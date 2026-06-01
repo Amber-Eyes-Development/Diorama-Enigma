@@ -1,14 +1,15 @@
 using System;
 using Extensions.Events;
-using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Абстрактное условие пазла. Реализации — <see cref="ClickCondition"/>,
-    /// <see cref="DragCondition"/>, <see cref="ResourceCondition"/>.
+    /// Абстрактное условие пазла. Хранится инлайн внутри <see cref="PuzzleStep"/>
+    /// через [SerializeReference]. Реализации — <see cref="ClickCondition"/>,
+    /// <see cref="DragCondition"/>, <see cref="ResourceCondition"/>, <see cref="DelayedCondition"/>.
     /// </summary>
-    public abstract class PuzzleCondition : ScriptableObject
+    [Serializable]
+    public abstract class PuzzleCondition
     {
         /// <summary>
         /// Активировать условие: подписаться на события хаба.

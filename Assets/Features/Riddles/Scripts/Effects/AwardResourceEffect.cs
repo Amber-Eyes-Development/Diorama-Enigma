@@ -1,3 +1,4 @@
+using System;
 using Extensions.Events;
 using Extensions.Log;
 using Extensions.ScriptableValues;
@@ -9,7 +10,7 @@ namespace DioramaEnigma.Riddles
     /// Эффект: устанавливает значение <see cref="BoolValue"/>-ресурса.
     /// Используется для выдачи или изъятия предметов/флагов.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Effects/AwardResourceEffect", fileName = nameof(AwardResourceEffect))]
+    [Serializable]
     public sealed class AwardResourceEffect : PuzzleEffect
     {
         [SerializeField] private BoolValue resource;

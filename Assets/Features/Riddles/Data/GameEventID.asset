@@ -9,11 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c58e21acad9f284c8789c897817b783, type: 3}
-  m_Name: PuzzleStep
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.PuzzleStep
-  stepLabel: 
-  conditions: []
-  activationEffects: []
-  effects: []
-  failureEffects: []
+  m_Script: {fileID: 11500000, guid: a55e661284ef8e04994f3c906ed8fc71, type: 3}
+  m_Name: GameEventID
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.GameEventID
+  id: 

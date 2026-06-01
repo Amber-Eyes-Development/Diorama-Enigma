@@ -7,7 +7,7 @@ namespace DioramaEnigma.Riddles
     /// <summary>
     /// Условие выполнено, когда заданный объект перетащен в заданную зону приземления.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Conditions/DragCondition", fileName = nameof(DragCondition))]
+    [Serializable]
     public sealed class DragCondition : PuzzleCondition
     {
         /// <summary>Перетаскиваемый объект</summary>

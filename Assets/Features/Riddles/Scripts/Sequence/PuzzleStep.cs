@@ -1,14 +1,15 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Один шаг пазла: набор условий (AND-логика) и эффекты при завершении.
-    /// Используется как элемент <see cref="PuzzleSequence"/>.
+    /// Один шаг пазла: набор условий (AND-логика) и эффекты при активации/завершении/провале.
+    /// Хранится инлайн внутри <see cref="PuzzleSequence"/> — отдельным ассетом не является.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/PuzzleStep", fileName = nameof(PuzzleStep))]
-    public sealed class PuzzleStep : ScriptableObject
+    [Serializable]
+    public sealed class PuzzleStep
     {
         /// <summary>Метка для отображения в редакторе</summary>
         public string StepLabel => stepLabel;
@@ -26,11 +27,11 @@ namespace DioramaEnigma.Riddles
         public IReadOnlyList<PuzzleEffect> FailureEffects => failureEffects;
 
         [SerializeField] private string stepLabel;
-        [SerializeField] private PuzzleCondition[] conditions;
+        [SerializeReference] private PuzzleCondition[] conditions = Array.Empty<PuzzleCondition>();
         [Tooltip("Выполняются сразу при активации шага — до ожидания условий. " +
                  "Используйте для разблокировки объектов (SetInteractableLockEffect).")]
-        [SerializeField] private PuzzleEffect[] activationEffects;
-        [SerializeField] private PuzzleEffect[] effects;
-        [SerializeField] private PuzzleEffect[] failureEffects;
+        [SerializeReference] private PuzzleEffect[] activationEffects = Array.Empty<PuzzleEffect>();
+        [SerializeReference] private PuzzleEffect[] effects = Array.Empty<PuzzleEffect>();
+        [SerializeReference] private PuzzleEffect[] failureEffects = Array.Empty<PuzzleEffect>();
     }
 }

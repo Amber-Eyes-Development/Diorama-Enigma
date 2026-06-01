@@ -1,3 +1,4 @@
+using System;
 using Extensions.Events;
 using Extensions.Log;
 using UnityEngine;
@@ -9,7 +10,7 @@ namespace DioramaEnigma.Riddles
     /// Используется в <see cref="PuzzleStep.ActivationEffects"/> для разблокировки объекта
     /// при старте шага и в <see cref="PuzzleStep.Effects"/> — для повторной блокировки после завершения.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Effects/SetInteractableLockEffect", fileName = nameof(SetInteractableLockEffect))]
+    [Serializable]
     public sealed class SetInteractableLockEffect : PuzzleEffect
     {
         [SerializeField] private InteractableID targetId;

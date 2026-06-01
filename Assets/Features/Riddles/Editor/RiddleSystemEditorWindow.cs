@@ -6,12 +6,12 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Окно редактора системы загадок. Открыть через меню Diorama Enigma → Riddle System Editor.
+    /// Окно редактора системы загадок: список шагов слева, детали выбранного шага справа.
+    /// Открыть через меню Diorama Enigma → Riddle System Editor.
     /// </summary>
     public sealed class RiddleSystemEditorWindow : EditorWindow
     {
         private const float LEFT_PANEL_WIDTH = 230f;
-        private const float SCENE_PANEL_HEIGHT = 150f;
 
         // ─── State ────────────────────────────────────────────────────────────
 
@@ -20,12 +20,8 @@ namespace DioramaEnigma.Riddles.Editor
 
         private Vector2 leftScroll;
         private Vector2 rightScroll;
-        private Vector2 sceneScroll;
 
         private readonly List<InteractableObject> sceneInteractables = new();
-        private readonly List<DropZoneObject> sceneDropZones = new();
-        private readonly Dictionary<string, List<int>> idToGroupsCache = new();
-
         private double lastSceneRefreshTime;
 
         // ─── Styles (lazy) ────────────────────────────────────────────────────
@@ -34,6 +30,7 @@ namespace DioramaEnigma.Riddles.Editor
         private GUIStyle styleSectionHeader;
         private GUIStyle styleStepNormal;
         private GUIStyle styleStepSelected;
+        private GUIStyle styleGroupHeader;
         private GUIStyle styleSmall;
         private GUIStyle styleTag;
 
@@ -43,7 +40,7 @@ namespace DioramaEnigma.Riddles.Editor
         public static void Open()
         {
             var window = GetWindow<RiddleSystemEditorWindow>("Riddle System Editor");
-            window.minSize = new Vector2(700f, 500f);
+            window.minSize = new Vector2(640f, 420f);
         }
 
         private void OnEnable()
@@ -69,7 +66,6 @@ namespace DioramaEnigma.Riddles.Editor
             {
                 selectedSequence = seq;
                 selectedStepIndex = -1;
-                RebuildCache();
                 Repaint();
             }
         }
@@ -87,19 +83,11 @@ namespace DioramaEnigma.Riddles.Editor
                 return;
             }
 
-            float mainAreaHeight = position.height
-                - EditorToolsConstraints.BASE_ELEMENT_HEIGHT  // toolbar
-                - 1f                                          // separator
-                - SCENE_PANEL_HEIGHT;
-
-            EditorGUILayout.BeginHorizontal(GUILayout.Height(mainAreaHeight));
-            DrawLeftPanel(mainAreaHeight);
+            EditorGUILayout.BeginHorizontal();
+            DrawLeftPanel();
             DrawDividerV();
             DrawRightPanel();
             EditorGUILayout.EndHorizontal();
-
-            DrawDividerH();
-            DrawScenePanel();
         }
 
         // ─── Toolbar ──────────────────────────────────────────────────────────
@@ -118,16 +106,15 @@ namespace DioramaEnigma.Riddles.Editor
             {
                 selectedSequence = next;
                 selectedStepIndex = -1;
-                RebuildCache();
             }
 
             GUILayout.FlexibleSpace();
 
+            if (GUILayout.Button("Объекты сцены ↗", EditorStyles.toolbarButton, GUILayout.Width(120)))
+                RiddleSceneObjectsWindow.Open();
+
             if (GUILayout.Button("Создать...", EditorStyles.toolbarButton, GUILayout.Width(70)))
                 CreateAsset<PuzzleSequence>("New PuzzleSequence");
-
-            if (GUILayout.Button("↺", EditorStyles.toolbarButton, GUILayout.Width(28)))
-                RefreshSceneObjects();
 
             EditorGUILayout.EndHorizontal();
 
@@ -158,9 +145,9 @@ namespace DioramaEnigma.Riddles.Editor
 
         // ─── Left Panel ───────────────────────────────────────────────────────
 
-        private void DrawLeftPanel(float height)
+        private void DrawLeftPanel()
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(LEFT_PANEL_WIDTH), GUILayout.Height(height));
+            EditorGUILayout.BeginVertical(GUILayout.Width(LEFT_PANEL_WIDTH), GUILayout.ExpandHeight(true));
 
             ColorLabel("  ШАГИ", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
             DrawDividerH(EditorToolsConstraints.COLOR_CYAN * 0.5f);
@@ -183,7 +170,7 @@ namespace DioramaEnigma.Riddles.Editor
                         ? EditorToolsConstraints.COLOR_CYAN
                         : EditorToolsConstraints.COLOR_GREEN;
 
-                    ColorLabel($"  Группа {currentGroup}", groupColor, styleSectionHeader);
+                    ColorLabel($"Группа {currentGroup}", groupColor, styleGroupHeader);
                 }
 
                 DrawStepRow(entry.Step, globalIndex);
@@ -203,14 +190,13 @@ namespace DioramaEnigma.Riddles.Editor
         private void DrawStepRow(PuzzleStep step, int index)
         {
             bool selected = index == selectedStepIndex;
-            string label = step == null ? "(не назначен)" :
-                string.IsNullOrEmpty(step.StepLabel) ? step.name : step.StepLabel;
+            string label = step == null ? "○ (не назначен)" :
+                string.IsNullOrEmpty(step.StepLabel) ? $"Шаг {index}" : step.StepLabel;
 
-            var style = selected ? styleStepSelected : styleStepNormal;
             var prevBg = GUI.backgroundColor;
-            GUI.backgroundColor = selected ? EditorToolsConstraints.COLOR_CYAN * 0.35f : Color.clear;
+            if (selected) GUI.backgroundColor = EditorToolsConstraints.COLOR_CYAN;
 
-            if (GUILayout.Button($"  {label}", style,
+            if (GUILayout.Button(label, selected ? styleStepSelected : styleStepNormal,
                 GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
             {
                 selectedStepIndex = index;
@@ -224,7 +210,7 @@ namespace DioramaEnigma.Riddles.Editor
 
         private void DrawRightPanel()
         {
-            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
 
             if (selectedStepIndex < 0 || selectedStepIndex >= selectedSequence.Steps.Count)
             {
@@ -238,18 +224,10 @@ namespace DioramaEnigma.Riddles.Editor
             var entry = selectedSequence.Steps[selectedStepIndex];
             var step = entry.Step;
 
-            // Заголовок
             string title = step == null ? "—" :
-                string.IsNullOrEmpty(step.StepLabel) ? step.name : step.StepLabel;
+                string.IsNullOrEmpty(step.StepLabel) ? $"Шаг {selectedStepIndex}" : step.StepLabel;
 
-            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField($"  {title}  (Группа {entry.GroupIndex})", styleTitle);
-            GUILayout.FlexibleSpace();
-            if (step != null && GUILayout.Button("Открыть ассет", GUILayout.Width(100),
-                GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                Selection.activeObject = step;
-            EditorGUILayout.EndHorizontal();
-
             DrawDividerH();
             EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
 
@@ -301,12 +279,8 @@ namespace DioramaEnigma.Riddles.Editor
             Color tagColor = GetConditionColor(condition);
             ColorLabel($"[{GetConditionTypeName(condition)}]", tagColor, styleTag);
             EditorGUILayout.LabelField(GetConditionSummary(condition), styleSmall);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("→", GUILayout.Width(22), GUILayout.Height(18)))
-                Selection.activeObject = condition;
             EditorGUILayout.EndHorizontal();
 
-            // Ссылка на объект сцены
             var linked = FindLinkedObject(condition);
             if (linked != null)
             {
@@ -318,7 +292,7 @@ namespace DioramaEnigma.Riddles.Editor
                 ColorLabel($"→ {linked.gameObject.name} (сцена){playInfo}",
                     EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSmall);
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Ping", GUILayout.Width(40), GUILayout.Height(16)))
+                if (GUILayout.Button("Ping", GUILayout.Width(44), GUILayout.Height(16)))
                 {
                     Selection.activeGameObject = linked.gameObject;
                     EditorGUIUtility.PingObject(linked.gameObject);
@@ -326,7 +300,6 @@ namespace DioramaEnigma.Riddles.Editor
                 EditorGUILayout.EndHorizontal();
             }
 
-            // Рекурсия для DelayedCondition
             if (condition is DelayedCondition delayed && delayed.Inner != null)
             {
                 EditorGUI.indentLevel++;
@@ -354,77 +327,9 @@ namespace DioramaEnigma.Riddles.Editor
                 if (effect == null) { EditorGUILayout.LabelField("  ○ null", styleSmall); continue; }
 
                 EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-                EditorGUILayout.LabelField(
-                    $"  {effect.GetType().Name.Replace("Effect", "")}  —  {effect.name}", styleSmall);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("→", GUILayout.Width(22), GUILayout.Height(18)))
-                    Selection.activeObject = effect;
+                EditorGUILayout.LabelField($"  {effect.GetType().Name.Replace("Effect", "")}", styleSmall);
                 EditorGUILayout.EndHorizontal();
             }
-        }
-
-        // ─── Scene Panel ──────────────────────────────────────────────────────
-
-        private void DrawScenePanel()
-        {
-            EditorGUILayout.BeginVertical(GUILayout.Height(SCENE_PANEL_HEIGHT));
-
-            ColorLabel("  ОБЪЕКТЫ В СЦЕНЕ", Color.gray, styleSectionHeader);
-            DrawDividerH(Color.gray * 0.5f);
-            EditorGUILayout.Space(2);
-
-            sceneScroll = EditorGUILayout.BeginScrollView(sceneScroll, GUILayout.ExpandHeight(true));
-
-            if (sceneInteractables.Count == 0 && sceneDropZones.Count == 0)
-            {
-                EditorGUILayout.LabelField("  InteractableObject и DropZoneObject не найдены в сцене", styleSmall);
-            }
-            else
-            {
-                foreach (var obj in sceneInteractables)
-                {
-                    if (obj == null) continue;
-
-                    bool linked = idToGroupsCache.TryGetValue(obj.Id, out var groups);
-                    Color c = linked ? EditorToolsConstraints.COLOR_LIGHT_GREEN : Color.gray;
-
-                    string groupInfo = linked ? $"→ Гр. {string.Join(",", groups)}" : string.Empty;
-                    string playInfo = Application.isPlaying
-                        ? $"  state:{obj.State.Current} {(obj.IsLocked ? "🔒" : "🔓")}"
-                        : string.Empty;
-
-                    EditorGUILayout.BeginHorizontal();
-                    ColorLabel($"  ● {obj.gameObject.name}{playInfo}  {groupInfo}", c, styleSmall);
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Ping", GUILayout.Width(40), GUILayout.Height(16)))
-                    {
-                        Selection.activeGameObject = obj.gameObject;
-                        EditorGUIUtility.PingObject(obj.gameObject);
-                    }
-                    EditorGUILayout.EndHorizontal();
-                }
-
-                foreach (var zone in sceneDropZones)
-                {
-                    if (zone == null) continue;
-
-                    bool linked = IsDropZoneLinked(zone);
-                    Color c = linked ? EditorToolsConstraints.COLOR_YELLOW : Color.gray;
-
-                    EditorGUILayout.BeginHorizontal();
-                    ColorLabel($"  ◈ {zone.gameObject.name}  (drop zone)", c, styleSmall);
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Ping", GUILayout.Width(40), GUILayout.Height(16)))
-                    {
-                        Selection.activeGameObject = zone.gameObject;
-                        EditorGUIUtility.PingObject(zone.gameObject);
-                    }
-                    EditorGUILayout.EndHorizontal();
-                }
-            }
-
-            EditorGUILayout.EndScrollView();
-            EditorGUILayout.EndVertical();
         }
 
         // ─── Condition Helpers ────────────────────────────────────────────────
@@ -444,7 +349,7 @@ namespace DioramaEnigma.Riddles.Editor
             ClickCondition cc => $"{(cc.TargetId != null ? cc.TargetId.name : "?")} → state {cc.RequiredStateIndex}",
             DragCondition d => $"{(d.DraggableId != null ? d.DraggableId.name : "?")} → {(d.DropZoneId != null ? d.DropZoneId.name : "?")}",
             ResourceCondition r => $"{(r.Resource != null ? r.Resource.name : "?")} == {r.RequiredValue}",
-            _ => c.name
+            _ => c.GetType().Name
         };
 
         private static Color GetConditionColor(PuzzleCondition c) => c switch
@@ -474,70 +379,16 @@ namespace DioramaEnigma.Riddles.Editor
             return null;
         }
 
-        // ─── Scene / Cache ────────────────────────────────────────────────────
+        // ─── Scene ────────────────────────────────────────────────────────────
 
         private void RefreshSceneObjects()
         {
             lastSceneRefreshTime = EditorApplication.timeSinceStartup;
             sceneInteractables.Clear();
-            sceneDropZones.Clear();
 
 #pragma warning disable CS0618
             sceneInteractables.AddRange(FindObjectsOfType<InteractableObject>());
-            sceneDropZones.AddRange(FindObjectsOfType<DropZoneObject>());
 #pragma warning restore CS0618
-
-            RebuildCache();
-            Repaint();
-        }
-
-        private void RebuildCache()
-        {
-            idToGroupsCache.Clear();
-            if (selectedSequence == null) return;
-
-            foreach (var entry in selectedSequence.Steps)
-            {
-                if (entry.Step == null) continue;
-
-                foreach (var cond in entry.Step.Conditions)
-                {
-                    string id = ExtractId(cond);
-                    if (id == null) continue;
-
-                    if (!idToGroupsCache.TryGetValue(id, out var list))
-                    {
-                        list = new List<int>();
-                        idToGroupsCache[id] = list;
-                    }
-
-                    if (!list.Contains(entry.GroupIndex))
-                        list.Add(entry.GroupIndex);
-                }
-            }
-        }
-
-        private static string ExtractId(PuzzleCondition c) => c switch
-        {
-            DelayedCondition d => ExtractId(d.Inner),
-            ClickCondition cc => cc.TargetId?.Id,
-            DragCondition d => d.DraggableId?.Id,
-            _ => null
-        };
-
-        private bool IsDropZoneLinked(DropZoneObject zone)
-        {
-            if (selectedSequence == null) return false;
-
-            foreach (var entry in selectedSequence.Steps)
-            {
-                if (entry.Step == null) continue;
-                foreach (var cond in entry.Step.Conditions)
-                    if (cond is DragCondition drag && drag.DropZoneId?.Id == zone.ZoneId)
-                        return true;
-            }
-
-            return false;
         }
 
         // ─── Asset Creation ───────────────────────────────────────────────────
@@ -558,7 +409,7 @@ namespace DioramaEnigma.Riddles.Editor
 
             stepsProp.arraySize++;
             var newEntry = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-            newEntry.FindPropertyRelative("Step").objectReferenceValue = null;
+            newEntry.FindPropertyRelative("Step").managedReferenceValue = new PuzzleStep();
             newEntry.FindPropertyRelative("GroupIndex").intValue = nextGroup;
             so.ApplyModifiedProperties();
 
@@ -596,8 +447,7 @@ namespace DioramaEnigma.Riddles.Editor
 
         private static void DrawDividerV()
         {
-            var rect = GUILayoutUtility.GetRect(1f, float.MaxValue, 1f, float.MaxValue);
-            rect.width = 1f;
+            var rect = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandHeight(true));
             EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
         }
 
@@ -606,16 +456,35 @@ namespace DioramaEnigma.Riddles.Editor
         private void EnsureStyles()
         {
             styleTitle ??= new GUIStyle(EditorStyles.boldLabel)
-                { fontSize = EditorToolsConstraints.BASE_FONT_SIZE + 1, padding = new RectOffset(EditorToolsConstraints.TEXT_PADDING, 0, 4, 0) };
+            {
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE + 1,
+                padding = new RectOffset(EditorToolsConstraints.TEXT_PADDING, 0, 4, 0)
+            };
 
             styleSectionHeader ??= new GUIStyle(EditorStyles.miniLabel)
                 { fontStyle = FontStyle.Bold, fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1 };
 
-            styleStepNormal ??= new GUIStyle(EditorStyles.label)
-                { alignment = TextAnchor.MiddleLeft, fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1 };
+            styleGroupHeader ??= new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontStyle = FontStyle.Bold,
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1,
+                padding = new RectOffset(2, 0, 2, 2)
+            };
 
-            styleStepSelected ??= new GUIStyle(EditorStyles.boldLabel)
-                { alignment = TextAnchor.MiddleLeft, fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1 };
+            styleStepNormal ??= new GUIStyle("Button")
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
+                padding = new RectOffset(10, 6, 2, 2)
+            };
+
+            styleStepSelected ??= new GUIStyle("Button")
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontStyle = FontStyle.Bold,
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
+                padding = new RectOffset(10, 6, 2, 2)
+            };
 
             styleSmall ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
 

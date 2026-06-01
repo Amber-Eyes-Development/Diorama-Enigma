@@ -14,7 +14,7 @@ namespace DioramaEnigma.Riddles
     /// Провал передаётся немедленно без задержки.
     /// При отмене шага (Dispose) отложенный вызов отменяется.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Conditions/DelayedCondition", fileName = nameof(DelayedCondition))]
+    [Serializable]
     public sealed class DelayedCondition : PuzzleCondition
     {
         /// <summary>Внутреннее условие</summary>
@@ -23,7 +23,7 @@ namespace DioramaEnigma.Riddles
         /// <summary>Задержка в секундах между срабатыванием условия и засчётом шага</summary>
         public float DelaySeconds => delaySeconds;
 
-        [SerializeField] private PuzzleCondition inner;
+        [SerializeReference] private PuzzleCondition inner;
         [Tooltip("Задержка в секундах — обычно равна длине анимации объекта")]
         [SerializeField] private float delaySeconds = 1f;
 

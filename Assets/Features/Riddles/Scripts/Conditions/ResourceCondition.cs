@@ -9,7 +9,7 @@ namespace DioramaEnigma.Riddles
     /// Условие выполнено, когда <see cref="BoolValue"/>-ресурс принимает нужное значение.
     /// Проверяется немедленно при активации (ресурс мог быть выдан раньше).
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Conditions/ResourceCondition", fileName = nameof(ResourceCondition))]
+    [Serializable]
     public sealed class ResourceCondition : PuzzleCondition
     {
         /// <summary>Отслеживаемый ресурс</summary>

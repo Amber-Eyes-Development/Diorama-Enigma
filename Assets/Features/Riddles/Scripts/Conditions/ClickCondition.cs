@@ -7,7 +7,7 @@ namespace DioramaEnigma.Riddles
     /// <summary>
     /// Условие выполнено, когда <see cref="InteractableObject"/> с заданным ID достигает нужного стейта.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Conditions/ClickCondition", fileName = nameof(ClickCondition))]
+    [Serializable]
     public sealed class ClickCondition : PuzzleCondition
     {
         /// <summary>Целевой объект</summary>

@@ -57,7 +57,7 @@ namespace DioramaEnigma.Riddles.Editor
             foreach (var step in runner.Editor_ActiveSteps)
             {
                 hasActiveSteps = true;
-                string label = string.IsNullOrEmpty(step.StepLabel) ? step.name : step.StepLabel;
+                string label = string.IsNullOrEmpty(step.StepLabel) ? "(без названия)" : step.StepLabel;
                 EditorGUILayout.LabelField($"  ● {label}", stepLabelStyle);
             }
 

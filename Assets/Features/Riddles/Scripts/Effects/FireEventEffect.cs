@@ -1,5 +1,5 @@
+using System;
 using Extensions.Events;
-using Extensions.Identification;
 using Extensions.Log;
 using UnityEngine;
 
@@ -9,10 +9,10 @@ namespace DioramaEnigma.Riddles
     /// Эффект: публикует <see cref="GameEventFiredEvent"/> в хаб событий.
     /// Используется для уведомления других систем о завершении шага.
     /// </summary>
-    [CreateAssetMenu(menuName = "Riddles/Effects/FireEventEffect", fileName = nameof(FireEventEffect))]
+    [Serializable]
     public sealed class FireEventEffect : PuzzleEffect
     {
-        [SerializeField] private ID gameEventId;
+        [SerializeField] private GameEventID gameEventId;
 
         /// <inheritdoc/>
         public override void Execute(EventHub hub)

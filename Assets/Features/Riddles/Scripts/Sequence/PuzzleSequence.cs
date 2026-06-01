@@ -6,6 +6,7 @@ namespace DioramaEnigma.Riddles
 {
     /// <summary>
     /// Последовательность шагов пазла с поддержкой параллельных групп.
+    /// Единственный ассет системы — шаги, условия и эффекты хранятся инлайн.
     /// Шаги с одинаковым <see cref="StepEntry.GroupIndex"/> активируются одновременно;
     /// следующая группа стартует только после завершения всей текущей.
     /// </summary>
@@ -23,14 +24,12 @@ namespace DioramaEnigma.Riddles
 
         /// <summary>Шаг последовательности с индексом параллельной группы</summary>
         [Serializable]
-        public struct StepEntry
+        public sealed class StepEntry
         {
-            /// <summary>Шаг пазла</summary>
-            public PuzzleStep Step;
+            [SerializeReference] public PuzzleStep Step;
 
             [Tooltip("Шаги с одинаковым GroupIndex активируются одновременно (параллельно). " +
                      "Следующая группа стартует только после завершения всех шагов текущей.")]
-            /// <summary>Индекс группы параллельного выполнения</summary>
             public int GroupIndex;
         }
     }

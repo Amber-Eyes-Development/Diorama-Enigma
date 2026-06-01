@@ -1,9 +1,14 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles.Editor
 {
+    /// <summary>
+    /// Инспектор PuzzleSequence: inline-редактирование шагов, условий и эффектов
+    /// (хранятся через [SerializeReference]), управление порядком групп.
+    /// </summary>
     [CustomEditor(typeof(PuzzleSequence))]
     public sealed class PuzzleSequenceEditor : UnityEditor.Editor
     {
@@ -11,14 +16,33 @@ namespace DioramaEnigma.Riddles.Editor
         private SerializedProperty stepsProp;
 
         private GUIStyle headerStyle;
-        private GUIStyle smallStyle;
 
-        private static readonly Color SeparatorColorEven = new(0.25f, 0.45f, 0.65f, 1f);
-        private static readonly Color SeparatorColorOdd = new(0.35f, 0.55f, 0.35f, 1f);
+        private static readonly Color SeparatorEven = new(0.25f, 0.45f, 0.65f, 1f);
+        private static readonly Color SeparatorOdd = new(0.35f, 0.55f, 0.35f, 1f);
 
-        private static readonly Color ColorClick = new(0.4f, 0.7f, 1f);
-        private static readonly Color ColorDrag = new(1f, 0.65f, 0.3f);
-        private static readonly Color ColorResource = new(0.4f, 1f, 0.5f);
+        // Типы для дропдаунов добавления
+        private static readonly (string label, Type type)[] ConditionTypes =
+        {
+            ("Click", typeof(ClickCondition)),
+            ("Drag", typeof(DragCondition)),
+            ("Resource", typeof(ResourceCondition)),
+            ("Delayed (обёртка)", typeof(DelayedCondition)),
+        };
+
+        // Для вложенного условия (DelayedCondition.inner) — без Delayed, чтобы избежать бесконечной вложенности
+        private static readonly (string label, Type type)[] InnerConditionTypes =
+        {
+            ("Click", typeof(ClickCondition)),
+            ("Drag", typeof(DragCondition)),
+            ("Resource", typeof(ResourceCondition)),
+        };
+
+        private static readonly (string label, Type type)[] EffectTypes =
+        {
+            ("Award Resource", typeof(AwardResourceEffect)),
+            ("Fire Event", typeof(FireEventEffect)),
+            ("Set Lock", typeof(SetInteractableLockEffect)),
+        };
 
         private void OnEnable()
         {
@@ -28,7 +52,7 @@ namespace DioramaEnigma.Riddles.Editor
 
         public override void OnInspectorGUI()
         {
-            EnsureStyles();
+            headerStyle ??= new GUIStyle(EditorStyles.boldLabel) { fontSize = 11 };
 
             serializedObject.Update();
 
@@ -45,42 +69,32 @@ namespace DioramaEnigma.Riddles.Editor
             int maxGroup = groups.Count > 0 ? groups[^1] : -1;
 
             EditorGUILayout.BeginHorizontal();
-
             if (GUILayout.Button("+ Шаг (новая группа)"))
                 AddStep(maxGroup + 1);
-
             if (groups.Count > 0 && GUILayout.Button("+ Шаг (в последнюю группу)"))
                 AddStep(maxGroup);
-
             EditorGUILayout.EndHorizontal();
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void EnsureStyles()
-        {
-            headerStyle ??= new GUIStyle(EditorStyles.boldLabel) { fontSize = 11 };
-            smallStyle ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
-        }
+        // ─── Группы ───────────────────────────────────────────────────────────
 
         private void DrawGroup(int groupIndex, int position, List<int> groups)
         {
-            Color separatorColor = position % 2 == 0 ? SeparatorColorEven : SeparatorColorOdd;
+            Color separatorColor = position % 2 == 0 ? SeparatorEven : SeparatorOdd;
 
             var rect = EditorGUILayout.GetControlRect(false, 2);
             EditorGUI.DrawRect(rect, separatorColor);
             EditorGUILayout.Space(2);
 
             int count = CountStepsInGroup(groupIndex);
-            string groupLabel = count > 1
-                ? $"Группа {position}  —  {count} шага параллельно"
-                : $"Группа {position}";
+            string groupLabel = count > 1 ? $"Группа {position}  —  {count} шага параллельно" : $"Группа {position}";
 
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(groupLabel, headerStyle);
             GUILayout.FlexibleSpace();
 
-            // Переместить всю группу выше/ниже в очереди выполнения (swap с соседней)
             bool moveUp = false;
             bool moveDown = false;
 
@@ -106,20 +120,37 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.Space(2);
         }
 
+        // ─── Шаг ──────────────────────────────────────────────────────────────
+
         private void DrawStepEntry(SerializedProperty entry, int arrayIndex)
         {
             var stepProp = entry.FindPropertyRelative("Step");
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            bool stepIsNull = string.IsNullOrEmpty(stepProp.managedReferenceFullTypename);
+
+            if (stepIsNull)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("(пустой шаг)");
+                if (GUILayout.Button("Создать", GUILayout.Width(70)))
+                    stepProp.managedReferenceValue = new PuzzleStep();
+                if (GUILayout.Button("✕", GUILayout.Width(20)))
+                    stepsProp.DeleteArrayElementAtIndex(arrayIndex);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
+            var labelProp = stepProp.FindPropertyRelative("stepLabel");
+
             EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.PropertyField(labelProp, GUIContent.none);
 
-            EditorGUILayout.PropertyField(stepProp, GUIContent.none);
-
-            // Переместить шаг в предыдущую/следующую группу (в т.ч. вынести в новую крайнюю)
-            int moveStepDir = 0;
-            if (GUILayout.Button("▲", GUILayout.Width(20))) moveStepDir = -1;
-            if (GUILayout.Button("▼", GUILayout.Width(20))) moveStepDir = +1;
-
+            int moveDir = 0;
+            if (GUILayout.Button("▲", GUILayout.Width(20))) moveDir = -1;
+            if (GUILayout.Button("▼", GUILayout.Width(20))) moveDir = +1;
             bool delete = GUILayout.Button("✕", GUILayout.Width(20));
 
             EditorGUILayout.EndHorizontal();
@@ -131,106 +162,157 @@ namespace DioramaEnigma.Riddles.Editor
                 return;
             }
 
-            if (moveStepDir != 0)
+            if (moveDir != 0)
             {
-                MoveStepToAdjacentGroup(arrayIndex, moveStepDir);
+                MoveStepToAdjacentGroup(arrayIndex, moveDir);
                 EditorGUILayout.EndVertical();
                 return;
             }
 
-            if (stepProp.objectReferenceValue is PuzzleStep step)
-            {
-                DrawConditionsSummary(step);
-
-                if (step.Conditions.Count == 0)
-                    EditorGUILayout.HelpBox("Шаг не имеет условий и завершится немедленно.", MessageType.Warning);
-
-                if (step.ActivationEffects.Count > 0)
-                {
-                    var activationStyle = new GUIStyle(EditorStyles.miniLabel)
-                        { normal = { textColor = new Color(1f, 0.85f, 0.3f) } };
-                    EditorGUILayout.LabelField($"  ▶ on activate: {step.ActivationEffects.Count} effect(s)", activationStyle);
-                }
-
-                if (step.FailureEffects.Count > 0)
-                {
-                    var failStyle = new GUIStyle(EditorStyles.miniLabel)
-                        { normal = { textColor = new Color(1f, 0.4f, 0.4f) } };
-                    EditorGUILayout.LabelField($"  ✕ on failure: {step.FailureEffects.Count} effect(s)", failStyle);
-                }
-            }
+            DrawManagedRefArray(stepProp.FindPropertyRelative("conditions"), "УСЛОВИЯ (все должны выполниться)", ConditionTypes);
+            DrawManagedRefArray(stepProp.FindPropertyRelative("activationEffects"), "ЭФФЕКТЫ ПРИ АКТИВАЦИИ", EffectTypes);
+            DrawManagedRefArray(stepProp.FindPropertyRelative("effects"), "ЭФФЕКТЫ ПРИ ЗАВЕРШЕНИИ", EffectTypes);
+            DrawManagedRefArray(stepProp.FindPropertyRelative("failureEffects"), "ЭФФЕКТЫ ПРИ ПРОВАЛЕ", EffectTypes);
 
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawConditionsSummary(PuzzleStep step)
+        // ─── SerializeReference массив ────────────────────────────────────────
+
+        private void DrawManagedRefArray(SerializedProperty arrayProp, string label, (string, Type)[] addChoices)
         {
-            if (step.Conditions.Count == 0) return;
+            EditorGUILayout.Space(2);
+            EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
+
+            int removeIndex = -1;
+
+            for (int i = 0; i < arrayProp.arraySize; i++)
+            {
+                var el = arrayProp.GetArrayElementAtIndex(i);
+
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+                EditorGUILayout.BeginHorizontal();
+                bool isNull = string.IsNullOrEmpty(el.managedReferenceFullTypename);
+                EditorGUILayout.LabelField(isNull ? "(null)" : ManagedRefTypeName(el), EditorStyles.boldLabel);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("✕", GUILayout.Width(20), GUILayout.Height(18))) removeIndex = i;
+                EditorGUILayout.EndHorizontal();
+
+                if (!isNull) DrawManagedRefBody(el);
+
+                EditorGUILayout.EndVertical();
+            }
+
+            if (removeIndex >= 0)
+                arrayProp.DeleteArrayElementAtIndex(removeIndex);
+
+            if (GUILayout.Button("+ Добавить", GUILayout.Height(20)))
+                ShowAddMenu(arrayProp.propertyPath, addChoices);
+        }
+
+        /// <summary>Рисует редактируемые поля managed-reference объекта без дефолтного фолдаута.</summary>
+        private void DrawManagedRefBody(SerializedProperty prop)
+        {
+            var end = prop.GetEndProperty();
+            var it = prop.Copy();
+            bool enter = true;
 
             EditorGUI.indentLevel++;
 
-            foreach (var condition in step.Conditions)
+            while (it.NextVisible(enter) && !SerializedProperty.EqualContents(it, end))
             {
-                if (condition == null)
-                {
-                    EditorGUILayout.LabelField("  ○ (null condition)", smallStyle);
-                    continue;
-                }
+                enter = false;
 
-                string summary = GetConditionSummary(condition);
-                string typeName = condition.GetType().Name.Replace("Condition", "");
-                Color color = GetConditionColor(condition);
-
-                var labelStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = color } };
-
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"  [{typeName}]", labelStyle, GUILayout.Width(80));
-                EditorGUILayout.LabelField(summary, smallStyle);
-                EditorGUILayout.EndHorizontal();
+                // Вложенное полиморфное поле (DelayedCondition.inner) — рисуем со своим пикером типа
+                if (it.propertyType == SerializedPropertyType.ManagedReference)
+                    DrawNestedManagedRef(it.Copy());
+                else
+                    EditorGUILayout.PropertyField(it, true);
             }
 
             EditorGUI.indentLevel--;
         }
 
-        private static string GetConditionSummary(PuzzleCondition condition)
+        private void DrawNestedManagedRef(SerializedProperty prop)
         {
-            return condition switch
-            {
-                DelayedCondition delayed =>
-                    $"{(delayed.Inner != null ? GetConditionSummary(delayed.Inner) : "?")}  +{delayed.DelaySeconds:0.##}s",
-                ClickCondition click =>
-                    $"{(click.TargetId != null ? click.TargetId.name : "?")} → state {click.RequiredStateIndex}",
-                DragCondition drag =>
-                    $"{(drag.DraggableId != null ? drag.DraggableId.name : "?")} → {(drag.DropZoneId != null ? drag.DropZoneId.name : "?")}",
-                ResourceCondition res =>
-                    $"{(res.Resource != null ? res.Resource.name : "?")} == {res.RequiredValue}",
-                _ => condition.GetType().Name
-            };
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            EditorGUILayout.BeginHorizontal();
+            bool isNull = string.IsNullOrEmpty(prop.managedReferenceFullTypename);
+            EditorGUILayout.LabelField($"{prop.displayName}: {(isNull ? "(не выбрано)" : ManagedRefTypeName(prop))}",
+                EditorStyles.miniBoldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(isNull ? "Выбрать" : "Сменить", GUILayout.Width(70)))
+                ShowPickMenu(prop.propertyPath, InnerConditionTypes);
+            EditorGUILayout.EndHorizontal();
+
+            if (!isNull) DrawManagedRefBody(prop);
+
+            EditorGUILayout.EndVertical();
         }
 
-        private static Color GetConditionColor(PuzzleCondition condition)
+        // ─── Меню выбора типа ─────────────────────────────────────────────────
+
+        private void ShowAddMenu(string arrayPath, (string label, Type type)[] choices)
         {
-            return condition switch
+            var menu = new GenericMenu();
+
+            foreach (var (label, type) in choices)
             {
-                DelayedCondition delayed => delayed.Inner != null
-                    ? GetConditionColor(delayed.Inner)
-                    : Color.white,
-                ClickCondition => ColorClick,
-                DragCondition => ColorDrag,
-                ResourceCondition => ColorResource,
-                _ => Color.white
-            };
+                Type captured = type;
+                menu.AddItem(new GUIContent(label), false, () =>
+                {
+                    serializedObject.Update();
+                    var arr = serializedObject.FindProperty(arrayPath);
+                    int idx = arr.arraySize;
+                    arr.arraySize++;
+                    arr.GetArrayElementAtIndex(idx).managedReferenceValue = Activator.CreateInstance(captured);
+                    serializedObject.ApplyModifiedProperties();
+                });
+            }
+
+            menu.ShowAsContext();
         }
+
+        private void ShowPickMenu(string propPath, (string label, Type type)[] choices)
+        {
+            var menu = new GenericMenu();
+
+            foreach (var (label, type) in choices)
+            {
+                Type captured = type;
+                menu.AddItem(new GUIContent(label), false, () =>
+                {
+                    serializedObject.Update();
+                    serializedObject.FindProperty(propPath).managedReferenceValue = Activator.CreateInstance(captured);
+                    serializedObject.ApplyModifiedProperties();
+                });
+            }
+
+            menu.ShowAsContext();
+        }
+
+        private static string ManagedRefTypeName(SerializedProperty prop)
+        {
+            string full = prop.managedReferenceFullTypename;
+            if (string.IsNullOrEmpty(full)) return "(null)";
+
+            int dot = full.LastIndexOf('.');
+            return dot >= 0 ? full[(dot + 1)..] : full;
+        }
+
+        // ─── Управление шагами/группами ───────────────────────────────────────
 
         private void AddStep(int groupIndex)
         {
+            int idx = stepsProp.arraySize;
             stepsProp.arraySize++;
-            var newEntry = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-            newEntry.FindPropertyRelative("Step").objectReferenceValue = null;
-            newEntry.FindPropertyRelative("GroupIndex").intValue = groupIndex;
+            var entry = stepsProp.GetArrayElementAtIndex(idx);
+            entry.FindPropertyRelative("Step").managedReferenceValue = new PuzzleStep();
+            entry.FindPropertyRelative("GroupIndex").intValue = groupIndex;
         }
 
-        /// <summary>Уникальные значения GroupIndex по возрастанию (порядок выполнения групп)</summary>
         private List<int> GetSortedGroups()
         {
             var set = new SortedSet<int>();
@@ -240,7 +322,6 @@ namespace DioramaEnigma.Riddles.Editor
             return new List<int>(set);
         }
 
-        /// <summary>Поменять местами две группы — у всех их шагов обменять GroupIndex</summary>
         private void SwapGroups(int groupA, int groupB)
         {
             for (int i = 0; i < stepsProp.arraySize; i++)
@@ -251,10 +332,6 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        /// <summary>
-        /// Переместить шаг в соседнюю группу. Если соседней нет (крайняя позиция) —
-        /// вынести шаг в новую крайнюю группу.
-        /// </summary>
         private void MoveStepToAdjacentGroup(int arrayIndex, int direction)
         {
             var groups = GetSortedGroups();
@@ -275,10 +352,8 @@ namespace DioramaEnigma.Riddles.Editor
         {
             int count = 0;
             for (int i = 0; i < stepsProp.arraySize; i++)
-            {
                 if (stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("GroupIndex").intValue == groupIndex)
                     count++;
-            }
 
             return count;
         }
