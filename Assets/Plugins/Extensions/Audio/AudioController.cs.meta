@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 719537188534477e83994a81b59c1173
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - default3dSpatialPreset: {fileID: 11400000, guid: 7b12d6a6129001a4c972c937b8f38862, type: 2}
+  - oneShotPrefab: {fileID: 8007241443552093141, guid: adf7dcf0bb9b6e9439818faa0789bccb, type: 3}
+  - oneShotRoot: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
