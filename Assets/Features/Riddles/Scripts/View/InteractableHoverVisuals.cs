@@ -1,6 +1,5 @@
 using DG.Tweening;
 using Extensions.AnimationSequencer;
-using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
@@ -8,7 +7,7 @@ namespace DioramaEnigma.Riddles
     /// <summary>
     /// Визуальная реакция на наведение курсора
     /// </summary>
-    public sealed class InteractableHoverVisuals : MonoBehaviour
+    public sealed class InteractableHoverVisuals : InteractableViewBehaviour
     {
         [Header("При наведении"), Space]
         [SerializeField] private GameObject[] objectsToEnableOnEnter;
@@ -22,31 +21,9 @@ namespace DioramaEnigma.Riddles
         [SerializeField] private DOTweenAnimation exitAnimation;
         [SerializeField] private AnimationSequencer exitSequencer;
 
-        private InteractableObject interactable;
+        protected override void Subscribe() => Interactable.onHoverChanged += OnHoverChanged;
 
-        #region MonoBehaviour
-
-        private void Awake()
-        {
-            interactable = GetComponent<InteractableObject>();
-
-            if (interactable == null)
-                ServiceDebug.LogWarning(this, "InteractableObject не найден на этом объекте");
-        }
-
-        private void OnEnable()
-        {
-            if (interactable != null)
-                interactable.onHoverChanged += OnHoverChanged;
-        }
-
-        private void OnDisable()
-        {
-            if (interactable != null)
-                interactable.onHoverChanged -= OnHoverChanged;
-        }
-
-        #endregion
+        protected override void Unsubscribe() => Interactable.onHoverChanged -= OnHoverChanged;
 
         #region Internal
 

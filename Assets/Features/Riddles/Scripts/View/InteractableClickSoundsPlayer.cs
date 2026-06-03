@@ -1,17 +1,15 @@
 using System;
-using Extensions.Audio;
-using Extensions.Log;
 using UnityEngine;
 using UnityEngine.Audio;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Звук при смене состояния объекта
+    /// Звук при смене стейта объекта
     /// </summary>
-    public sealed class InteractableClickSoundsPlayer : BaseAudioPlayer
+    public sealed class InteractableClickSoundsPlayer : InteractableAudioBehaviour
     {
-        /// <summary> Звук для одного состояния </summary>
+        /// <summary> Звук для одного стейта </summary>
         [Serializable]
         public struct StateSound
         {
@@ -19,38 +17,12 @@ namespace DioramaEnigma.Riddles
             public AudioResource Sound;
         }
 
-        [Header("Звуки по состояниям"), Space]
+        [Header("Звуки по стейтам"), Space]
         [SerializeField] private StateSound[] stateSounds;
 
-        private InteractableObject interactable;
+        protected override void Subscribe() => Interactable.State.onStateChanged += OnStateChanged;
 
-        #region MonoBehaviour
-
-        private void Awake()
-        {
-            interactable = GetComponent<InteractableObject>();
-
-            if (interactable == null)
-                ServiceDebug.LogWarning(this, "InteractableObject не найден на этом объекте");
-        }
-
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-
-            if (interactable != null)
-                interactable.State.onStateChanged += OnStateChanged;
-        }
-
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-
-            if (interactable != null)
-                interactable.State.onStateChanged -= OnStateChanged;
-        }
-
-        #endregion
+        protected override void Unsubscribe() => Interactable.State.onStateChanged -= OnStateChanged;
 
         private void OnStateChanged(int stateIndex)
         {

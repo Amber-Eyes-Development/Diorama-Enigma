@@ -9,7 +9,7 @@ namespace DioramaEnigma.Riddles
     /// <summary>
     /// Визуальная реакция на смену стейта объекта
     /// </summary>
-    public sealed class InteractableStateVisuals : MonoBehaviour
+    public sealed class InteractableStateVisuals : InteractableViewBehaviour
     {
         /// <summary> Визуал для одного стейта </summary>
         [Serializable]
@@ -24,41 +24,21 @@ namespace DioramaEnigma.Riddles
 
         [SerializeField] private StateConfig[] stateConfigs;
 
-        private InteractableObject interactable;
-
-        #region MonoBehaviour
-
-        private void Awake()
-        {
-            interactable = GetComponent<InteractableObject>();
-
-            if (interactable == null)
-                ServiceDebug.LogWarning(this, "InteractableObject не найден на этом объекте");
-        }
-
-        private void OnEnable()
-        {
-            if (interactable == null) return;
-
-            interactable.State.onStateChanged += OnStateChanged;
-
-            if (interactable.State.Current != 0)
-                ApplySilent(interactable.State.Current);
-        }
-
-        private void OnDisable()
-        {
-            if (interactable != null)
-                interactable.State.onStateChanged -= OnStateChanged;
-        }
-
-        #endregion
-
         /// <summary> Применить визуал состояния с анимациями </summary>
         public void Apply(int stateIndex) => ApplyInternal(stateIndex, silent: false);
 
         /// <summary> Применить визуал состояния без анимаций (восстановление после загрузки) </summary>
         public void ApplySilent(int stateIndex) => ApplyInternal(stateIndex, silent: true);
+
+        protected override void Subscribe()
+        {
+            Interactable.State.onStateChanged += OnStateChanged;
+
+            if (Interactable.State.Current != 0)
+                ApplySilent(Interactable.State.Current);
+        }
+
+        protected override void Unsubscribe() => Interactable.State.onStateChanged -= OnStateChanged;
 
         #region Internal
 
