@@ -30,7 +30,7 @@ namespace DioramaEnigma.Riddles
             if (inner == null)
             {
                 ServiceDebug.LogWarning<DelayedCondition>("inner условие не назначено");
-                return new DelegateDisposable(null);
+                return new ActionDisposable(null);
             }
 
             var delayTask = new CoroutineTask(RiddleContext.Instance);
@@ -41,7 +41,7 @@ namespace DioramaEnigma.Riddles
                 onFailed: onFailed
             );
 
-            return new DelegateDisposable(() =>
+            return new ActionDisposable(() =>
             {
                 delayTask.Stop();
                 innerDisposable.Dispose();

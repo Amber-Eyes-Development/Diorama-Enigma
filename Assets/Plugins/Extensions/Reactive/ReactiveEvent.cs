@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Extensions.Helpers;
 
 namespace Extensions.Reactive
 {
@@ -17,18 +18,18 @@ namespace Extensions.Reactive
         /// </summary>
         /// <param name="callback">Событие</param>
         /// <returns>Подписка на реактивный источник</returns>
-        public ReactiveSubscription Subscribe(Action callback)
+        public ActionDisposable Subscribe(Action callback)
         {
             if (subscribers.Contains(callback))
-                return new ReactiveSubscription(() => Unsubscribe(callback));
+                return new ActionDisposable(() => Unsubscribe(callback));
 
             subscribers.Add(callback);
 
-            return new ReactiveSubscription(() => Unsubscribe(callback));
+            return new ActionDisposable(() => Unsubscribe(callback));
         }
         
         /// <summary>
-        /// Альтернативный способ отписки без хранения ReactiveSubscription
+        /// Альтернативный способ отписки без хранения ActionDisposable
         /// </summary>
         /// <remarks>
         /// Не смешивать с Dispose() одной и той же подписки
@@ -87,18 +88,18 @@ namespace Extensions.Reactive
         /// </summary>
         /// <param name="callback">Событие</param>
         /// <returns>Подписка на реактивный источник</returns>
-        public ReactiveSubscription Subscribe(Action<T> callback)
+        public ActionDisposable Subscribe(Action<T> callback)
         {
             if (subscribers.Contains(callback))
-                return new ReactiveSubscription(() => Unsubscribe(callback));
+                return new ActionDisposable(() => Unsubscribe(callback));
 
             subscribers.Add(callback);
 
-            return new ReactiveSubscription(() => Unsubscribe(callback));
+            return new ActionDisposable(() => Unsubscribe(callback));
         }
         
         /// <summary>
-        /// Альтернативный способ отписки без хранения ReactiveSubscription
+        /// Альтернативный способ отписки без хранения ActionDisposable
         /// </summary>
         /// <remarks>
         /// Не смешивать с Dispose() одной и той же подписки

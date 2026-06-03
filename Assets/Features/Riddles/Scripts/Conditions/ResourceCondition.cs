@@ -36,7 +36,7 @@ namespace DioramaEnigma.Riddles
             if (resource.Value == requiredValue)
                 onSatisfied?.Invoke();
 
-            return new DelegateDisposable(() => resource.onValueChanged -= handler);
+            return new ActionDisposable(() => resource.onValueChanged -= handler);
         }
 
         /// <inheritdoc/>

@@ -32,7 +32,7 @@ namespace DioramaEnigma.Riddles
 
             hub.Subscribe(handler);
 
-            return new DelegateDisposable(() => hub.Unsubscribe(handler));
+            return new ActionDisposable(() => hub.Unsubscribe(handler));
         }
 
         /// <inheritdoc/>
