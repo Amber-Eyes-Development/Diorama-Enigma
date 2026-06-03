@@ -6,9 +6,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Визуальная реакция на наведение курсора на <see cref="InteractableObject"/>:
-    /// включение/выключение объектов и воспроизведение анимаций.
-    /// Размещается на том же GameObject.
+    /// Визуальная реакция на наведение курсора
     /// </summary>
     public sealed class InteractableHoverVisuals : MonoBehaviour
     {
@@ -26,7 +24,7 @@ namespace DioramaEnigma.Riddles
 
         private InteractableObject interactable;
 
-        #region Unity Lifecycle
+        #region MonoBehaviour
 
         private void Awake()
         {

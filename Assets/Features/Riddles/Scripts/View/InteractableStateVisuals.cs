@@ -7,32 +7,18 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Визуальная реакция на смену стейта <see cref="InteractableObject"/>.
-    /// Размещается на том же GameObject. Поддерживает два режима применения:
-    /// анимированный (нормальная игра) и тихий (<see cref="ApplySilent"/> —
-    /// для восстановления состояния после загрузки без воспроизведения анимаций).
+    /// Визуальная реакция на смену стейта объекта
     /// </summary>
     public sealed class InteractableStateVisuals : MonoBehaviour
     {
-        /// <summary>Конфигурация визуала для одного стейта</summary>
+        /// <summary> Визуал для одного стейта </summary>
         [Serializable]
         public struct StateConfig
         {
-            [Tooltip("Индекс стейта из InteractableObject")]
             public int StateIndex;
-
-            [Tooltip("Объекты, которые включаются при переходе в этот стейт")]
             public GameObject[] ObjectsToEnable;
-
-            [Tooltip("Объекты, которые выключаются при переходе в этот стейт")]
             public GameObject[] ObjectsToDisable;
-
-            [Tooltip("DOTweenAnimation, воспроизводимый при переходе в этот стейт. " +
-                     "При тихом восстановлении — прокручивается к конечному состоянию без анимации.")]
             public DOTweenAnimation Animation;
-
-            [Tooltip("AnimationSequencer, запускаемый при переходе в этот стейт. " +
-                     "При тихом восстановлении — не воспроизводится.")]
             public AnimationSequencer Sequencer;
         }
 
@@ -40,7 +26,7 @@ namespace DioramaEnigma.Riddles
 
         private InteractableObject interactable;
 
-        #region Unity Lifecycle
+        #region MonoBehaviour
 
         private void Awake()
         {
@@ -56,8 +42,6 @@ namespace DioramaEnigma.Riddles
 
             interactable.State.onStateChanged += OnStateChanged;
 
-            // Восстановить визуал текущего стейта без анимации —
-            // нужно при загрузке сохранения или повторном включении объекта.
             if (interactable.State.Current != 0)
                 ApplySilent(interactable.State.Current);
         }
@@ -70,17 +54,10 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        /// <summary>
-        /// Применить визуал стейта с анимациями (нормальная игра).
-        /// </summary>
+        /// <summary> Применить визуал состояния с анимациями </summary>
         public void Apply(int stateIndex) => ApplyInternal(stateIndex, silent: false);
 
-        /// <summary>
-        /// Применить визуал стейта без анимаций.
-        /// Включает/выключает объекты немедленно; DOTweenAnimation прокручивается к конечному
-        /// состоянию без воспроизведения; AnimationSequencer пропускается.
-        /// Вызывается автоматически при загрузке сохранения.
-        /// </summary>
+        /// <summary> Применить визуал состояния без анимаций (восстановление после загрузки) </summary>
         public void ApplySilent(int stateIndex) => ApplyInternal(stateIndex, silent: true);
 
         #region Internal
@@ -97,7 +74,6 @@ namespace DioramaEnigma.Riddles
                 return;
             }
 
-            // Стейт 0 не требует конфига — объект уже в начальном визуальном состоянии
             if (stateIndex != 0)
                 ServiceDebug.LogWarning(this, $"StateConfig для стейта {stateIndex} не найден");
         }
@@ -115,7 +91,6 @@ namespace DioramaEnigma.Riddles
             if (config.Animation != null)
             {
                 config.Animation.DORestart();
-                // В тихом режиме мгновенно прокручиваем к конечному состоянию
                 if (silent) config.Animation.DOComplete();
             }
 

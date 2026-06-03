@@ -7,29 +7,24 @@ using UnityEngine.Audio;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Воспроизводит звук при смене стейта <see cref="InteractableObject"/>.
-    /// Каждому стейту назначается свой <see cref="AudioResource"/>.
-    /// Размещается на том же GameObject.
+    /// Звук при смене состояния объекта
     /// </summary>
     public sealed class InteractableClickSoundsPlayer : BaseAudioPlayer
     {
-        /// <summary>Звук для одного стейта</summary>
+        /// <summary> Звук для одного состояния </summary>
         [Serializable]
         public struct StateSound
         {
-            [Tooltip("Индекс стейта из InteractableObject")]
             public int StateIndex;
-
-            [Tooltip("Звук, воспроизводимый при переходе в этот стейт")]
             public AudioResource Sound;
         }
 
-        [Header("Звуки по стейтам"), Space]
+        [Header("Звуки по состояниям"), Space]
         [SerializeField] private StateSound[] stateSounds;
 
         private InteractableObject interactable;
 
-        #region Unity Lifecycle
+        #region MonoBehaviour
 
         private void Awake()
         {
@@ -57,8 +52,6 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        #region Internal
-
         private void OnStateChanged(int stateIndex)
         {
             foreach (var stateSound in stateSounds)
@@ -70,7 +63,5 @@ namespace DioramaEnigma.Riddles
                 return;
             }
         }
-
-        #endregion
     }
 }

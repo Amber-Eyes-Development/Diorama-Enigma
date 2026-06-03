@@ -6,9 +6,7 @@ using UnityEngine.Audio;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Воспроизводит звуки при наведении и уходе курсора с <see cref="InteractableObject"/>.
-    /// Размещается на том же GameObject. Наследует <see cref="BaseAudioPlayer"/> —
-    /// звук учитывает аудио-модель, пространственный пресет и настройку громкости.
+    /// Звук при наведении и уходе курсора
     /// </summary>
     public sealed class InteractableHoverSoundsPlayer : BaseAudioPlayer
     {
@@ -18,7 +16,7 @@ namespace DioramaEnigma.Riddles
 
         private InteractableObject interactable;
 
-        #region Unity Lifecycle
+        #region MonoBehaviour
 
         private void Awake()
         {
@@ -46,15 +44,11 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        #region Internal
-
         private void OnHoverChanged(bool isHovered)
         {
             AudioResource sound = isHovered ? enterSound : exitSound;
 
             if (sound != null) Play(sound);
         }
-
-        #endregion
     }
 }

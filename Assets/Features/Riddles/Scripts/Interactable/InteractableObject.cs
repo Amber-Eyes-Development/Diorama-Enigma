@@ -9,50 +9,50 @@ using UnityEngine.EventSystems;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Интерактивный объект сцены. Обрабатывает клик (цикличное переключение стейта),
-    /// дрэг к зонам приземления и наведение курсора. Публикует события через <see cref="RiddleContext.Hub"/>.
-    /// Поддерживает блокировку (<see cref="SetInteractableLockEffect"/>)
-    /// и сброс стейта при рестарте последовательности.
+    /// Интерактивный объект сцены: клик, дрэг и наведение
     /// </summary>
     public sealed class InteractableObject : MonoBehaviour,
         IPointerClickHandler,
         IPointerEnterHandler, IPointerExitHandler,
         IBeginDragHandler, IDragHandler, IEndDragHandler
     {
-        /// <summary>Событие наведения/ухода курсора (true — наведён, false — ушёл). Не вызывается когда объект заблокирован.</summary>
+        /// <summary> Наведение курсора (true — наведён, false — ушёл) </summary>
         public event Action<bool> onHoverChanged;
 
-        /// <summary>Текущий стейт объекта</summary>
+        /// <summary> Текущее активное состояние </summary>
         public InteractableState State => state;
-
-        /// <summary>ID объекта из привязанного InteractableID-ассета</summary>
+        /// <summary> ID объекта </summary>
         public string Id => interactableId != null ? interactableId.Id : string.Empty;
-
-        /// <summary>Заблокирован ли объект в данный момент</summary>
+        /// <summary> Заблокирован ли объект </summary>
         public bool IsLocked => isLocked;
 
-        [Header("Идентификация")]
+        #region  Параметры
+        
+        [Header("Идентификация"), Space]
         [SerializeField] private InteractableID interactableId;
 
-        [Header("Взаимодействие")]
-        [Tooltip("Количество стейтов, циклично переключаемых по клику")]
+        [Header("Взаимодействие"), Space]
+        [Tooltip("Количество состояний, циклично переключаемых по клику")]
+        [Min(2)]
         [SerializeField] private int stateCount = 2;
         [SerializeField] private bool isClickable = true;
         [SerializeField] private bool isDraggable = false;
 
-        [Header("Блокировка")]
+        [Header("Блокировка"), Space]
         [Tooltip("Заблокирован при старте и при сбросе последовательности. " +
                  "Разблокировать через SetInteractableLockEffect в ActivationEffects нужного шага.")]
         [SerializeField] private bool startsLocked = false;
 
-        [Header("Сброс")]
+        [Header("Сброс"), Space]
         [Tooltip("Сбросить стейт и блокировку при получении PuzzleSequenceResetEvent")]
         [SerializeField] private bool resetOnSequenceReset = false;
 
-        [Header("Сохранение")]
+        [Header("Сохранение"), Space]
         [Tooltip("Сохранять и восстанавливать стейт между сессиями. " +
                  "Ключ сохранения — ID из InteractableID-ассета.")]
         [SerializeField] private bool saveState = false;
+        
+        #endregion
 
         private InteractableState state;
         private bool isLocked;
@@ -60,7 +60,7 @@ namespace DioramaEnigma.Riddles
         private float dragDepth;
         private EventHub hub;
 
-        #region Unity Lifecycle
+        #region MonoBehaviour
 
         private void Awake()
         {
@@ -100,7 +100,7 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        #region Click
+        #region Нажатие
 
         public void OnPointerClick(PointerEventData eventData)
         {
@@ -130,7 +130,7 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        #region Drag
+        #region Перетаскивание
 
         public void OnBeginDrag(PointerEventData eventData)
         {
@@ -165,12 +165,12 @@ namespace DioramaEnigma.Riddles
                     dropZone.ReceiveDrop(this);
                     return;
                 }
-        }
+            }
         }
 
         #endregion
 
-        /// <summary>Вызывается зоной приземления — публикует событие дропа</summary>
+        /// <summary>Принять дроп от зоны приземления</summary>
         public void OnDroppedOnZone(DropZoneObject zone)
         {
             if (zone == null)

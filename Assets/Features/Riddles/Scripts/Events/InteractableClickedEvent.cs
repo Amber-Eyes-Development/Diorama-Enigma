@@ -1,5 +1,8 @@
 namespace DioramaEnigma.Riddles
 {
+    /// <summary>
+    /// Игровое событие: объект сменил стейт по клику
+    /// </summary>
     public readonly struct InteractableClickedEvent
     {
         public readonly string InteractableId;

@@ -1,21 +1,20 @@
 using System;
 using Extensions.Events;
+using Extensions.Helpers;
 using Extensions.ScriptableValues;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Условие выполнено, когда <see cref="BoolValue"/>-ресурс принимает нужное значение.
-    /// Проверяется немедленно при активации (ресурс мог быть выдан раньше).
+    /// Условие шага паззла, выполняемое при принятии ресурсом заданного значение
     /// </summary>
     [Serializable]
     public sealed class ResourceCondition : PuzzleCondition
     {
-        /// <summary>Отслеживаемый ресурс</summary>
+        /// <summary> Отслеживаемый ресурс </summary>
         public BoolValue Resource => resource;
-
-        /// <summary>Значение, при котором условие считается выполненным</summary>
+        /// <summary>Требуемое значение</summary>
         public bool RequiredValue => requiredValue;
 
         [SerializeField] private BoolValue resource;
@@ -24,6 +23,8 @@ namespace DioramaEnigma.Riddles
         /// <inheritdoc/>
         public override IDisposable Activate(EventHub hub, Action onSatisfied, Action onFailed = null)
         {
+            if (Logic.IsNull(resource, nameof(resource))) return null;
+
             Action<bool> handler = value =>
             {
                 if (value == requiredValue)

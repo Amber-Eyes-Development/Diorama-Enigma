@@ -1,5 +1,8 @@
 namespace DioramaEnigma.Riddles
 {
+    /// <summary>
+    /// Игровое событие: шаг последовательности провален
+    /// </summary>
     public readonly struct PuzzleStepFailedEvent
     {
         public readonly string SequenceId;

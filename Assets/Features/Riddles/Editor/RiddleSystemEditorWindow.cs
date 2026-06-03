@@ -6,8 +6,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Окно редактора системы загадок: список шагов слева, детали выбранного шага справа.
-    /// Открыть через меню Diorama Enigma → Riddle System Editor.
+    /// Окно обзора последовательности загадки
     /// </summary>
     public sealed class RiddleSystemEditorWindow : EditorWindow
     {

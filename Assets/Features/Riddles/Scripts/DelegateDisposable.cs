@@ -2,6 +2,9 @@ using System;
 
 namespace DioramaEnigma.Riddles
 {
+    /// <summary>
+    /// IDisposable, вызывающий делегат при Dispose
+    /// </summary>
     internal sealed class DelegateDisposable : IDisposable
     {
         private Action onDispose;

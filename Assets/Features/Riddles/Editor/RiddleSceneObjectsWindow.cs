@@ -6,9 +6,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Окно обзора интерактивных объектов и зон приземления в активной сцене.
-    /// Показывает ID, в Play Mode — текущий стейт и блокировку. Открыть через
-    /// меню Diorama Enigma → Riddle Scene Objects или кнопкой из Riddle System Editor.
+    /// Окно обзора интерактивных объектов и зон в сцене
     /// </summary>
     public sealed class RiddleSceneObjectsWindow : EditorWindow
     {

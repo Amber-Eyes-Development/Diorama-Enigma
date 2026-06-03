@@ -1,14 +1,12 @@
 using System;
 using Extensions.Events;
-using Extensions.Log;
+using Extensions.Helpers;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Эффект: блокирует или разблокирует <see cref="InteractableObject"/> по ID.
-    /// Используется в <see cref="PuzzleStep.ActivationEffects"/> для разблокировки объекта
-    /// при старте шага и в <see cref="PuzzleStep.Effects"/> — для повторной блокировки после завершения.
+    /// Эффект шага паззла, изменяющий состояние интерактивности объекта на сцене
     /// </summary>
     [Serializable]
     public sealed class SetInteractableLockEffect : PuzzleEffect
@@ -19,11 +17,7 @@ namespace DioramaEnigma.Riddles
         /// <inheritdoc/>
         public override void Execute(EventHub hub)
         {
-            if (targetId == null)
-            {
-                ServiceDebug.LogWarning<SetInteractableLockEffect>("targetId не назначен");
-                return;
-            }
+            if (Logic.IsNull(targetId, nameof(targetId))) return;
 
             hub.Publish(new InteractableLockChangedEvent(targetId.Id, isLocked));
         }

@@ -5,31 +5,29 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Один шаг пазла: набор условий (AND-логика) и эффекты при активации/завершении/провале.
-    /// Хранится инлайн внутри <see cref="PuzzleSequence"/> — отдельным ассетом не является.
+    /// Данные шага пазла: условия и эффекты
     /// </summary>
     [Serializable]
     public sealed class PuzzleStep
     {
-        /// <summary>Метка для отображения в редакторе</summary>
+        /// <summary> Метка шага </summary>
         public string StepLabel => stepLabel;
 
-        /// <summary>Условия шага (все должны выполниться)</summary>
+        /// <summary> Условия (AND) </summary>
         public IReadOnlyList<PuzzleCondition> Conditions => conditions;
 
-        /// <summary>Эффекты, выполняемые при активации шага (до ожидания условий)</summary>
+        /// <summary> Эффекты при активации </summary>
         public IReadOnlyList<PuzzleEffect> ActivationEffects => activationEffects;
 
-        /// <summary>Эффекты, выполняемые при завершении шага</summary>
+        /// <summary> Эффекты при завершении </summary>
         public IReadOnlyList<PuzzleEffect> Effects => effects;
 
-        /// <summary>Эффекты, выполняемые при провале шага</summary>
+        /// <summary> Эффекты при провале </summary>
         public IReadOnlyList<PuzzleEffect> FailureEffects => failureEffects;
 
         [SerializeField] private string stepLabel;
         [SerializeReference] private PuzzleCondition[] conditions = Array.Empty<PuzzleCondition>();
-        [Tooltip("Выполняются сразу при активации шага — до ожидания условий. " +
-                 "Используйте для разблокировки объектов (SetInteractableLockEffect).")]
+        [Tooltip("Выполняются при активации шага — до ожидания условий")]
         [SerializeReference] private PuzzleEffect[] activationEffects = Array.Empty<PuzzleEffect>();
         [SerializeReference] private PuzzleEffect[] effects = Array.Empty<PuzzleEffect>();
         [SerializeReference] private PuzzleEffect[] failureEffects = Array.Empty<PuzzleEffect>();

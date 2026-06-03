@@ -1,25 +1,18 @@
 using Extensions.Events;
-using Extensions.Log;
 using Extensions.Singleton;
-using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Сцено-уровневый контекст системы загадок. Размещается один раз в сцене.
-    /// Хранит <see cref="EventHub"/> и предоставляет его всем компонентам системы через <see cref="Instance"/>.
+    /// Сцено-уровневый контекст системы загадок
     /// </summary>
     public sealed class RiddleContext : MonoBehaviourSingleton<RiddleContext>
     {
-        /// <summary>Хаб событий системы загадок</summary>
-        public EventHub Hub { get; private set; }
+        /// <summary>Хаб событий</summary>
+        public EventHub Hub => hub ??= new EventHub();
 
-        protected override void Awake()
-        {
-            base.Awake();
-            Hub = new EventHub();
-        }
+        private EventHub hub;
 
-        private void OnDestroy() => Hub?.Clear();
+        private void OnDestroy() => hub?.Clear();
     }
 }

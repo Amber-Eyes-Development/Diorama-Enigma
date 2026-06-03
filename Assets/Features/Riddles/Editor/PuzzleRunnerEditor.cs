@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace DioramaEnigma.Riddles.Editor
 {
+    /// <summary>
+    /// Инспектор PuzzleRunner с debug-панелью в Play Mode
+    /// </summary>
     [CustomEditor(typeof(PuzzleRunner))]
     public sealed class PuzzleRunnerEditor : UnityEditor.Editor
     {

@@ -5,31 +5,28 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Последовательность шагов пазла с поддержкой параллельных групп.
-    /// Единственный ассет системы — шаги, условия и эффекты хранятся инлайн.
-    /// Шаги с одинаковым <see cref="StepEntry.GroupIndex"/> активируются одновременно;
-    /// следующая группа стартует только после завершения всей текущей.
+    /// Последовательность шагов пазла
     /// </summary>
     [CreateAssetMenu(menuName = "Riddles/PuzzleSequence", fileName = nameof(PuzzleSequence))]
     public sealed class PuzzleSequence : ScriptableObject
     {
-        /// <summary>Метка для отображения в редакторе и в событиях</summary>
+        /// <summary> Метка последовательности </summary>
         public string SequenceLabel => sequenceLabel;
 
-        /// <summary>Все шаги последовательности</summary>
+        /// <summary> Шаги последовательности </summary>
         public IReadOnlyList<StepEntry> Steps => steps;
 
         [SerializeField] private string sequenceLabel;
         [SerializeField] private StepEntry[] steps;
 
-        /// <summary>Шаг последовательности с индексом параллельной группы</summary>
+        /// <summary> Шаг с индексом параллельной группы </summary>
         [Serializable]
         public sealed class StepEntry
         {
             [SerializeReference] public PuzzleStep Step;
 
-            [Tooltip("Шаги с одинаковым GroupIndex активируются одновременно (параллельно). " +
-                     "Следующая группа стартует только после завершения всех шагов текущей.")]
+            [Tooltip("Шаги с одинаковым GroupIndex активируются одновременно. " +
+                     "Следующая группа стартует после завершения текущей")]
             public int GroupIndex;
         }
     }

@@ -9,34 +9,29 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Исполнитель <see cref="PuzzleSequence"/>. Активирует группы шагов поочерёдно,
-    /// дожидается выполнения всех условий каждого шага и переходит к следующей группе.
-    /// При провале любого условия — приостанавливается и уведомляет внешние системы.
-    /// Поддерживает сохранение и восстановление прогресса между сессиями.
-    /// Полностью событийный — без корутин.
+    /// Исполнитель последовательности пазла
     /// </summary>
     public sealed class PuzzleRunner : MonoBehaviour
     {
-        /// <summary>Вызывается при завершении всей последовательности</summary>
+        /// <summary>Последовательность завершена</summary>
         public event Action onSequenceCompleted;
-
-        /// <summary>
-        /// Вызывается при провале любого шага текущей группы.
-        /// Последовательность приостанавливается — вызвать <see cref="RestartStep"/>
-        /// или <see cref="RestartSequence"/> для продолжения.
-        /// </summary>
+        /// <summary>Шаг провален; последовательность приостановлена</summary>
         public event Action<PuzzleStep> onStepFailed;
 
+        #region Параметры
+        
         [SerializeField] private PuzzleSequence sequence;
         [Tooltip("Запустить последовательность автоматически при включении объекта")]
         [SerializeField] private bool startOnEnable = true;
 
-        [Header("Сохранение")]
+        [Header("Сохранение"), Space]
         [Tooltip("Сохранять и восстанавливать прогресс между сессиями. " +
                  "Прогресс сохраняется по завершении каждой группы шагов.")]
         [SerializeField] private bool saveProgress = false;
-        [Tooltip("Авто-генерируется при добавлении компонента. Не менять после выпуска.")]
+        [Tooltip("Ключ сохранения. Не менять после выпуска!")]
         [SerializeField] private string saveKey;
+        
+        #endregion
 
         private int currentGroupIndex;
         private EventHub hub;
@@ -44,7 +39,7 @@ namespace DioramaEnigma.Riddles
         private readonly Dictionary<PuzzleStep, List<IDisposable>> activeSubscriptions = new();
         private readonly Dictionary<PuzzleStep, int> pendingConditionCounts = new();
 
-        #region Unity Lifecycle
+        #region MonoBehaviour
 
         private void Awake()
         {
@@ -73,12 +68,11 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        /// <summary>
-        /// Запустить последовательность. Если включено сохранение прогресса —
-        /// возобновляет с последней завершённой группы без сброса объектов сцены.
-        /// </summary>
+        /// <summary> Запустить последовательность (с возобновлением, если включено сохранение) </summary>
         public void StartSequence()
         {
+            if (sequence == null) return;
+
             StopSequence();
 
             int startGroup = LoadProgress();
@@ -94,18 +88,18 @@ namespace DioramaEnigma.Riddles
             AdvanceToNextGroup();
         }
 
-        /// <summary>Остановить выполнение и снять все активные подписки</summary>
+        /// <summary> Остановить выполнение и снять все активные подписки </summary>
         public void StopSequence()
         {
             foreach (var subscriptions in activeSubscriptions.Values)
                 foreach (var disposable in subscriptions)
-                    disposable.Dispose();
+                    disposable?.Dispose();
 
             activeSubscriptions.Clear();
             pendingConditionCounts.Clear();
         }
 
-        /// <summary>Полностью сбросить прогресс и перезапустить с первого шага</summary>
+        /// <summary> Сбросить прогресс и перезапустить с первого шага </summary>
         public void RestartSequence()
         {
             EraseProgress();
@@ -113,10 +107,7 @@ namespace DioramaEnigma.Riddles
             StartSequence();
         }
 
-        /// <summary>
-        /// Перезапустить текущую группу шагов после провала.
-        /// Вызывать из обработчика <see cref="onStepFailed"/> или внешней системы.
-        /// </summary>
+        /// <summary>Перезапустить текущую группу шагов после провала</summary>
         public void RestartStep()
         {
             StopSequence();
@@ -222,7 +213,8 @@ namespace DioramaEnigma.Riddles
                         OnConditionFailed(capturedStep);
                     });
 
-                activeSubscriptions[step].Add(subscription);
+                if (subscription != null)
+                    activeSubscriptions[step].Add(subscription);
             }
         }
 
@@ -253,7 +245,7 @@ namespace DioramaEnigma.Riddles
         {
             if (activeSubscriptions.TryGetValue(step, out var subscriptions))
             {
-                foreach (var d in subscriptions) d.Dispose();
+                foreach (var d in subscriptions) d?.Dispose();
                 activeSubscriptions.Remove(step);
             }
 
@@ -274,16 +266,13 @@ namespace DioramaEnigma.Riddles
 
 #if UNITY_EDITOR
 
-        /// <summary>Текущий индекс активной группы (только для редактора)</summary>
+        /// <summary>Текущий индекс активной группы</summary>
         public int Editor_CurrentGroupIndex => currentGroupIndex;
 
-        /// <summary>Шаги, ожидающие выполнения в текущей группе (только для редактора)</summary>
+        /// <summary>Шаги, ожидающие выполнения</summary>
         public IEnumerable<PuzzleStep> Editor_ActiveSteps => activeSubscriptions.Keys;
 
-        /// <summary>
-        /// Принудительно завершить все активные шаги текущей группы и перейти к следующей.
-        /// Эффекты завершения выполняются, прогресс сохраняется. Только для редактора/тестирования.
-        /// </summary>
+        /// <summary>Принудительно завершить активные шаги группы</summary>
         public void Editor_ForceCompleteCurrentGroup()
         {
             var steps = new List<PuzzleStep>(activeSubscriptions.Keys);

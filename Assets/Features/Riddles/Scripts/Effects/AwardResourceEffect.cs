@@ -1,14 +1,13 @@
 using System;
 using Extensions.Events;
-using Extensions.Log;
+using Extensions.Helpers;
 using Extensions.ScriptableValues;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Эффект: устанавливает значение <see cref="BoolValue"/>-ресурса.
-    /// Используется для выдачи или изъятия предметов/флагов.
+    /// Эффект шага паззла, устанавливающий значение ресурса
     /// </summary>
     [Serializable]
     public sealed class AwardResourceEffect : PuzzleEffect
@@ -19,11 +18,7 @@ namespace DioramaEnigma.Riddles
         /// <inheritdoc/>
         public override void Execute(EventHub hub)
         {
-            if (resource == null)
-            {
-                ServiceDebug.LogWarning<AwardResourceEffect>("resource не назначен");
-                return;
-            }
+            if (Logic.IsNull(resource, nameof(resource))) return;
 
             resource.SetValue(valueToSet);
         }

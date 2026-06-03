@@ -2,29 +2,26 @@ using System;
 using System.Collections;
 using Extensions.Coroutines;
 using Extensions.Events;
+using Extensions.Helpers;
 using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Обёртка над любым условием: добавляет задержку перед засчётом выполнения.
-    /// Используется для синхронизации с анимациями — условие срабатывает,
-    /// но шаг засчитывается только после <see cref="delaySeconds"/>.
-    /// Провал передаётся немедленно без задержки.
-    /// При отмене шага (Dispose) отложенный вызов отменяется.
+    /// Обёртка выполнения условия шага паззла с задержкой 
     /// </summary>
     [Serializable]
     public sealed class DelayedCondition : PuzzleCondition
     {
-        /// <summary>Внутреннее условие</summary>
+        /// <summary> Вложенное условие </summary>
         public PuzzleCondition Inner => inner;
-
-        /// <summary>Задержка в секундах между срабатыванием условия и засчётом шага</summary>
+        /// <summary> Задержка в секундах </summary>
         public float DelaySeconds => delaySeconds;
 
         [SerializeReference] private PuzzleCondition inner;
         [Tooltip("Задержка в секундах — обычно равна длине анимации объекта")]
+        [Range(0f, 5f)]
         [SerializeField] private float delaySeconds = 1f;
 
         /// <inheritdoc/>

@@ -6,8 +6,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Инспектор PuzzleSequence: inline-редактирование шагов, условий и эффектов
-    /// (хранятся через [SerializeReference]), управление порядком групп.
+    /// Инспектор PuzzleSequence с inline-редактированием шагов и групп
     /// </summary>
     [CustomEditor(typeof(PuzzleSequence))]
     public sealed class PuzzleSequenceEditor : UnityEditor.Editor

@@ -1,5 +1,8 @@
 namespace DioramaEnigma.Riddles
 {
+    /// <summary>
+    /// Игровое событие: объект перетащен в зону приземления
+    /// </summary>
     public readonly struct InteractableDraggedEvent
     {
         public readonly string InteractableId;
