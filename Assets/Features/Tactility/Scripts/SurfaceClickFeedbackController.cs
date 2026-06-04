@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Extensions.Audio;
+using Extensions.Generics.Input;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.EventSystems;
@@ -10,7 +11,7 @@ namespace DioramaEnigma.Tactility
     /// <summary>
     /// Глобальный контроллер обратной тактильной связи по клику на объект
     /// </summary>
-    public sealed class SurfaceClickFeedbackController : MonoBehaviour
+    public sealed class SurfaceClickFeedbackController : AbstractInputAction
     {
         [Header("Рейкаст"), Space]
         [Tooltip("Камера для рейкаста. Если не задана — Camera.main")]
@@ -46,16 +47,14 @@ namespace DioramaEnigma.Tactility
             if (targetCamera == null) targetCamera = Camera.main;
         }
 
-        private void Update()
+        protected override void OnInputPerformed()
         {
-            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
-
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             if (targetCamera == null) targetCamera = Camera.main;
-            if (targetCamera == null) return;
+            if (targetCamera == null || Pointer.current == null) return;
 
-            Ray ray = targetCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            Ray ray = targetCamera.ScreenPointToRay(Pointer.current.position.ReadValue());
             if (!Physics.Raycast(ray, out RaycastHit hit, maxDistance, clickMask)) return;
 
             PlaySound(hit);
