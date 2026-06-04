@@ -4,8 +4,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Переключение активности объекта: ссылка на объект + целевое состояние.
-    /// Заменяет параллельные массивы «включить / выключить» одним списком.
+    /// Переключение активности объекта
     /// </summary>
     [Serializable]
     public struct GameObjectActivation
