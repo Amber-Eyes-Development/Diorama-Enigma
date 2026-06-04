@@ -10,14 +10,12 @@ namespace DioramaEnigma.Riddles
     public sealed class InteractableHoverVisuals : InteractableViewBehaviour
     {
         [Header("При наведении"), Space]
-        [SerializeField] private GameObject[] objectsToEnableOnEnter;
-        [SerializeField] private GameObject[] objectsToDisableOnEnter;
+        [SerializeField] private GameObjectActivation[] objectsOnEnter;
         [SerializeField] private DOTweenAnimation enterAnimation;
         [SerializeField] private AnimationSequencer enterSequencer;
 
         [Header("При уходе"), Space]
-        [SerializeField] private GameObject[] objectsToEnableOnExit;
-        [SerializeField] private GameObject[] objectsToDisableOnExit;
+        [SerializeField] private GameObjectActivation[] objectsOnExit;
         [SerializeField] private DOTweenAnimation exitAnimation;
         [SerializeField] private AnimationSequencer exitSequencer;
 
@@ -35,25 +33,16 @@ namespace DioramaEnigma.Riddles
 
         private void OnHoverEnter()
         {
-            SetActive(objectsToEnableOnEnter, true);
-            SetActive(objectsToDisableOnEnter, false);
+            objectsOnEnter.Apply();
             enterAnimation?.DORestart();
             enterSequencer?.Play();
         }
 
         private void OnHoverExit()
         {
-            SetActive(objectsToEnableOnExit, true);
-            SetActive(objectsToDisableOnExit, false);
+            objectsOnExit.Apply();
             exitAnimation?.DORestart();
             exitSequencer?.Play();
-        }
-
-        private static void SetActive(GameObject[] objects, bool active)
-        {
-            if (objects == null) return;
-            foreach (var obj in objects)
-                if (obj != null) obj.SetActive(active);
         }
 
         #endregion

@@ -16,8 +16,7 @@ namespace DioramaEnigma.Riddles
         public struct StateConfig
         {
             public int StateIndex;
-            public GameObject[] ObjectsToEnable;
-            public GameObject[] ObjectsToDisable;
+            public GameObjectActivation[] Objects;
             public DOTweenAnimation Animation;
             public AnimationSequencer Sequencer;
         }
@@ -60,13 +59,7 @@ namespace DioramaEnigma.Riddles
 
         private void ApplyConfig(StateConfig config, bool silent)
         {
-            if (config.ObjectsToEnable != null)
-                foreach (var obj in config.ObjectsToEnable)
-                    if (obj != null) obj.SetActive(true);
-
-            if (config.ObjectsToDisable != null)
-                foreach (var obj in config.ObjectsToDisable)
-                    if (obj != null) obj.SetActive(false);
+            config.Objects.Apply();
 
             if (config.Animation != null)
             {
