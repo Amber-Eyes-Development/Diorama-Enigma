@@ -1,4 +1,4 @@
-#if RIDDLES_EDITOR_WIP
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,13 +13,14 @@ namespace DioramaEnigma.Riddles.Editor
         private void OnEnable() => EditorApplication.update += Repaint;
         private void OnDisable() => EditorApplication.update -= Repaint;
 
-        private static readonly Color ColorGroupLabel = new(0.6f, 0.9f, 1f);
-        private static readonly Color ColorActiveStep = new(0.4f, 1f, 0.5f);
-        private static readonly Color ColorButtonSkip = new(0.3f, 0.7f, 1f);
-        private static readonly Color ColorButtonRestart = new(1f, 0.6f, 0.3f);
+        private static readonly Color ColorGroupLabel  = new(0.6f, 0.9f, 1f);
+        private static readonly Color ColorDone        = new(0.4f, 1f, 0.5f);
+        private static readonly Color ColorPending     = new(1f, 0.85f, 0.35f);
+        private static readonly Color ColorButtonSkip  = new(0.3f, 0.7f, 1f);
+        private static readonly Color ColorButtonReset = new(1f, 0.6f, 0.3f);
 
         private GUIStyle groupLabelStyle;
-        private GUIStyle stepLabelStyle;
+        private GUIStyle stepNameStyle;
 
         public override void OnInspectorGUI()
         {
@@ -34,16 +35,16 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.Space(10);
             DrawSeparator(new Color(0.5f, 0.5f, 0.5f));
             EditorGUILayout.Space(4);
-
             EditorGUILayout.LabelField("Debug (Play Mode)", EditorStyles.boldLabel);
             EditorGUILayout.Space(4);
 
             DrawCurrentState(runner);
 
             EditorGUILayout.Space(6);
-
             DrawControls(runner);
         }
+
+        // ─── State ────────────────────────────────────────────────────────────
 
         private void DrawCurrentState(PuzzleRunner runner)
         {
@@ -57,19 +58,120 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.Space(2);
             EditorGUILayout.LabelField("Активные шаги:", EditorStyles.miniLabel);
 
-            bool hasActiveSteps = false;
+            bool any = false;
             foreach (var step in runner.Editor_ActiveSteps)
             {
-                hasActiveSteps = true;
-                string label = string.IsNullOrEmpty(step.StepLabel) ? "(без названия)" : step.StepLabel;
-                EditorGUILayout.LabelField($"  ● {label}", stepLabelStyle);
+                any = true;
+                DrawActiveStep(step);
             }
 
-            if (!hasActiveSteps)
+            if (!any)
                 EditorGUILayout.LabelField("  (нет активных шагов)", EditorStyles.miniLabel);
 
             EditorGUILayout.EndVertical();
         }
+
+        private void DrawActiveStep(IPuzzleStep step)
+        {
+            bool done = step.IsCompleted;
+            string name = string.IsNullOrEmpty(step.StepLabel) ? "(без названия)" : step.StepLabel;
+            string progress = GetStepProgressInfo(step);
+
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+
+            // Step name
+            var prevColor = GUI.contentColor;
+            GUI.contentColor = done ? ColorDone : Color.white;
+            EditorGUILayout.LabelField($"  ● {name}", stepNameStyle);
+            GUI.contentColor = prevColor;
+
+            // Progress info: val:X  →  target
+            if (!string.IsNullOrEmpty(progress))
+            {
+                prevColor = GUI.contentColor;
+                GUI.contentColor = done ? ColorDone : ColorPending;
+                EditorGUILayout.LabelField(progress, EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
+                GUI.contentColor = prevColor;
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        // ─── Progress info ────────────────────────────────────────────────────
+
+        private static string GetStepProgressInfo(IPuzzleStep step)
+        {
+            var asset = step as ScriptableObject;
+            if (asset == null) return string.Empty;
+
+            if (step is StateSetPuzzleStep intStep)
+            {
+                var so = new SerializedObject(asset);
+                var prop = so.FindProperty("acceptingStates");
+                string targets = prop != null ? IntArrayStr(prop) : "?";
+                return $"val:{intStep.Value}  →  [{targets}]";
+            }
+
+            if (step is BoolPuzzleStep boolStep)
+            {
+                var so = new SerializedObject(asset);
+                var prop = so.FindProperty("completedWhen");
+                string target = prop != null ? prop.boolValue.ToString().ToLower() : "?";
+                return $"val:{boolStep.Value}  →  {target}";
+            }
+
+            if (step is StringPuzzleStep strStep)
+            {
+                var so = new SerializedObject(asset);
+                var prop = so.FindProperty("acceptedValues");
+                string targets = prop != null ? StrArrayStr(prop) : "?";
+                return $"\"{strStep.Value}\"  →  {targets}";
+            }
+
+            if (step is CompositePuzzleStep)
+            {
+                var so = new SerializedObject(asset);
+                var childrenProp = so.FindProperty("children");
+                if (childrenProp == null) return string.Empty;
+
+                int total = childrenProp.arraySize;
+                int done = 0;
+                for (int i = 0; i < total; i++)
+                    if (childrenProp.GetArrayElementAtIndex(i).objectReferenceValue is IPuzzleStep child && child.IsCompleted)
+                        done++;
+                return $"{done}/{total} дочерних";
+            }
+
+            return string.Empty;
+        }
+
+        private static string IntArrayStr(SerializedProperty prop)
+        {
+            if (prop.arraySize == 0) return "∅";
+            var sb = new StringBuilder();
+            for (int i = 0; i < prop.arraySize; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(prop.GetArrayElementAtIndex(i).intValue);
+            }
+            return sb.ToString();
+        }
+
+        private static string StrArrayStr(SerializedProperty prop)
+        {
+            if (prop.arraySize == 0) return "∅";
+            var sb = new StringBuilder();
+            for (int i = 0; i < prop.arraySize; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append('"');
+                sb.Append(prop.GetArrayElementAtIndex(i).stringValue);
+                sb.Append('"');
+            }
+            return sb.ToString();
+        }
+
+        // ─── Controls ─────────────────────────────────────────────────────────
 
         private void DrawControls(PuzzleRunner runner)
         {
@@ -84,7 +186,7 @@ namespace DioramaEnigma.Riddles.Editor
                 EditorUtility.SetDirty(runner);
             }
 
-            GUI.backgroundColor = ColorButtonRestart;
+            GUI.backgroundColor = ColorButtonReset;
             if (GUILayout.Button("↺  Перезапустить", GUILayout.Height(28)))
             {
                 runner.RestartSequence();
@@ -103,13 +205,15 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
+        // ─── Helpers ──────────────────────────────────────────────────────────
+
         private void EnsureStyles()
         {
             groupLabelStyle ??= new GUIStyle(EditorStyles.boldLabel)
                 { normal = { textColor = ColorGroupLabel } };
 
-            stepLabelStyle ??= new GUIStyle(EditorStyles.miniLabel)
-                { normal = { textColor = ColorActiveStep } };
+            stepNameStyle ??= new GUIStyle(EditorStyles.miniLabel)
+                { normal = { textColor = ColorDone } };
         }
 
         private static void DrawSeparator(Color color)
@@ -119,4 +223,3 @@ namespace DioramaEnigma.Riddles.Editor
         }
     }
 }
-#endif

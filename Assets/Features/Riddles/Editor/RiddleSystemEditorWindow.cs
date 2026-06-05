@@ -1,6 +1,7 @@
-#if RIDDLES_EDITOR_WIP
 using System.Collections.Generic;
+using System;
 using Extensions.EditorTools;
+using Extensions.ScriptableValues;
 using UnityEditor;
 using UnityEngine;
 
@@ -21,7 +22,13 @@ namespace DioramaEnigma.Riddles.Editor
         private Vector2 leftScroll;
         private Vector2 rightScroll;
 
-        private readonly List<InteractableObject> sceneInteractables = new();
+        private struct InputLink
+        {
+            public MonoBehaviour Component;
+            public ScriptableObject StateAsset;
+        }
+
+        private readonly List<InputLink> sceneInputLinks = new();
         private double lastSceneRefreshTime;
 
         // ─── Styles (lazy) ────────────────────────────────────────────────────
@@ -32,7 +39,6 @@ namespace DioramaEnigma.Riddles.Editor
         private GUIStyle styleStepSelected;
         private GUIStyle styleGroupHeader;
         private GUIStyle styleSmall;
-        private GUIStyle styleTag;
 
         // ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +47,17 @@ namespace DioramaEnigma.Riddles.Editor
         {
             var window = GetWindow<RiddleSystemEditorWindow>("Riddle System Editor");
             window.minSize = new Vector2(640f, 420f);
+        }
+
+        /// <summary>Открыть окно и перейти к конкретному шагу</summary>
+        public static void Open(PuzzleSequence sequence, int stepIndex = -1)
+        {
+            var window = GetWindow<RiddleSystemEditorWindow>("Riddle System Editor");
+            window.minSize = new Vector2(640f, 420f);
+            if (sequence == null) return;
+            window.selectedSequence = sequence;
+            window.selectedStepIndex = stepIndex;
+            window.Repaint();
         }
 
         private void OnEnable()
@@ -187,11 +204,15 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawStepRow(PuzzleStep step, int index)
+        private void DrawStepRow(IPuzzleStep step, int index)
         {
             bool selected = index == selectedStepIndex;
+
             string label = step == null ? "○ (не назначен)" :
                 string.IsNullOrEmpty(step.StepLabel) ? $"Шаг {index}" : step.StepLabel;
+
+            if (Application.isPlaying && step != null)
+                label = (step.IsCompleted ? "✓ " : "● ") + label;
 
             var prevBg = GUI.backgroundColor;
             if (selected) GUI.backgroundColor = EditorToolsConstraints.COLOR_CYAN;
@@ -203,7 +224,10 @@ namespace DioramaEnigma.Riddles.Editor
                 GUI.FocusControl(null);
             }
 
+            var rowRect = GUILayoutUtility.GetLastRect();
             GUI.backgroundColor = prevBg;
+
+            if (step != null) HandleStepRowDrag(rowRect, step);
         }
 
         // ─── Right Panel ──────────────────────────────────────────────────────
@@ -233,82 +257,131 @@ namespace DioramaEnigma.Riddles.Editor
 
             if (step == null)
             {
-                EditorGUILayout.HelpBox("Шаг не назначен.", MessageType.Warning);
+                EditorGUILayout.HelpBox("Шаг не назначен. Назначьте ассет-шаг в инспекторе PuzzleSequence.", MessageType.Warning);
                 EditorGUILayout.EndVertical();
                 return;
             }
 
             rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
 
-            DrawConditionsBlock(step);
+            DrawStepInfoBlock(step);
             EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-            DrawEffectsBlock("▶  ПРИ АКТИВАЦИИ", step.ActivationEffects, EditorToolsConstraints.COLOR_YELLOW);
+            DrawLinkedInputsSection(step);
             EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-            DrawEffectsBlock("✓  ПРИ ЗАВЕРШЕНИИ", step.Effects, EditorToolsConstraints.COLOR_GREEN);
+            DrawEffectsBlock("▶  ПРИ АКТИВАЦИИ", entry.ActivationEffects, EditorToolsConstraints.COLOR_YELLOW);
             EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-            DrawEffectsBlock("✕  ПРИ ПРОВАЛЕ", step.FailureEffects, EditorToolsConstraints.COLOR_RED);
+            DrawEffectsBlock("✓  ПРИ ЗАВЕРШЕНИИ", entry.CompletionEffects, EditorToolsConstraints.COLOR_GREEN);
 
             EditorGUILayout.EndScrollView();
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawConditionsBlock(PuzzleStep step)
+        // ─── Step Info Block ──────────────────────────────────────────────────
+
+        private void DrawStepInfoBlock(IPuzzleStep step)
         {
-            ColorLabel("  УСЛОВИЯ", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
+            ColorLabel("  ШАГ", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
             DrawDividerH(EditorToolsConstraints.COLOR_CYAN * 0.4f);
             EditorGUILayout.Space(2);
 
-            if (step.Conditions.Count == 0)
+            EditorGUILayout.LabelField($"Тип: {step.GetType().Name}", styleSmall);
+
+            if (Application.isPlaying)
             {
-                EditorGUILayout.LabelField("  (нет — шаг завершается мгновенно при активации)", styleSmall);
-                return;
+                bool completed = step.IsCompleted;
+                string completedStr = completed ? "✓ завершён" : "● ожидание";
+                string valueStr = GetStepValueString(step);
+
+                Color prevColor = GUI.contentColor;
+                GUI.contentColor = completed ? EditorToolsConstraints.COLOR_GREEN : EditorToolsConstraints.COLOR_YELLOW;
+                EditorGUILayout.LabelField($"  {completedStr}  {valueStr}", styleSmall);
+                GUI.contentColor = prevColor;
             }
 
-            foreach (var cond in step.Conditions)
-            {
-                if (cond == null) { EditorGUILayout.LabelField("  ○ null", styleSmall); continue; }
-                DrawConditionRow(cond);
-            }
+            DrawGateInfo(step);
         }
 
-        private void DrawConditionRow(PuzzleCondition condition)
+        private void DrawGateInfo(IPuzzleStep step)
         {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            var stepAsset = step as ScriptableObject;
+            if (stepAsset == null) return;
 
-            EditorGUILayout.BeginHorizontal();
-            Color tagColor = GetConditionColor(condition);
-            ColorLabel($"[{GetConditionTypeName(condition)}]", tagColor, styleTag);
-            EditorGUILayout.LabelField(GetConditionSummary(condition), styleSmall);
-            EditorGUILayout.EndHorizontal();
+            var so = new SerializedObject(stepAsset);
+            var trackerProp = so.FindProperty("tracker");
+            if (trackerProp == null) return;
 
-            var linked = FindLinkedObject(condition);
-            if (linked != null)
-            {
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Space(10);
-                string playInfo = Application.isPlaying
-                    ? $"  state:{linked.State.Current} {(linked.IsLocked ? "🔒" : "🔓")}"
-                    : string.Empty;
-                ColorLabel($"→ {linked.gameObject.name} (сцена){playInfo}",
-                    EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSmall);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Ping", GUILayout.Width(44), GUILayout.Height(16)))
-                {
-                    Selection.activeGameObject = linked.gameObject;
-                    EditorGUIUtility.PingObject(linked.gameObject);
-                }
-                EditorGUILayout.EndHorizontal();
-            }
+            var gateProp = trackerProp.FindPropertyRelative("gate");
+            if (gateProp == null) return;
 
-            if (condition is DelayedCondition delayed && delayed.Inner != null)
-            {
-                EditorGUI.indentLevel++;
-                DrawConditionRow(delayed.Inner);
-                EditorGUI.indentLevel--;
-            }
+            EditorGUILayout.Space(2);
 
-            EditorGUILayout.EndVertical();
+            bool hasGate = !string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
+            string gateStr = hasGate ? GateSummary(gateProp) : "(нет)";
+            EditorGUILayout.LabelField($"Гейт: {gateStr}", styleSmall);
         }
+
+        private static string GetStepValueString(IPuzzleStep step) => step switch
+        {
+            StateSetPuzzleStep intStep => $"val:{intStep.Value}",
+            BoolPuzzleStep boolStep => $"val:{boolStep.Value}",
+            StringPuzzleStep strStep => $"val:\"{strStep.Value}\"",
+            _ => string.Empty,
+        };
+
+        private static string GateSummary(SerializedProperty gateProp)
+        {
+            string typeName = ManagedRefTypeName(gateProp);
+            var requiredProp = gateProp.FindPropertyRelative("requiredSteps");
+            if (requiredProp != null) return $"{typeName} [{requiredProp.arraySize} шагов]";
+            return typeName;
+        }
+
+        private static string ManagedRefTypeName(SerializedProperty prop)
+        {
+            string full = prop.managedReferenceFullTypename;
+            if (string.IsNullOrEmpty(full)) return string.Empty;
+            int dot = full.LastIndexOf('.');
+            return dot >= 0 ? full[(dot + 1)..] : full;
+        }
+
+        // ─── Linked Inputs Section ────────────────────────────────────────────
+
+        private void DrawLinkedInputsSection(IPuzzleStep step)
+        {
+            ColorLabel("  СВЯЗАННЫЕ ОБЪЕКТЫ (сцена)", EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSectionHeader);
+            DrawDividerH(EditorToolsConstraints.COLOR_LIGHT_GREEN * 0.4f);
+            EditorGUILayout.Space(2);
+
+            var stepAsset = step as ScriptableObject;
+            bool found = false;
+
+            if (stepAsset != null)
+            {
+                foreach (var link in sceneInputLinks)
+                {
+                    if (link.StateAsset != stepAsset || link.Component == null) continue;
+
+                    found = true;
+                    string typeName = link.Component.GetType().Name.Replace("Interactable", "");
+
+                    EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+                    ColorLabel($"→ {link.Component.gameObject.name}  [{typeName}]",
+                        EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSmall);
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Ping", GUILayout.Width(44), GUILayout.Height(16)))
+                    {
+                        Selection.activeGameObject = link.Component.gameObject;
+                        EditorGUIUtility.PingObject(link.Component.gameObject);
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
+            }
+
+            if (!found)
+                EditorGUILayout.LabelField("  (нет связанных объектов в сцене)", styleSmall);
+        }
+
+        // ─── Effects Block ────────────────────────────────────────────────────
 
         private void DrawEffectsBlock(string title, IReadOnlyList<PuzzleEffect> effects, Color color)
         {
@@ -332,63 +405,26 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        // ─── Condition Helpers ────────────────────────────────────────────────
-
-        private static string GetConditionTypeName(PuzzleCondition c) => c switch
-        {
-            DelayedCondition d => $"Delay +{d.DelaySeconds:0.##}s",
-            ClickCondition => "Click",
-            DragCondition => "Drag",
-            ResourceCondition => "Resource",
-            _ => c.GetType().Name.Replace("Condition", "")
-        };
-
-        private static string GetConditionSummary(PuzzleCondition c) => c switch
-        {
-            DelayedCondition d => d.Inner != null ? GetConditionSummary(d.Inner) : "?",
-            ClickCondition cc => $"{(cc.TargetId != null ? cc.TargetId.name : "?")} → state {cc.RequiredStateIndex}",
-            DragCondition d => $"{(d.DraggableId != null ? d.DraggableId.name : "?")} → {(d.DropZoneId != null ? d.DropZoneId.name : "?")}",
-            ResourceCondition r => $"{(r.Resource != null ? r.Resource.name : "?")} == {r.RequiredValue}",
-            _ => c.GetType().Name
-        };
-
-        private static Color GetConditionColor(PuzzleCondition c) => c switch
-        {
-            DelayedCondition => EditorToolsConstraints.COLOR_PURPLE,
-            ClickCondition => EditorToolsConstraints.COLOR_CYAN,
-            DragCondition => EditorToolsConstraints.COLOR_YELLOW,
-            ResourceCondition => EditorToolsConstraints.COLOR_GREEN,
-            _ => Color.white
-        };
-
-        private InteractableObject FindLinkedObject(PuzzleCondition condition)
-        {
-            string id = condition switch
-            {
-                DelayedCondition d when d.Inner is ClickCondition c => c.TargetId?.Id,
-                ClickCondition c => c.TargetId?.Id,
-                DragCondition d => d.DraggableId?.Id,
-                _ => null
-            };
-
-            if (id == null) return null;
-
-            foreach (var obj in sceneInteractables)
-                if (obj != null && obj.Id == id) return obj;
-
-            return null;
-        }
-
         // ─── Scene ────────────────────────────────────────────────────────────
 
         private void RefreshSceneObjects()
         {
             lastSceneRefreshTime = EditorApplication.timeSinceStartup;
-            sceneInteractables.Clear();
+            sceneInputLinks.Clear();
 
-#pragma warning disable CS0618
-            sceneInteractables.AddRange(FindObjectsOfType<InteractableObject>());
-#pragma warning restore CS0618
+            foreach (var click in FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None))
+            {
+                var so = new SerializedObject(click);
+                var stateRef = so.FindProperty("state")?.objectReferenceValue as ScriptableObject;
+                sceneInputLinks.Add(new InputLink { Component = click, StateAsset = stateRef });
+            }
+
+            foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
+            {
+                var so = new SerializedObject(drag);
+                var stateRef = so.FindProperty("state")?.objectReferenceValue as ScriptableObject;
+                sceneInputLinks.Add(new InputLink { Component = drag, StateAsset = stateRef });
+            }
         }
 
         // ─── Asset Creation ───────────────────────────────────────────────────
@@ -404,13 +440,15 @@ namespace DioramaEnigma.Riddles.Editor
             if (stepsProp.arraySize > 0)
             {
                 var last = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-                nextGroup = last.FindPropertyRelative("GroupIndex").intValue + 1;
+                nextGroup = last.FindPropertyRelative("groupIndex").intValue + 1;
             }
 
             stepsProp.arraySize++;
             var newEntry = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-            newEntry.FindPropertyRelative("Step").managedReferenceValue = new PuzzleStep();
-            newEntry.FindPropertyRelative("GroupIndex").intValue = nextGroup;
+            newEntry.FindPropertyRelative("step").objectReferenceValue = null;
+            newEntry.FindPropertyRelative("groupIndex").intValue = nextGroup;
+            newEntry.FindPropertyRelative("activationEffects").ClearArray();
+            newEntry.FindPropertyRelative("completionEffects").ClearArray();
             so.ApplyModifiedProperties();
 
             selectedStepIndex = stepsProp.arraySize - 1;
@@ -451,6 +489,81 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
         }
 
+        // ─── Drag-drop ────────────────────────────────────────────────────────
+
+        private void HandleStepRowDrag(Rect rowRect, IPuzzleStep step)
+        {
+            var evt = Event.current;
+            if (!rowRect.Contains(evt.mousePosition)) return;
+
+            var stepAsset = step as ScriptableObject;
+            if (stepAsset == null) return;
+
+            switch (evt.type)
+            {
+                case EventType.DragUpdated:
+                {
+                    var comp = GetDraggedInteractable();
+                    if (comp != null && CanAssign(stepAsset, comp))
+                    {
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+                        evt.Use();
+                    }
+                    break;
+                }
+                case EventType.DragPerform:
+                {
+                    var comp = GetDraggedInteractable();
+                    if (comp != null && CanAssign(stepAsset, comp))
+                    {
+                        DragAndDrop.AcceptDrag();
+                        AssignStepToInteractable(stepAsset, comp);
+                        RefreshSceneObjects();
+                        evt.Use();
+                    }
+                    break;
+                }
+                case EventType.Repaint:
+                {
+                    if (DragAndDrop.visualMode == DragAndDropVisualMode.Link)
+                    {
+                        var comp = GetDraggedInteractable();
+                        if (comp != null && CanAssign(stepAsset, comp))
+                            EditorGUI.DrawRect(rowRect, new Color(0.3f, 0.8f, 0.3f, 0.25f));
+                    }
+                    break;
+                }
+            }
+        }
+
+        private static MonoBehaviour GetDraggedInteractable()
+        {
+            foreach (var obj in DragAndDrop.objectReferences)
+            {
+                if (obj is not GameObject go) continue;
+                var click = go.GetComponent<ClickInteractable>();
+                if (click != null) return click;
+                var drag = go.GetComponent<DraggableInteractable>();
+                if (drag != null) return drag;
+            }
+            return null;
+        }
+
+        private static bool CanAssign(ScriptableObject stepAsset, MonoBehaviour interactable)
+        {
+            return (interactable is ClickInteractable && stepAsset is IntValue)
+                || (interactable is DraggableInteractable && stepAsset is BoolValue);
+        }
+
+        private static void AssignStepToInteractable(ScriptableObject stepAsset, MonoBehaviour interactable)
+        {
+            var so = new SerializedObject(interactable);
+            var stateProp = so.FindProperty("state");
+            if (stateProp == null) return;
+            stateProp.objectReferenceValue = stepAsset;
+            so.ApplyModifiedProperties();
+        }
+
         // ─── Styles ───────────────────────────────────────────────────────────
 
         private void EnsureStyles()
@@ -487,10 +600,6 @@ namespace DioramaEnigma.Riddles.Editor
             };
 
             styleSmall ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
-
-            styleTag ??= new GUIStyle(EditorStyles.miniLabel)
-                { fontStyle = FontStyle.Bold, fixedWidth = 90f };
         }
     }
 }
-#endif

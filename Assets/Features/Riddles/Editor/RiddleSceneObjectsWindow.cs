@@ -1,17 +1,31 @@
-#if RIDDLES_EDITOR_WIP
 using System.Collections.Generic;
 using Extensions.EditorTools;
+using Extensions.ScriptableValues;
 using UnityEditor;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Окно обзора интерактивных объектов и зон в сцене
+    /// Окно обзора интерактивных компонентов и зон в сцене
     /// </summary>
     public sealed class RiddleSceneObjectsWindow : EditorWindow
     {
-        private readonly List<InteractableObject> interactables = new();
+        private class ClickEntry
+        {
+            public ClickInteractable Component;
+            public IntValue StateRef;
+        }
+
+        private class DragEntry
+        {
+            public DraggableInteractable Component;
+            public BoolValue StateRef;
+            public string TargetZoneName;
+        }
+
+        private readonly List<ClickEntry> clicks = new();
+        private readonly List<DragEntry> drags = new();
         private readonly List<DropZoneObject> dropZones = new();
 
         private Vector2 scroll;
@@ -48,9 +62,10 @@ namespace DioramaEnigma.Riddles.Editor
         {
             EnsureStyles();
 
+            int total = clicks.Count + drags.Count;
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar,
                 GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
-            EditorGUILayout.LabelField($"Объектов: {interactables.Count}   Зон: {dropZones.Count}");
+            EditorGUILayout.LabelField($"Клик: {clicks.Count}   Перетаск: {drags.Count}   Зоны: {dropZones.Count}");
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("↺ Обновить", EditorStyles.toolbarButton, GUILayout.Width(90)))
                 Refresh();
@@ -58,36 +73,66 @@ namespace DioramaEnigma.Riddles.Editor
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
 
-            if (interactables.Count == 0 && dropZones.Count == 0)
+            if (total == 0 && dropZones.Count == 0)
             {
                 EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-                EditorGUILayout.LabelField("  InteractableObject и DropZoneObject в сцене не найдены", styleSmall);
+                EditorGUILayout.LabelField("  ClickInteractable, DraggableInteractable и DropZoneObject в сцене не найдены", styleSmall);
                 EditorGUILayout.EndScrollView();
                 return;
             }
 
-            if (interactables.Count > 0)
+            if (clicks.Count > 0)
             {
-                ColorLabel("  ИНТЕРАКТИВНЫЕ ОБЪЕКТЫ", EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSectionHeader);
-                foreach (var obj in interactables)
+                ColorLabel("  КЛИК", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
+                foreach (var entry in clicks)
                 {
-                    if (obj == null) continue;
-                    DrawRow(obj.gameObject, ObjectInfo(obj), EditorToolsConstraints.COLOR_LIGHT_GREEN);
+                    if (entry?.Component == null) continue;
+                    DrawRow(entry.Component.gameObject, ClickLabel(entry), EditorToolsConstraints.COLOR_CYAN);
+                }
+            }
+
+            if (drags.Count > 0)
+            {
+                EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+                ColorLabel("  ПЕРЕТАСКИВАНИЕ", EditorToolsConstraints.COLOR_YELLOW, styleSectionHeader);
+                foreach (var entry in drags)
+                {
+                    if (entry?.Component == null) continue;
+                    DrawRow(entry.Component.gameObject, DragLabel(entry), EditorToolsConstraints.COLOR_YELLOW);
                 }
             }
 
             if (dropZones.Count > 0)
             {
                 EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-                ColorLabel("  ЗОНЫ ПРИЗЕМЛЕНИЯ", EditorToolsConstraints.COLOR_YELLOW, styleSectionHeader);
+                ColorLabel("  ЗОНЫ ПРИЗЕМЛЕНИЯ", EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSectionHeader);
                 foreach (var zone in dropZones)
                 {
                     if (zone == null) continue;
-                    DrawRow(zone.gameObject, $"◈ {zone.gameObject.name}   id: {zone.ZoneId}", EditorToolsConstraints.COLOR_YELLOW);
+                    DrawRow(zone.gameObject, $"◈ {zone.gameObject.name}", EditorToolsConstraints.COLOR_LIGHT_GREEN);
                 }
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private static string ClickLabel(ClickEntry entry)
+        {
+            string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
+            string playInfo = Application.isPlaying && entry.StateRef != null
+                ? $"   val:{entry.StateRef.Value}"
+                : string.Empty;
+            return $"◉ {entry.Component.gameObject.name}   state:{stateName}{playInfo}";
+        }
+
+        private static string DragLabel(DragEntry entry)
+        {
+            string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
+            string zoneName = string.IsNullOrEmpty(entry.TargetZoneName) ? "любая" : entry.TargetZoneName;
+            string playInfo = Application.isPlaying && entry.StateRef != null
+                ? $"   val:{entry.StateRef.Value}"
+                : string.Empty;
+            return $"⬡ {entry.Component.gameObject.name}   state:{stateName}   zone:{zoneName}{playInfo}";
         }
 
         private void DrawRow(GameObject go, string label, Color color)
@@ -103,26 +148,35 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        private static string ObjectInfo(InteractableObject obj)
-        {
-            string playInfo = Application.isPlaying
-                ? $"   state:{obj.State.Current}  {(obj.IsLocked ? "🔒" : "🔓")}"
-                : string.Empty;
-
-            return $"● {obj.gameObject.name}   id: {obj.Id}{playInfo}";
-        }
-
         private void Refresh()
         {
             lastRefreshTime = EditorApplication.timeSinceStartup;
 
-            interactables.Clear();
+            clicks.Clear();
+            drags.Clear();
             dropZones.Clear();
 
-#pragma warning disable CS0618
-            interactables.AddRange(FindObjectsOfType<InteractableObject>());
-            dropZones.AddRange(FindObjectsOfType<DropZoneObject>());
-#pragma warning restore CS0618
+            foreach (var click in FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None))
+            {
+                var so = new SerializedObject(click);
+                var stateRef = so.FindProperty("state")?.objectReferenceValue as IntValue;
+                clicks.Add(new ClickEntry { Component = click, StateRef = stateRef });
+            }
+
+            foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
+            {
+                var so = new SerializedObject(drag);
+                var stateRef = so.FindProperty("state")?.objectReferenceValue as BoolValue;
+                var zone = so.FindProperty("targetZone")?.objectReferenceValue as DropZoneObject;
+                drags.Add(new DragEntry
+                {
+                    Component = drag,
+                    StateRef = stateRef,
+                    TargetZoneName = zone != null ? zone.gameObject.name : string.Empty,
+                });
+            }
+
+            dropZones.AddRange(FindObjectsByType<DropZoneObject>(FindObjectsSortMode.None));
 
             Repaint();
         }
@@ -144,4 +198,3 @@ namespace DioramaEnigma.Riddles.Editor
         }
     }
 }
-#endif

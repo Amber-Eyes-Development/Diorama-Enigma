@@ -1,54 +1,66 @@
-#if RIDDLES_EDITOR_WIP
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Инспектор PuzzleSequence с inline-редактированием шагов и групп
+    /// Инспектор PuzzleSequence: редактирование записей шагов (ссылки на ассеты + эффекты)
     /// </summary>
     [CustomEditor(typeof(PuzzleSequence))]
     public sealed class PuzzleSequenceEditor : UnityEditor.Editor
     {
+        private const string STEPS_FOLDER_PATH = "Assets/Features/Riddles/Data";
+        private const string STEPS_FOLDER_NAME = "Steps";
+            
         private SerializedProperty sequenceLabelProp;
         private SerializedProperty stepsProp;
 
         private GUIStyle headerStyle;
 
+        // ─── Warnings cache ───────────────────────────────────────────────────
+        private readonly HashSet<int> disconnectedSteps = new();
+        private readonly Dictionary<int, List<string>> sharedSteps = new();
+        private bool warningsBuilt;
+
+        // ─── Step SO cache ────────────────────────────────────────────────────
+        // Кешируем SerializedObject шагов: Unity откладывает callback [SerializeReference]
+        // пикера; если пересоздавать SO каждый кадр, ссылка устаревает до выбора типа.
+        private readonly Dictionary<int, SerializedObject> stepSOCache = new();
+
         private static readonly Color SeparatorEven = new(0.25f, 0.45f, 0.65f, 1f);
         private static readonly Color SeparatorOdd = new(0.35f, 0.55f, 0.35f, 1f);
 
-        // Типы для дропдаунов добавления
-        private static readonly (string label, Type type)[] ConditionTypes =
+        private static readonly (string label, Type type)[] StepTypes =
         {
-            ("Click", typeof(ClickCondition)),
-            ("Drag", typeof(DragCondition)),
-            ("Resource", typeof(ResourceCondition)),
-            ("Delayed (обёртка)", typeof(DelayedCondition)),
-        };
-
-        // Для вложенного условия (DelayedCondition.inner) — без Delayed, чтобы избежать бесконечной вложенности
-        private static readonly (string label, Type type)[] InnerConditionTypes =
-        {
-            ("Click", typeof(ClickCondition)),
-            ("Drag", typeof(DragCondition)),
-            ("Resource", typeof(ResourceCondition)),
+            ("Bool Step",      typeof(BoolPuzzleStep)),
+            ("State Set Step", typeof(StateSetPuzzleStep)),
+            ("String Step",    typeof(StringPuzzleStep)),
+            ("Composite Step", typeof(CompositePuzzleStep)),
         };
 
         private static readonly (string label, Type type)[] EffectTypes =
         {
             ("Award Resource", typeof(AwardResourceEffect)),
-            ("Fire Event", typeof(FireEventEffect)),
-            ("Set Lock", typeof(SetInteractableLockEffect)),
+            ("Fire Event",     typeof(FireEventEffect)),
+        };
+
+        private static readonly (string label, Type type)[] GateTypes =
+        {
+            ("Требует завершения шагов", typeof(RequireStepsCompletedGate)),
         };
 
         private void OnEnable()
         {
             sequenceLabelProp = serializedObject.FindProperty("sequenceLabel");
             stepsProp = serializedObject.FindProperty("steps");
+            RefreshWarnings();
         }
+
+        private void OnDisable() => stepSOCache.Clear();
 
         public override void OnInspectorGUI()
         {
@@ -56,7 +68,11 @@ namespace DioramaEnigma.Riddles.Editor
 
             serializedObject.Update();
 
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.PropertyField(sequenceLabelProp);
+            if (GUILayout.Button("↺", GUILayout.Width(24), GUILayout.Height(18)))
+                RefreshWarnings();
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(4);
 
             var groups = GetSortedGroups();
@@ -69,16 +85,16 @@ namespace DioramaEnigma.Riddles.Editor
             int maxGroup = groups.Count > 0 ? groups[^1] : -1;
 
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("+ Шаг (новая группа)"))
-                AddStep(maxGroup + 1);
-            if (groups.Count > 0 && GUILayout.Button("+ Шаг (в последнюю группу)"))
-                AddStep(maxGroup);
+            if (GUILayout.Button("+ Создать шаг (новая группа)"))
+                ShowCreateStepMenu(maxGroup + 1);
+            if (groups.Count > 0 && GUILayout.Button("+ Создать шаг (в ту же группу)"))
+                ShowCreateStepMenu(maxGroup);
             EditorGUILayout.EndHorizontal();
 
             serializedObject.ApplyModifiedProperties();
         }
 
-        // ─── Группы ───────────────────────────────────────────────────────────
+        // ─── Groups ───────────────────────────────────────────────────────────
 
         private void DrawGroup(int groupIndex, int position, List<int> groups)
         {
@@ -95,8 +111,7 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.LabelField(groupLabel, headerStyle);
             GUILayout.FlexibleSpace();
 
-            bool moveUp = false;
-            bool moveDown = false;
+            bool moveUp = false, moveDown = false;
 
             using (new EditorGUI.DisabledScope(position == 0))
                 if (GUILayout.Button("▲", GUILayout.Width(24))) moveUp = true;
@@ -112,41 +127,34 @@ namespace DioramaEnigma.Riddles.Editor
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
                 var entry = stepsProp.GetArrayElementAtIndex(i);
-                if (entry.FindPropertyRelative("GroupIndex").intValue != groupIndex) continue;
-
+                if (entry.FindPropertyRelative("groupIndex").intValue != groupIndex) continue;
                 DrawStepEntry(entry, i);
             }
 
             EditorGUILayout.Space(2);
         }
 
-        // ─── Шаг ──────────────────────────────────────────────────────────────
+        // ─── Step Entry ───────────────────────────────────────────────────────
 
         private void DrawStepEntry(SerializedProperty entry, int arrayIndex)
         {
-            var stepProp = entry.FindPropertyRelative("Step");
+            var stepProp = entry.FindPropertyRelative("step");
+            bool stepIsNull = stepProp.objectReferenceValue == null;
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-            bool stepIsNull = string.IsNullOrEmpty(stepProp.managedReferenceFullTypename);
+            // Header row: step asset picker + [Создать] (when null) + move + delete
+            EditorGUILayout.BeginHorizontal();
+
+            EditorGUILayout.PropertyField(stepProp, GUIContent.none);
 
             if (stepIsNull)
             {
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("(пустой шаг)");
-                if (GUILayout.Button("Создать", GUILayout.Width(70)))
-                    stepProp.managedReferenceValue = new PuzzleStep();
-                if (GUILayout.Button("✕", GUILayout.Width(20)))
-                    stepsProp.DeleteArrayElementAtIndex(arrayIndex);
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.EndVertical();
-                return;
+                // Capture for lambda; copy avoids closure-over-loop-variable
+                var capturedProp = stepProp.Copy();
+                if (GUILayout.Button("Создать ▾", GUILayout.Width(72)))
+                    ShowCreateMenuForEntry(capturedProp);
             }
-
-            var labelProp = stepProp.FindPropertyRelative("stepLabel");
-
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(labelProp, GUIContent.none);
 
             int moveDir = 0;
             if (GUILayout.Button("▲", GUILayout.Width(20))) moveDir = -1;
@@ -169,15 +177,111 @@ namespace DioramaEnigma.Riddles.Editor
                 return;
             }
 
-            DrawManagedRefArray(stepProp.FindPropertyRelative("conditions"), "УСЛОВИЯ (все должны выполниться)", ConditionTypes);
-            DrawManagedRefArray(stepProp.FindPropertyRelative("activationEffects"), "ЭФФЕКТЫ ПРИ АКТИВАЦИИ", EffectTypes);
-            DrawManagedRefArray(stepProp.FindPropertyRelative("effects"), "ЭФФЕКТЫ ПРИ ЗАВЕРШЕНИИ", EffectTypes);
-            DrawManagedRefArray(stepProp.FindPropertyRelative("failureEffects"), "ЭФФЕКТЫ ПРИ ПРОВАЛЕ", EffectTypes);
+            // Step asset summary + inline gate editing
+            if (stepProp.objectReferenceValue is ScriptableObject stepAsset)
+            {
+                if (stepAsset is IPuzzleStep puzzleStep)
+                {
+                    string label = string.IsNullOrEmpty(puzzleStep.StepLabel) ? "(без метки)" : puzzleStep.StepLabel;
+                    string typeName = stepAsset.GetType().Name.Replace("PuzzleStep", "");
+                    EditorGUILayout.LabelField($"  {typeName} · {label}", EditorStyles.miniLabel);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox($"{stepAsset.GetType().Name} не реализует IPuzzleStep", MessageType.Warning);
+                }
+
+                DrawStepWarnings(stepAsset.GetInstanceID());
+                DrawStepGate(stepAsset);
+            }
+
+            DrawManagedRefArray(entry.FindPropertyRelative("activationEffects"), "ЭФФЕКТЫ ПРИ АКТИВАЦИИ", EffectTypes);
+            DrawManagedRefArray(entry.FindPropertyRelative("completionEffects"), "ЭФФЕКТЫ ПРИ ЗАВЕРШЕНИИ", EffectTypes);
 
             EditorGUILayout.EndVertical();
         }
 
-        // ─── SerializeReference массив ────────────────────────────────────────
+        // ─── Gate (nested SO editor) ──────────────────────────────────────────
+
+        private void DrawStepGate(ScriptableObject stepAsset)
+        {
+            var so = GetStepSO(stepAsset);
+            so.Update();
+
+            var trackerProp = so.FindProperty("tracker");
+            if (trackerProp == null) return;
+
+            var gateProp = trackerProp.FindPropertyRelative("gate");
+            if (gateProp == null) return;
+
+            EditorGUILayout.Space(2);
+
+            bool hasGate = !string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
+
+            // ── Header row ─────────────────────────────────────────────────────
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Гейт:", EditorStyles.miniLabel, GUILayout.Width(38));
+
+            if (hasGate)
+            {
+                EditorGUILayout.LabelField(ManagedRefTypeName(gateProp), EditorStyles.miniBoldLabel);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("✕", GUILayout.Width(20), GUILayout.Height(16)))
+                {
+                    gateProp.managedReferenceValue = null;
+                    so.ApplyModifiedProperties();
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField("(нет)", EditorStyles.miniLabel);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("+ Добавить", GUILayout.Width(72), GUILayout.Height(16)))
+                    ShowGateMenu(gateProp, so);
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            // ── Gate body ──────────────────────────────────────────────────────
+            if (hasGate)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUI.BeginChangeCheck();
+                DrawManagedRefBody(gateProp);
+                if (EditorGUI.EndChangeCheck())
+                    so.ApplyModifiedProperties();
+                EditorGUI.indentLevel--;
+            }
+        }
+
+        private void ShowGateMenu(SerializedProperty gateProp, SerializedObject so)
+        {
+            var menu = new GenericMenu();
+            foreach (var (menuLabel, type) in GateTypes)
+            {
+                Type captured = type;
+                menu.AddItem(new GUIContent(menuLabel), false, () =>
+                {
+                    so.Update();
+                    gateProp.managedReferenceValue = Activator.CreateInstance(captured);
+                    so.ApplyModifiedProperties();
+                });
+            }
+            menu.ShowAsContext();
+        }
+
+        private SerializedObject GetStepSO(ScriptableObject stepAsset)
+        {
+            int id = stepAsset.GetInstanceID();
+            if (!stepSOCache.TryGetValue(id, out var so) || so == null || !so.targetObject)
+            {
+                so = new SerializedObject(stepAsset);
+                stepSOCache[id] = so;
+            }
+            return so;
+        }
+
+        // ─── SerializeReference array ─────────────────────────────────────────
 
         private void DrawManagedRefArray(SerializedProperty arrayProp, string label, (string, Type)[] addChoices)
         {
@@ -191,7 +295,6 @@ namespace DioramaEnigma.Riddles.Editor
                 var el = arrayProp.GetArrayElementAtIndex(i);
 
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
                 EditorGUILayout.BeginHorizontal();
                 bool isNull = string.IsNullOrEmpty(el.managedReferenceFullTypename);
                 EditorGUILayout.LabelField(isNull ? "(null)" : ManagedRefTypeName(el), EditorStyles.boldLabel);
@@ -211,7 +314,6 @@ namespace DioramaEnigma.Riddles.Editor
                 ShowAddMenu(arrayProp.propertyPath, addChoices);
         }
 
-        /// <summary>Рисует редактируемые поля managed-reference объекта без дефолтного фолдаута.</summary>
         private void DrawManagedRefBody(SerializedProperty prop)
         {
             var end = prop.GetEndProperty();
@@ -223,45 +325,135 @@ namespace DioramaEnigma.Riddles.Editor
             while (it.NextVisible(enter) && !SerializedProperty.EqualContents(it, end))
             {
                 enter = false;
-
-                // Вложенное полиморфное поле (DelayedCondition.inner) — рисуем со своим пикером типа
-                if (it.propertyType == SerializedPropertyType.ManagedReference)
-                    DrawNestedManagedRef(it.Copy());
-                else
-                    EditorGUILayout.PropertyField(it, true);
+                EditorGUILayout.PropertyField(it, true);
             }
 
             EditorGUI.indentLevel--;
         }
 
-        private void DrawNestedManagedRef(SerializedProperty prop)
+        // ─── Step creation menus ──────────────────────────────────────────────
+
+        /// <summary>Меню создания шага с добавлением новой записи в последовательность</summary>
+        private void ShowCreateStepMenu(int groupIndex)
         {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            var menu = new GenericMenu();
 
-            EditorGUILayout.BeginHorizontal();
-            bool isNull = string.IsNullOrEmpty(prop.managedReferenceFullTypename);
-            EditorGUILayout.LabelField($"{prop.displayName}: {(isNull ? "(не выбрано)" : ManagedRefTypeName(prop))}",
-                EditorStyles.miniBoldLabel);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button(isNull ? "Выбрать" : "Сменить", GUILayout.Width(70)))
-                ShowPickMenu(prop.propertyPath, InnerConditionTypes);
-            EditorGUILayout.EndHorizontal();
+            foreach (var (menuLabel, type) in StepTypes)
+            {
+                Type captured = type;
+                int capturedGroup = groupIndex;
+                menu.AddItem(new GUIContent(menuLabel), false, () =>
+                {
+                    var asset = CreateStepAsset(captured);
+                    if (asset == null) return;
 
-            if (!isNull) DrawManagedRefBody(prop);
+                    serializedObject.Update();
+                    int idx = stepsProp.arraySize;
+                    stepsProp.arraySize++;
+                    var entry = stepsProp.GetArrayElementAtIndex(idx);
+                    entry.FindPropertyRelative("step").objectReferenceValue = asset;
+                    entry.FindPropertyRelative("groupIndex").intValue = capturedGroup;
+                    entry.FindPropertyRelative("activationEffects").ClearArray();
+                    entry.FindPropertyRelative("completionEffects").ClearArray();
+                    serializedObject.ApplyModifiedProperties();
+                });
+            }
 
-            EditorGUILayout.EndVertical();
+            menu.AddSeparator(string.Empty);
+            menu.AddItem(new GUIContent("Пустой слот (выбрать позже)"), false, () => AddStep(groupIndex));
+
+            menu.ShowAsContext();
         }
 
-        // ─── Меню выбора типа ─────────────────────────────────────────────────
+        /// <summary>Меню создания шага и назначения его в существующий пустой слот</summary>
+        private void ShowCreateMenuForEntry(SerializedProperty stepProp)
+        {
+            var menu = new GenericMenu();
+
+            foreach (var (menuLabel, type) in StepTypes)
+            {
+                Type captured = type;
+                SerializedProperty capturedProp = stepProp.Copy();
+                menu.AddItem(new GUIContent(menuLabel), false, () =>
+                {
+                    var asset = CreateStepAsset(captured);
+                    if (asset == null) return;
+
+                    serializedObject.Update();
+                    capturedProp.objectReferenceValue = asset;
+                    serializedObject.ApplyModifiedProperties();
+                });
+            }
+
+            menu.ShowAsContext();
+        }
+
+        // ─── Asset creation ───────────────────────────────────────────────────
+
+        private ScriptableObject CreateStepAsset(Type stepType)
+        {
+            string folder = GetOrCreateStepFolder();
+            if (folder == null) return null;
+
+            string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{stepType.Name}.asset");
+            var asset = ScriptableObject.CreateInstance(stepType);
+            AssetDatabase.CreateAsset(asset, assetPath);
+            AssetDatabase.SaveAssets();
+            EditorGUIUtility.PingObject(asset);
+            return asset;
+        }
+
+        private string GetOrCreateStepFolder()
+        {
+            var sequence = (PuzzleSequence)target;
+            string label = string.IsNullOrEmpty(sequence.SequenceLabel)
+                ? sequence.name
+                : sequence.SequenceLabel;
+
+            string folderName = SanitizeFolderName(label);
+            if (string.IsNullOrEmpty(folderName)) folderName = "Default";
+
+            string targetFolder = $"{STEPS_FOLDER_PATH}/{STEPS_FOLDER_NAME}/{folderName}";
+
+            EnsureFolder($"{STEPS_FOLDER_PATH}");
+            EnsureFolder($"{STEPS_FOLDER_PATH}/{STEPS_FOLDER_NAME}");
+            EnsureFolder(targetFolder);
+
+            return targetFolder;
+        }
+
+        private static void EnsureFolder(string folderPath)
+        {
+            if (AssetDatabase.IsValidFolder(folderPath)) return;
+
+            string parent = Path.GetDirectoryName(folderPath)?.Replace('\\', '/') ?? string.Empty;
+            string name = Path.GetFileName(folderPath);
+
+            if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent))
+                EnsureFolder(parent);
+
+            AssetDatabase.CreateFolder(parent, name);
+        }
+
+        private static string SanitizeFolderName(string name)
+        {
+            char[] invalid = Path.GetInvalidFileNameChars();
+            var sb = new StringBuilder(name.Length);
+            foreach (char c in name)
+                sb.Append(Array.IndexOf(invalid, c) < 0 ? c : '_');
+            return sb.ToString().Trim('_', ' ');
+        }
+
+        // ─── Effect type menu ─────────────────────────────────────────────────
 
         private void ShowAddMenu(string arrayPath, (string label, Type type)[] choices)
         {
             var menu = new GenericMenu();
 
-            foreach (var (label, type) in choices)
+            foreach (var (menuLabel, type) in choices)
             {
                 Type captured = type;
-                menu.AddItem(new GUIContent(label), false, () =>
+                menu.AddItem(new GUIContent(menuLabel), false, () =>
                 {
                     serializedObject.Update();
                     var arr = serializedObject.FindProperty(arrayPath);
@@ -275,50 +467,32 @@ namespace DioramaEnigma.Riddles.Editor
             menu.ShowAsContext();
         }
 
-        private void ShowPickMenu(string propPath, (string label, Type type)[] choices)
-        {
-            var menu = new GenericMenu();
-
-            foreach (var (label, type) in choices)
-            {
-                Type captured = type;
-                menu.AddItem(new GUIContent(label), false, () =>
-                {
-                    serializedObject.Update();
-                    serializedObject.FindProperty(propPath).managedReferenceValue = Activator.CreateInstance(captured);
-                    serializedObject.ApplyModifiedProperties();
-                });
-            }
-
-            menu.ShowAsContext();
-        }
-
         private static string ManagedRefTypeName(SerializedProperty prop)
         {
             string full = prop.managedReferenceFullTypename;
             if (string.IsNullOrEmpty(full)) return "(null)";
-
             int dot = full.LastIndexOf('.');
             return dot >= 0 ? full[(dot + 1)..] : full;
         }
 
-        // ─── Управление шагами/группами ───────────────────────────────────────
+        // ─── Step / group management ──────────────────────────────────────────
 
         private void AddStep(int groupIndex)
         {
             int idx = stepsProp.arraySize;
             stepsProp.arraySize++;
             var entry = stepsProp.GetArrayElementAtIndex(idx);
-            entry.FindPropertyRelative("Step").managedReferenceValue = new PuzzleStep();
-            entry.FindPropertyRelative("GroupIndex").intValue = groupIndex;
+            entry.FindPropertyRelative("step").objectReferenceValue = null;
+            entry.FindPropertyRelative("groupIndex").intValue = groupIndex;
+            entry.FindPropertyRelative("activationEffects").ClearArray();
+            entry.FindPropertyRelative("completionEffects").ClearArray();
         }
 
         private List<int> GetSortedGroups()
         {
             var set = new SortedSet<int>();
             for (int i = 0; i < stepsProp.arraySize; i++)
-                set.Add(stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("GroupIndex").intValue);
-
+                set.Add(stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("groupIndex").intValue);
             return new List<int>(set);
         }
 
@@ -326,7 +500,7 @@ namespace DioramaEnigma.Riddles.Editor
         {
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
-                var gp = stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("GroupIndex");
+                var gp = stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("groupIndex");
                 if (gp.intValue == groupA) gp.intValue = groupB;
                 else if (gp.intValue == groupB) gp.intValue = groupA;
             }
@@ -335,28 +509,119 @@ namespace DioramaEnigma.Riddles.Editor
         private void MoveStepToAdjacentGroup(int arrayIndex, int direction)
         {
             var groups = GetSortedGroups();
-            var gp = stepsProp.GetArrayElementAtIndex(arrayIndex).FindPropertyRelative("GroupIndex");
-
+            var gp = stepsProp.GetArrayElementAtIndex(arrayIndex).FindPropertyRelative("groupIndex");
             int currentPos = groups.IndexOf(gp.intValue);
             int targetPos = currentPos + direction;
 
-            if (targetPos < 0)
-                gp.intValue = groups[0] - 1;
-            else if (targetPos >= groups.Count)
-                gp.intValue = groups[^1] + 1;
-            else
-                gp.intValue = groups[targetPos];
+            if (targetPos < 0) gp.intValue = groups[0] - 1;
+            else if (targetPos >= groups.Count) gp.intValue = groups[^1] + 1;
+            else gp.intValue = groups[targetPos];
         }
 
         private int CountStepsInGroup(int groupIndex)
         {
             int count = 0;
             for (int i = 0; i < stepsProp.arraySize; i++)
-                if (stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("GroupIndex").intValue == groupIndex)
+                if (stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("groupIndex").intValue == groupIndex)
                     count++;
-
             return count;
+        }
+
+        // ─── Warnings ─────────────────────────────────────────────────────────
+
+        private void RefreshWarnings()
+        {
+            disconnectedSteps.Clear();
+            sharedSteps.Clear();
+            warningsBuilt = false;
+
+            // Collect step assets of this sequence that need scene connections
+            var valueStepIDs = new HashSet<int>();
+            var allStepIDs = new HashSet<int>();
+
+            for (int i = 0; i < stepsProp.arraySize; i++)
+            {
+                var asset = stepsProp.GetArrayElementAtIndex(i)
+                    .FindPropertyRelative("step").objectReferenceValue as ScriptableObject;
+                if (asset == null) continue;
+
+                allStepIDs.Add(asset.GetInstanceID());
+
+                // Only value-based steps need direct scene input
+                if (asset is StateSetPuzzleStep || asset is BoolPuzzleStep || asset is StringPuzzleStep)
+                    valueStepIDs.Add(asset.GetInstanceID());
+            }
+
+            if (allStepIDs.Count == 0) { warningsBuilt = true; return; }
+
+            // ── Scene connection check ──────────────────────────────────────
+            var connectedIDs = new HashSet<int>();
+            CollectConnectedStateIDs(connectedIDs, FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None));
+            CollectConnectedStateIDs(connectedIDs, FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None));
+
+            foreach (int id in valueStepIDs)
+                if (!connectedIDs.Contains(id))
+                    disconnectedSteps.Add(id);
+
+            // ── Cross-sequence sharing check ────────────────────────────────
+            var guids = AssetDatabase.FindAssets("t:PuzzleSequence");
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var otherSeq = AssetDatabase.LoadAssetAtPath<PuzzleSequence>(path);
+                if (otherSeq == null || otherSeq == target) continue;
+
+                var otherSO = new SerializedObject(otherSeq);
+                var otherSteps = otherSO.FindProperty("steps");
+
+                for (int i = 0; i < otherSteps.arraySize; i++)
+                {
+                    var otherAsset = otherSteps.GetArrayElementAtIndex(i)
+                        .FindPropertyRelative("step").objectReferenceValue as ScriptableObject;
+                    if (otherAsset == null || !allStepIDs.Contains(otherAsset.GetInstanceID())) continue;
+
+                    int id = otherAsset.GetInstanceID();
+                    if (!sharedSteps.TryGetValue(id, out var names))
+                        sharedSteps[id] = names = new List<string>();
+                    if (!names.Contains(otherSeq.name))
+                        names.Add(otherSeq.name);
+                }
+            }
+
+            warningsBuilt = true;
+        }
+
+        private static void CollectConnectedStateIDs<T>(HashSet<int> ids, T[] components)
+            where T : UnityEngine.Component
+        {
+            foreach (var comp in components)
+            {
+                if (comp == null) continue;
+                var so = new SerializedObject(comp);
+                var stateRef = so.FindProperty("state")?.objectReferenceValue as ScriptableObject;
+                if (stateRef != null) ids.Add(stateRef.GetInstanceID());
+            }
+        }
+
+        private void DrawStepWarnings(int stepId)
+        {
+            if (!warningsBuilt) return;
+
+            if (disconnectedSteps.Contains(stepId))
+            {
+                var prev = GUI.contentColor;
+                GUI.contentColor = new Color(1f, 0.75f, 0.2f);
+                EditorGUILayout.LabelField("  ⚠  Нет связанных объектов в сцене", EditorStyles.miniLabel);
+                GUI.contentColor = prev;
+            }
+
+            if (sharedSteps.TryGetValue(stepId, out var names) && names.Count > 0)
+            {
+                var prev = GUI.contentColor;
+                GUI.contentColor = new Color(1f, 0.55f, 0.55f);
+                EditorGUILayout.LabelField($"  ⚡  Также в: {string.Join(", ", names)}", EditorStyles.miniLabel);
+                GUI.contentColor = prev;
+            }
         }
     }
 }
-#endif
