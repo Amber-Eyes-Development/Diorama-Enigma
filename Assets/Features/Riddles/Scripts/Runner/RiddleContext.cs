@@ -1,14 +1,15 @@
 using Extensions.Events;
-using Extensions.Singleton;
+using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Сцено-уровневый контекст системы загадок
+    /// Контекст загадки (компонент на корне префаба): владеет хабом событий загадки.
+    /// Одна загадка = один префаб = один контекст; события не текут между загадками.
     /// </summary>
-    public sealed class RiddleContext : MonoBehaviourSingleton<RiddleContext>
+    public sealed class RiddleContext : MonoBehaviour
     {
-        /// <summary>Хаб событий</summary>
+        /// <summary> Хаб событий загадки </summary>
         public EventHub Hub => hub ??= new EventHub();
 
         private EventHub hub;

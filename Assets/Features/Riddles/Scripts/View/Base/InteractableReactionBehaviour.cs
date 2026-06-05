@@ -3,7 +3,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Реакция на события объекта: диспетчеризация триггеров по списку биндингов
+    /// Реакция на состояние шага и наведение: диспетчеризация триггеров по списку биндингов
     /// </summary>
     /// <typeparam name="TBinding">Тип биндинга медиума (визуал / частицы / звук)</typeparam>
     public abstract class InteractableReactionBehaviour<TBinding> : InteractableViewBehaviour
@@ -13,18 +13,26 @@ namespace DioramaEnigma.Riddles
 
         protected sealed override void Subscribe()
         {
-            Interactable.onHoverChanged += OnHoverChanged;
-            Interactable.State.onStateChanged += OnStateChanged;
+            if (Interactable != null)
+                Interactable.onHoverChanged += OnHoverChanged;
 
-            // Восстановление текущего состояния без эффектов
-            if (Interactable.State.Current != 0)
-                Dispatch(new ReactionTrigger(TriggerKind.StateEntered, Interactable.State.Current), silent: true);
+            if (StateSource != null)
+            {
+                StateSource.onValueChanged += OnStateChanged;
+
+                // Восстановление текущего состояния без эффектов
+                if (StateSource.Value != 0)
+                    Dispatch(new ReactionTrigger(TriggerKind.StateEntered, StateSource.Value), silent: true);
+            }
         }
 
         protected sealed override void Unsubscribe()
         {
-            Interactable.onHoverChanged -= OnHoverChanged;
-            Interactable.State.onStateChanged -= OnStateChanged;
+            if (Interactable != null)
+                Interactable.onHoverChanged -= OnHoverChanged;
+
+            if (StateSource != null)
+                StateSource.onValueChanged -= OnStateChanged;
         }
 
         /// <summary> Применить реакцию биндинга </summary>

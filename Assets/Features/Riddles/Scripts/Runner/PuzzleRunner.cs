@@ -1,43 +1,28 @@
 using System;
 using System.Collections.Generic;
-using Extensions.Data;
 using Extensions.Events;
-using Extensions.Helpers;
 using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Исполнитель последовательности пазла
+    /// Исполнитель последовательности загадки (один на префаб).
+    /// Наблюдает завершённость шагов и управляет порядком групп и эффектами.
     /// </summary>
     public sealed class PuzzleRunner : MonoBehaviour
     {
-        /// <summary>Последовательность завершена</summary>
+        /// <summary> Последовательность завершена </summary>
         public event Action onSequenceCompleted;
-        /// <summary>Шаг провален; последовательность приостановлена</summary>
-        public event Action<PuzzleStep> onStepFailed;
 
-        #region Параметры
-        
         [SerializeField] private PuzzleSequence sequence;
         [Tooltip("Запустить последовательность автоматически при включении объекта")]
         [SerializeField] private bool startOnEnable = true;
 
-        [Header("Сохранение"), Space]
-        [Tooltip("Сохранять и восстанавливать прогресс между сессиями. " +
-                 "Прогресс сохраняется по завершении каждой группы шагов.")]
-        [SerializeField] private bool saveProgress = false;
-        [Tooltip("Ключ сохранения. Не менять после выпуска!")]
-        [SerializeField] private string saveKey;
-        
-        #endregion
-
         private int currentGroupIndex;
         private EventHub hub;
 
-        private readonly Dictionary<PuzzleStep, List<IDisposable>> activeSubscriptions = new();
-        private readonly Dictionary<PuzzleStep, int> pendingConditionCounts = new();
+        private readonly List<PuzzleSequence.StepEntry> activeEntries = new();
 
         #region MonoBehaviour
 
@@ -46,18 +31,12 @@ namespace DioramaEnigma.Riddles
             if (sequence == null)
                 ServiceDebug.LogWarning(this, "sequence не назначен");
 
-            hub = RiddleContext.Instance.Hub;
+            RiddleContext context = GetComponentInParent<RiddleContext>();
+            if (context == null)
+                ServiceDebug.LogWarning(this, "RiddleContext не найден в родителях — добавьте его на корень префаба загадки");
+            else
+                hub = context.Hub;
         }
-
-#if UNITY_EDITOR
-        private void OnValidate()
-        {
-            if (!string.IsNullOrEmpty(saveKey)) return;
-
-            saveKey = IdGenerator.NewGuid();
-            UnityEditor.EditorUtility.SetDirty(this);
-        }
-#endif
 
         private void OnEnable()
         {
@@ -68,48 +47,63 @@ namespace DioramaEnigma.Riddles
 
         #endregion
 
-        /// <summary> Запустить последовательность (с возобновлением, если включено сохранение) </summary>
+        /// <summary> Запустить последовательность (с возобновлением, если шаги сохраняемы) </summary>
         public void StartSequence()
         {
             if (sequence == null) return;
+            if (hub == null)
+            {
+                ServiceDebug.LogError(this, "Хаб не инициализирован — нужен RiddleContext на префабе");
+                return;
+            }
 
             StopSequence();
 
-            int startGroup = LoadProgress();
-            bool resumingFromSave = startGroup > 0;
+            // Возобновление, если есть сохранённый прогресс шагов; иначе — чистый старт
+            bool resuming = AnyStepCompleted();
 
-            hub.ClearReplay<InteractableClickedEvent>();
-
-            // Сброс объектов не нужен при возобновлении — они уже восстановлены из своих сохранений
-            if (!resumingFromSave)
+            if (!resuming)
+            {
+                ResetAllSteps();
                 hub.Publish(new PuzzleSequenceResetEvent(sequence.SequenceLabel));
+            }
 
-            currentGroupIndex = startGroup - 1;
+            currentGroupIndex = -1;
             AdvanceToNextGroup();
         }
 
-        /// <summary> Остановить выполнение и снять все активные подписки </summary>
+        /// <summary> Остановить выполнение и снять подписки </summary>
         public void StopSequence()
         {
-            foreach (var subscriptions in activeSubscriptions.Values)
-                foreach (var disposable in subscriptions)
-                    disposable?.Dispose();
+            foreach (var entry in activeEntries)
+            {
+                if (entry?.Step == null) continue;
 
-            activeSubscriptions.Clear();
-            pendingConditionCounts.Clear();
+                entry.Step.onCompletionChanged -= OnActiveStepCompletionChanged;
+                entry.Step.SetActive(false);
+            }
+
+            activeEntries.Clear();
         }
 
-        /// <summary> Сбросить прогресс и перезапустить с первого шага </summary>
+        /// <summary> Сбросить состояние всех шагов и перезапустить с начала </summary>
         public void RestartSequence()
         {
-            EraseProgress();
+            if (sequence == null || hub == null) return;
+
             StopSequence();
-            StartSequence();
+            ResetAllSteps();
+            hub.Publish(new PuzzleSequenceResetEvent(sequence.SequenceLabel));
+
+            currentGroupIndex = -1;
+            AdvanceToNextGroup();
         }
 
-        /// <summary>Перезапустить текущую группу шагов после провала</summary>
+        /// <summary> Перезапустить текущую группу шагов </summary>
         public void RestartStep()
         {
+            if (sequence == null) return;
+
             StopSequence();
             ActivateGroup(currentGroupIndex);
         }
@@ -120,7 +114,6 @@ namespace DioramaEnigma.Riddles
         {
             int maxGroup = GetMaxGroupIndex();
 
-            // Пропускаем пустые группы (дыры в нумерации GroupIndex), завершаемся только за последней группой
             do
             {
                 currentGroupIndex++;
@@ -133,6 +126,14 @@ namespace DioramaEnigma.Riddles
                 return;
             }
 
+            // Возобновление: уже завершённую группу не ждём, а восстанавливаем её побочные эффекты
+            if (IsGroupAlreadyCompleted(currentGroupIndex))
+            {
+                RestoreCompletedGroup(currentGroupIndex);
+                AdvanceToNextGroup();
+                return;
+            }
+
             ActivateGroup(currentGroupIndex);
         }
 
@@ -140,22 +141,110 @@ namespace DioramaEnigma.Riddles
         {
             foreach (var entry in sequence.Steps)
             {
-                if (entry.GroupIndex != groupIndex) continue;
+                if (entry == null || entry.GroupIndex != groupIndex) continue;
                 if (entry.Step == null)
                 {
-                    ServiceDebug.LogWarning(this, $"Шаг с GroupIndex={groupIndex} имеет null Step — пропущен");
+                    ServiceDebug.LogWarning(this, $"Шаг в группе {groupIndex} не назначен или не реализует IPuzzleStep — пропущен");
                     continue;
                 }
 
-                ActivateStep(entry.Step);
+                entry.Step.SetActive(true);
+                entry.Step.onCompletionChanged += OnActiveStepCompletionChanged;
+                activeEntries.Add(entry);
             }
+
+            foreach (var entry in activeEntries)
+                RunEffects(entry.ActivationEffects);
+
+            CheckGroupCompletion();
+        }
+
+        private void OnActiveStepCompletionChanged(bool _) => CheckGroupCompletion();
+
+        private void CheckGroupCompletion()
+        {
+            if (activeEntries.Count == 0) return;
+
+            foreach (var entry in activeEntries)
+                if (entry.Step == null || !entry.Step.IsCompleted) return;
+
+            CompleteGroup();
+        }
+
+        private void CompleteGroup()
+        {
+            // Снимаем подписки и деактивируем до выполнения эффектов, чтобы избежать повторного входа
+            var completedEntries = new List<PuzzleSequence.StepEntry>(activeEntries);
+            activeEntries.Clear();
+
+            foreach (var entry in completedEntries)
+            {
+                entry.Step.onCompletionChanged -= OnActiveStepCompletionChanged;
+                entry.Step.SetActive(false);
+            }
+
+            foreach (var entry in completedEntries)
+                RunEffects(entry.CompletionEffects);
+
+            hub.Publish(new PuzzleStepCompletedEvent(sequence.SequenceLabel, currentGroupIndex));
+
+            AdvanceToNextGroup();
+        }
+
+        private void RestoreCompletedGroup(int groupIndex)
+        {
+            foreach (var entry in sequence.Steps)
+            {
+                if (entry?.Step == null || entry.GroupIndex != groupIndex) continue;
+
+                RunEffects(entry.ActivationEffects);
+                RunEffects(entry.CompletionEffects);
+            }
+        }
+
+        private void RunEffects(IReadOnlyList<PuzzleEffect> effects)
+        {
+            if (effects == null) return;
+
+            foreach (var effect in effects)
+                effect?.Execute(hub);
+        }
+
+        private void ResetAllSteps()
+        {
+            foreach (var entry in sequence.Steps)
+                entry?.Step?.ResetState();
+        }
+
+        private bool AnyStepCompleted()
+        {
+            foreach (var entry in sequence.Steps)
+                if (entry?.Step != null && entry.Step.IsCompleted) return true;
+
+            return false;
+        }
+
+        private bool IsGroupAlreadyCompleted(int groupIndex)
+        {
+            bool any = false;
+
+            foreach (var entry in sequence.Steps)
+            {
+                if (entry?.Step == null || entry.GroupIndex != groupIndex) continue;
+
+                any = true;
+                if (!entry.Step.IsCompleted) return false;
+            }
+
+            return any;
         }
 
         private int GetMaxGroupIndex()
         {
             int max = -1;
+
             foreach (var entry in sequence.Steps)
-                if (entry.Step != null && entry.GroupIndex > max)
+                if (entry?.Step != null && entry.GroupIndex > max)
                     max = entry.GroupIndex;
 
             return max;
@@ -164,146 +253,35 @@ namespace DioramaEnigma.Riddles
         private bool GroupHasSteps(int groupIndex)
         {
             foreach (var entry in sequence.Steps)
-                if (entry.Step != null && entry.GroupIndex == groupIndex)
+                if (entry?.Step != null && entry.GroupIndex == groupIndex)
                     return true;
 
             return false;
         }
 
-        private void ActivateStep(PuzzleStep step)
-        {
-            foreach (var effect in step.ActivationEffects)
-                effect?.Execute(hub);
-
-            int conditionCount = step.Conditions.Count;
-
-            if (conditionCount == 0)
-            {
-                OnStepCompleted(step);
-                return;
-            }
-
-            pendingConditionCounts[step] = conditionCount;
-            activeSubscriptions[step] = new List<IDisposable>(conditionCount);
-
-            foreach (var condition in step.Conditions)
-            {
-                if (condition == null)
-                {
-                    ServiceDebug.LogWarning(this, $"Шаг '{step.StepLabel}' содержит null условие — пропущено");
-                    OnConditionSatisfied(step);
-                    continue;
-                }
-
-                var capturedStep = step;
-                bool conditionResolved = false;
-
-                IDisposable subscription = condition.Activate(
-                    hub,
-                    onSatisfied: () =>
-                    {
-                        if (conditionResolved) return;
-                        conditionResolved = true;
-                        OnConditionSatisfied(capturedStep);
-                    },
-                    onFailed: () =>
-                    {
-                        if (conditionResolved) return;
-                        conditionResolved = true;
-                        OnConditionFailed(capturedStep);
-                    });
-
-                if (subscription != null)
-                    activeSubscriptions[step].Add(subscription);
-            }
-        }
-
-        private void OnConditionSatisfied(PuzzleStep step)
-        {
-            if (!pendingConditionCounts.ContainsKey(step)) return;
-
-            pendingConditionCounts[step]--;
-
-            if (pendingConditionCounts[step] > 0) return;
-
-            OnStepCompleted(step);
-        }
-
-        private void OnConditionFailed(PuzzleStep step)
-        {
-            StopSequence();
-
-            foreach (var effect in step.FailureEffects)
-                effect?.Execute(hub);
-
-            hub.Publish(new PuzzleStepFailedEvent(sequence.SequenceLabel, currentGroupIndex));
-
-            onStepFailed?.Invoke(step);
-        }
-
-        private void OnStepCompleted(PuzzleStep step)
-        {
-            if (activeSubscriptions.TryGetValue(step, out var subscriptions))
-            {
-                foreach (var d in subscriptions) d?.Dispose();
-                activeSubscriptions.Remove(step);
-            }
-
-            pendingConditionCounts.Remove(step);
-
-            foreach (var effect in step.Effects)
-                effect?.Execute(hub);
-
-            hub.Publish(new PuzzleStepCompletedEvent(sequence.SequenceLabel, currentGroupIndex));
-
-            if (activeSubscriptions.Count == 0 && pendingConditionCounts.Count == 0)
-            {
-                // Группа полностью завершена — сохранить прогресс перед переходом к следующей
-                SaveProgress(currentGroupIndex);
-                AdvanceToNextGroup();
-            }
-        }
+        #endregion
 
 #if UNITY_EDITOR
 
-        /// <summary>Текущий индекс активной группы</summary>
+        /// <summary> Текущий индекс активной группы </summary>
         public int Editor_CurrentGroupIndex => currentGroupIndex;
 
-        /// <summary>Шаги, ожидающие выполнения</summary>
-        public IEnumerable<PuzzleStep> Editor_ActiveSteps => activeSubscriptions.Keys;
+        /// <summary> Шаги, ожидающие завершения </summary>
+        public IEnumerable<IPuzzleStep> Editor_ActiveSteps
+        {
+            get
+            {
+                foreach (var entry in activeEntries)
+                    if (entry?.Step != null) yield return entry.Step;
+            }
+        }
 
-        /// <summary>Принудительно завершить активные шаги группы</summary>
+        /// <summary> Принудительно завершить активную группу </summary>
         public void Editor_ForceCompleteCurrentGroup()
         {
-            var steps = new List<PuzzleStep>(activeSubscriptions.Keys);
-            foreach (var step in steps)
-                OnStepCompleted(step);
+            if (activeEntries.Count > 0) CompleteGroup();
         }
 
 #endif
-
-        private int LoadProgress()
-        {
-            if (!saveProgress || string.IsNullOrEmpty(saveKey)) return 0;
-
-            return JsonSaveLoad.Load<int>(saveKey, defaultValue: 0);
-        }
-
-        private void SaveProgress(int completedGroupIndex)
-        {
-            if (!saveProgress || string.IsNullOrEmpty(saveKey)) return;
-
-            // Сохраняем индекс следующей группы — с неё возобновимся при загрузке
-            JsonSaveLoad.Save(completedGroupIndex + 1, saveKey);
-        }
-
-        private void EraseProgress()
-        {
-            if (!saveProgress || string.IsNullOrEmpty(saveKey)) return;
-
-            JsonSaveLoad.Save(0, saveKey);
-        }
-
-        #endregion
     }
 }

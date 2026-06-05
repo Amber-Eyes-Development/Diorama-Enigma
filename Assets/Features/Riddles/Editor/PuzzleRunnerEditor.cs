@@ -1,3 +1,4 @@
+#if RIDDLES_EDITOR_WIP
 using UnityEditor;
 using UnityEngine;
 
@@ -118,3 +119,4 @@ namespace DioramaEnigma.Riddles.Editor
         }
     }
 }
+#endif

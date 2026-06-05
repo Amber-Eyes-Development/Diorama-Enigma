@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
-using Extensions.Data;
 using Extensions.Events;
 using Extensions.Log;
+using Extensions.ScriptableValues;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Интерактивный объект сцены: клик, дрэг и наведение
+    /// Интерактивный объект сцены: репортит ввод (клик/драг/наведение) и пишет связанные
+    /// значения-состояния. О «шагах» не знает — встречается с системой шагов на значении.
     /// </summary>
     public sealed class InteractableObject : MonoBehaviour,
         IPointerClickHandler,
@@ -19,42 +20,38 @@ namespace DioramaEnigma.Riddles
         /// <summary> Наведение курсора (true — наведён, false — ушёл) </summary>
         public event Action<bool> onHoverChanged;
 
-        /// <summary> Текущее активное состояние </summary>
-        public InteractableState State => state;
         /// <summary> ID объекта </summary>
         public string Id => interactableId != null ? interactableId.Id : string.Empty;
         /// <summary> Заблокирован ли объект </summary>
         public bool IsLocked => isLocked;
 
-        #region  Параметры
-        
+        #region Параметры
+
         [Header("Идентификация"), Space]
         [SerializeField] private InteractableID interactableId;
 
-        [Header("Взаимодействие"), Space]
-        [Tooltip("Количество состояний, циклично переключаемых по клику")]
+        [Header("Клик"), Space]
+        [SerializeField] private bool isClickable = true;
+        [Tooltip("Значение-состояние, циклически переключаемое по клику (например StateSetPuzzleStep). Опционально")]
+        [SerializeField] private IntValue clickState;
+        [Tooltip("Количество циклически переключаемых состояний")]
         [Min(2)]
         [SerializeField] private int stateCount = 2;
-        [SerializeField] private bool isClickable = true;
+
+        [Header("Перетаскивание"), Space]
         [SerializeField] private bool isDraggable = false;
+        [Tooltip("Значение-состояние, выставляемое в true при дропе в нужную зону (например BoolPuzzleStep). Опционально")]
+        [SerializeField] private BoolValue dropState;
+        [Tooltip("Зона, в которую нужно перетащить (пусто — любая зона)")]
+        [SerializeField] private InteractableID requiredDropZone;
 
         [Header("Блокировка"), Space]
         [Tooltip("Заблокирован при старте и при сбросе последовательности. " +
-                 "Разблокировать через SetInteractableLockEffect в ActivationEffects нужного шага.")]
+                 "Разблокировать через SetInteractableLockEffect в ActivationEffects нужного шага")]
         [SerializeField] private bool startsLocked = false;
 
-        [Header("Сброс"), Space]
-        [Tooltip("Сбросить стейт и блокировку при получении PuzzleSequenceResetEvent")]
-        [SerializeField] private bool resetOnSequenceReset = false;
-
-        [Header("Сохранение"), Space]
-        [Tooltip("Сохранять и восстанавливать стейт между сессиями. " +
-                 "Ключ сохранения — ID из InteractableID-ассета.")]
-        [SerializeField] private bool saveState = false;
-        
         #endregion
 
-        private InteractableState state;
         private bool isLocked;
         private Camera mainCamera;
         private float dragDepth;
@@ -64,38 +61,33 @@ namespace DioramaEnigma.Riddles
 
         private void Awake()
         {
-            state = new InteractableState(stateCount);
             isLocked = startsLocked;
             mainCamera = Camera.main;
-            hub = RiddleContext.Instance.Hub;
+
+            RiddleContext context = GetComponentInParent<RiddleContext>();
+            if (context == null)
+                ServiceDebug.LogWarning(this, "RiddleContext не найден в родителях");
+            else
+                hub = context.Hub;
 
             if (interactableId == null)
-            {
                 ServiceDebug.LogWarning(this, "interactableId не назначен");
-            }
-            else if (saveState)
-            {
-                int savedIndex = JsonSaveLoad.Load<int>(interactableId.Id, defaultValue: 0);
-                state.SetSilent(savedIndex);
-            }
         }
 
         private void OnEnable()
         {
+            if (hub == null) return;
+
             hub.Subscribe<InteractableLockChangedEvent>(OnLockChanged);
             hub.Subscribe<PuzzleSequenceResetEvent>(OnSequenceReset);
-
-            if (saveState && interactableId != null)
-                state.onStateChanged += OnStateChangedSave;
         }
 
         private void OnDisable()
         {
+            if (hub == null) return;
+
             hub.Unsubscribe<InteractableLockChangedEvent>(OnLockChanged);
             hub.Unsubscribe<PuzzleSequenceResetEvent>(OnSequenceReset);
-
-            if (saveState && interactableId != null)
-                state.onStateChanged -= OnStateChangedSave;
         }
 
         #endregion
@@ -104,10 +96,10 @@ namespace DioramaEnigma.Riddles
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (!isClickable || isLocked) return;
+            if (!isClickable || isLocked || clickState == null) return;
 
-            state.CycleNext();
-            hub.PublishReplay(new InteractableClickedEvent(Id, state.Current));
+            int next = stateCount > 0 ? (clickState.Value + 1) % stateCount : clickState.Value + 1;
+            clickState.SetValue(next);
         }
 
         #endregion
@@ -160,17 +152,14 @@ namespace DioramaEnigma.Riddles
             foreach (var result in results)
             {
                 var dropZone = result.gameObject.GetComponent<DropZoneObject>();
-                if (dropZone != null)
-                {
-                    dropZone.ReceiveDrop(this);
-                    return;
-                }
+                if (dropZone == null) continue;
+
+                dropZone.ReceiveDrop(this);
+                return;
             }
         }
 
-        #endregion
-
-        /// <summary>Принять дроп от зоны приземления</summary>
+        /// <summary> Принять дроп от зоны приземления </summary>
         public void OnDroppedOnZone(DropZoneObject zone)
         {
             if (zone == null)
@@ -179,33 +168,20 @@ namespace DioramaEnigma.Riddles
                 return;
             }
 
-            hub.Publish(new InteractableDraggedEvent(Id, zone.ZoneId));
+            if (requiredDropZone != null && zone.ZoneId != requiredDropZone.Id) return;
+            if (dropState != null) dropState.SetValue(true);
         }
+
+        #endregion
 
         #region Internal
 
         private void OnLockChanged(InteractableLockChangedEvent evt)
         {
-            if (evt.InteractableId == Id)
-                isLocked = evt.IsLocked;
+            if (evt.InteractableId == Id) isLocked = evt.IsLocked;
         }
 
-        private void OnStateChangedSave(int stateIndex)
-        {
-            JsonSaveLoad.Save(stateIndex, interactableId.Id);
-        }
-
-        private void OnSequenceReset(PuzzleSequenceResetEvent evt)
-        {
-            if (!resetOnSequenceReset) return;
-
-            state.Reset();
-            isLocked = startsLocked;
-            hub.ClearReplay<InteractableClickedEvent>();
-
-            if (saveState && interactableId != null)
-                JsonSaveLoad.Save(0, interactableId.Id);
-        }
+        private void OnSequenceReset(PuzzleSequenceResetEvent evt) => isLocked = startsLocked;
 
         #endregion
     }

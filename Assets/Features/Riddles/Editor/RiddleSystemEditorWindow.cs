@@ -1,3 +1,4 @@
+#if RIDDLES_EDITOR_WIP
 using System.Collections.Generic;
 using Extensions.EditorTools;
 using UnityEditor;
@@ -492,3 +493,4 @@ namespace DioramaEnigma.Riddles.Editor
         }
     }
 }
+#endif
