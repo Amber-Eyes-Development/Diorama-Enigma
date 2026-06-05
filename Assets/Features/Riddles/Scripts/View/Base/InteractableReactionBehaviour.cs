@@ -13,8 +13,8 @@ namespace DioramaEnigma.Riddles
 
         protected sealed override void Subscribe()
         {
-            if (Interactable != null)
-                Interactable.onHoverChanged += OnHoverChanged;
+            if (Hover != null)
+                Hover.onHoverChanged += OnHoverChanged;
 
             if (StateSource != null)
             {
@@ -28,8 +28,8 @@ namespace DioramaEnigma.Riddles
 
         protected sealed override void Unsubscribe()
         {
-            if (Interactable != null)
-                Interactable.onHoverChanged -= OnHoverChanged;
+            if (Hover != null)
+                Hover.onHoverChanged -= OnHoverChanged;
 
             if (StateSource != null)
                 StateSource.onValueChanged -= OnStateChanged;
