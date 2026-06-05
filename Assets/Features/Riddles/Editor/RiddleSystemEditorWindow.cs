@@ -1,616 +1,223 @@
 using System.Collections.Generic;
-using System;
 using Extensions.EditorTools;
-using Extensions.ScriptableValues;
 using UnityEditor;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles.Editor
 {
     /// <summary>
-    /// Окно обзора последовательности загадки
+    /// Навигатор загадок: все PuzzleSequence проекта, их шаги и префабы-носители
     /// </summary>
     public sealed class RiddleSystemEditorWindow : EditorWindow
     {
-        private const float LEFT_PANEL_WIDTH = 230f;
-        private const double SCENE_REFRESH_INTERVAL = 2.0;
+        private const string WINDOW_NAME = "Puzzle Sequences In Project";
+        private const float SQUARE = EditorToolsConstraints.BASE_ELEMENT_HEIGHT;
 
-        private const string STATE_PROP = "state";
-        private const string GROUP_INDEX_PROP = "groupIndex";
-
-        private PuzzleSequence selectedSequence;
-        private int selectedStepIndex = -1;
-
-        private Vector2 leftScroll;
-        private Vector2 rightScroll;
-
-        private struct InputLink
+        private sealed class SequenceInfo
         {
-            public MonoBehaviour Component;
-            public ScriptableObject StateAsset;
+            public PuzzleSequence Asset;
+            public string Guid;
         }
 
-        private readonly List<InputLink> sceneInputLinks = new();
-        private double lastSceneRefreshTime;
+        private readonly List<SequenceInfo> sequences = new();
+        private readonly HashSet<string> expanded = new();
 
-        private GUIStyle styleTitle;
-        private GUIStyle styleSectionHeader;
-        private GUIStyle styleStepNormal;
-        private GUIStyle styleStepSelected;
+        private Vector2 scroll;
+
+        private GUIStyle styleMainButton;
         private GUIStyle styleGroupHeader;
         private GUIStyle styleSmall;
 
-        [MenuItem("Diorama Enigma/Riddle System Editor", priority = 100)]
-        public static void Open()
-        {
-            var window = GetWindow<RiddleSystemEditorWindow>("Riddle System Editor");
-            window.minSize = new Vector2(640f, 420f);
-        }
+        [MenuItem("Diorama Enigma/" + WINDOW_NAME, priority = 100)]
+        public static void Open() => GetWindow<RiddleSystemEditorWindow>(WINDOW_NAME).minSize = new Vector2(420f, 320f);
 
-        /// <summary> Открыть окно и перейти к конкретному шагу </summary>
+        /// <summary> Открыть окно и развернуть конкретную последовательность </summary>
         public static void Open(PuzzleSequence sequence, int stepIndex = -1)
         {
-            var window = GetWindow<RiddleSystemEditorWindow>("Riddle System Editor");
-            window.minSize = new Vector2(640f, 420f);
+            var window = GetWindow<RiddleSystemEditorWindow>(WINDOW_NAME);
+            window.minSize = new Vector2(420f, 320f);
+            window.Refresh();
+
             if (sequence == null) return;
-            window.selectedSequence = sequence;
-            window.selectedStepIndex = stepIndex;
+
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(sequence));
+            window.expanded.Add(guid);
+
+            if (stepIndex >= 0) EditorGUIUtility.PingObject(sequence);
             window.Repaint();
         }
 
-        private void OnEnable()
-        {
-            EditorApplication.update += OnEditorUpdate;
-            RefreshSceneObjects();
-        }
+        private void OnEnable() => Refresh();
 
-        private void OnDisable() => EditorApplication.update -= OnEditorUpdate;
-
-        private void OnEditorUpdate()
-        {
-            if (EditorApplication.timeSinceStartup - lastSceneRefreshTime > SCENE_REFRESH_INTERVAL)
-                RefreshSceneObjects();
-
-            if (Application.isPlaying)
-                Repaint();
-        }
-
-        private void OnSelectionChange()
-        {
-            if (Selection.activeObject is PuzzleSequence seq)
-            {
-                selectedSequence = seq;
-                selectedStepIndex = -1;
-                Repaint();
-            }
-        }
-
-        #region Main
+        #region GUI
 
         private void OnGUI()
         {
             EnsureStyles();
             DrawToolbar();
 
-            if (selectedSequence == null)
+            if (sequences.Count == 0)
             {
-                DrawEmptyState();
+                EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+                EditorGUILayout.LabelField("  PuzzleSequence в проекте не найдены", styleSmall);
                 return;
             }
 
-            EditorGUILayout.BeginHorizontal();
-            DrawLeftPanel();
-            DrawDividerV();
-            DrawRightPanel();
-            EditorGUILayout.EndHorizontal();
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            foreach (var info in sequences)
+                DrawSequence(info);
+            EditorGUILayout.EndScrollView();
         }
-
-        #endregion
-
-        #region Toolbar
 
         private void DrawToolbar()
         {
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar,
-                GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar, GUILayout.Height(SQUARE));
 
-            EditorGUILayout.LabelField("Последовательность:", GUILayout.Width(140));
-
-            var next = (PuzzleSequence)EditorGUILayout.ObjectField(
-                selectedSequence, typeof(PuzzleSequence), allowSceneObjects: false, GUILayout.Width(200));
-
-            if (next != selectedSequence)
-            {
-                selectedSequence = next;
-                selectedStepIndex = -1;
-            }
-
+            EditorGUILayout.LabelField($"Последовательностей: {sequences.Count}");
             GUILayout.FlexibleSpace();
 
             if (GUILayout.Button("Объекты сцены ↗", EditorStyles.toolbarButton, GUILayout.Width(120)))
                 RiddleSceneObjectsWindow.Open();
 
-            if (GUILayout.Button("Создать...", EditorStyles.toolbarButton, GUILayout.Width(70)))
-                CreateAsset<PuzzleSequence>("New PuzzleSequence");
+            if (GUILayout.Button("↺ Обновить", EditorStyles.toolbarButton, GUILayout.Width(90)))
+                Refresh();
 
             EditorGUILayout.EndHorizontal();
-
-            DrawDividerH();
         }
 
-        #endregion
-
-        #region Empty state
-
-        private void DrawEmptyState()
+        private void DrawSequence(SequenceInfo info)
         {
-            GUILayout.FlexibleSpace();
+            bool isExpanded = expanded.Contains(info.Guid);
+
             EditorGUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.BeginVertical();
 
-            EditorGUILayout.LabelField("Выберите PuzzleSequence в окне Project", styleTitle);
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+            if (GUILayout.Button(isExpanded ? "▼" : "▶", GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+            {
+                if (isExpanded) expanded.Remove(info.Guid);
+                else expanded.Add(info.Guid);
+            }
 
-            if (GUILayout.Button("Создать новую PuzzleSequence",
-                GUILayout.Width(260), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                CreateAsset<PuzzleSequence>("New PuzzleSequence");
+            string label = string.IsNullOrEmpty(info.Asset.SequenceLabel) ? info.Asset.name : info.Asset.SequenceLabel;
 
-            EditorGUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
+            SetBG(EditorToolsConstraints.COLOR_ACCENT);
+            if (GUILayout.Button($"  {label}   ({info.Asset.Steps.Count} шагов)", styleMainButton, GUILayout.Height(SQUARE)))
+                Selection.activeObject = info.Asset;
+            ResetBG();
+
+            DrawPingButton(info.Asset);
+
             EditorGUILayout.EndHorizontal();
-            GUILayout.FlexibleSpace();
+
+            if (isExpanded) DrawSteps(info.Asset);
         }
 
-        #endregion
-
-        #region Left panel
-
-        private void DrawLeftPanel()
+        private void DrawSteps(PuzzleSequence sequence)
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(LEFT_PANEL_WIDTH), GUILayout.ExpandHeight(true));
+            EditorGUI.indentLevel++;
 
-            ColorLabel("  ШАГИ", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
-            DrawDividerH(EditorToolsConstraints.COLOR_CYAN * 0.5f);
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-
-            leftScroll = EditorGUILayout.BeginScrollView(leftScroll, GUIStyle.none, GUI.skin.verticalScrollbar);
-
-            int globalIndex = 0;
             int currentGroup = -1;
-
-            foreach (var entry in selectedSequence.Steps)
+            foreach (var entry in sequence.Steps)
             {
+                if (entry == null) continue;
+
                 if (entry.GroupIndex != currentGroup)
                 {
                     currentGroup = entry.GroupIndex;
-
-                    if (globalIndex > 0) EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-
-                    Color groupColor = currentGroup % 2 == 0
-                        ? EditorToolsConstraints.COLOR_CYAN
-                        : EditorToolsConstraints.COLOR_GREEN;
-
-                    ColorLabel($"Группа {currentGroup}", groupColor, styleGroupHeader);
+                    EditorGUILayout.LabelField($"   Группа {currentGroup}", styleGroupHeader);
                 }
 
-                DrawStepRow(entry.Step, globalIndex);
-                globalIndex++;
+                DrawStepRow(entry.Step as ScriptableObject);
             }
 
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-
-            if (GUILayout.Button("+ Шаг (следующая группа)",
-                GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                AddStep();
-
-            EditorGUILayout.EndScrollView();
-            EditorGUILayout.EndVertical();
-        }
-
-        private void DrawStepRow(IPuzzleStep step, int index)
-        {
-            bool selected = index == selectedStepIndex;
-
-            string label = step == null ? "○ (не назначен)" :
-                string.IsNullOrEmpty(step.StepLabel) ? $"Шаг {index}" : step.StepLabel;
-
-            if (Application.isPlaying && step != null)
-                label = (step.IsCompleted ? "✓ " : "● ") + label;
-
-            var prevBg = GUI.backgroundColor;
-            if (selected) GUI.backgroundColor = EditorToolsConstraints.COLOR_CYAN;
-
-            if (GUILayout.Button(label, selected ? styleStepSelected : styleStepNormal,
-                GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-            {
-                selectedStepIndex = index;
-                GUI.FocusControl(null);
-            }
-
-            var rowRect = GUILayoutUtility.GetLastRect();
-            GUI.backgroundColor = prevBg;
-
-            if (step != null) HandleStepRowDrag(rowRect, step);
-        }
-
-        #endregion
-
-        #region Right panel
-
-        private void DrawRightPanel()
-        {
-            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
-
-            if (selectedStepIndex < 0 || selectedStepIndex >= selectedSequence.Steps.Count)
-            {
-                GUILayout.FlexibleSpace();
-                EditorGUILayout.LabelField("  Выберите шаг слева", styleTitle);
-                GUILayout.FlexibleSpace();
-                EditorGUILayout.EndVertical();
-                return;
-            }
-
-            var entry = selectedSequence.Steps[selectedStepIndex];
-            var step = entry.Step;
-
-            string title = step == null ? "—" :
-                string.IsNullOrEmpty(step.StepLabel) ? $"Шаг {selectedStepIndex}" : step.StepLabel;
-
-            EditorGUILayout.LabelField($"  {title}  (Группа {entry.GroupIndex})", styleTitle);
-            DrawDividerH();
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-
-            if (step == null)
-            {
-                EditorGUILayout.HelpBox("Шаг не назначен. Назначьте ассет-шаг в инспекторе PuzzleSequence.", MessageType.Warning);
-                EditorGUILayout.EndVertical();
-                return;
-            }
-
-            rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
-
-            DrawStepInfoBlock(step);
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-            DrawLinkedInputsSection(step);
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-            DrawEffectsBlock("▶  ПРИ АКТИВАЦИИ", entry.ActivationEffects, EditorToolsConstraints.COLOR_YELLOW);
-            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-            DrawEffectsBlock("✓  ПРИ ЗАВЕРШЕНИИ", entry.CompletionEffects, EditorToolsConstraints.COLOR_GREEN);
-
-            EditorGUILayout.EndScrollView();
-            EditorGUILayout.EndVertical();
-        }
-
-        private void DrawStepInfoBlock(IPuzzleStep step)
-        {
-            ColorLabel("  ШАГ", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
-            DrawDividerH(EditorToolsConstraints.COLOR_CYAN * 0.4f);
+            EditorGUI.indentLevel--;
             EditorGUILayout.Space(2);
+        }
 
-            EditorGUILayout.LabelField($"Тип: {step.GetType().Name}", styleSmall);
+        private void DrawStepRow(ScriptableObject stepAsset)
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(EditorGUI.indentLevel * 12f);
 
-            if (Application.isPlaying)
+            if (stepAsset == null)
             {
-                bool completed = step.IsCompleted;
-                string completedStr = completed ? "✓ завершён" : "● ожидание";
-                string valueStr = GetStepValueString(step);
-
-                Color prevColor = GUI.contentColor;
-                GUI.contentColor = completed ? EditorToolsConstraints.COLOR_GREEN : EditorToolsConstraints.COLOR_YELLOW;
-                EditorGUILayout.LabelField($"  {completedStr}  {valueStr}", styleSmall);
-                GUI.contentColor = prevColor;
-            }
-
-            DrawGateInfo(step);
-        }
-
-        private void DrawGateInfo(IPuzzleStep step)
-        {
-            var stepAsset = step as ScriptableObject;
-            if (stepAsset == null) return;
-
-            var so = new SerializedObject(stepAsset);
-            var trackerProp = so.FindProperty("tracker");
-            if (trackerProp == null) return;
-
-            var gateProp = trackerProp.FindPropertyRelative("gate");
-            if (gateProp == null) return;
-
-            EditorGUILayout.Space(2);
-
-            bool hasGate = !string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
-            string gateStr = hasGate ? GateSummary(gateProp) : "(нет)";
-            EditorGUILayout.LabelField($"Гейт: {gateStr}", styleSmall);
-        }
-
-        private static string GetStepValueString(IPuzzleStep step) => step switch
-        {
-            StateSetPuzzleStep intStep => $"val:{intStep.Value}",
-            BoolPuzzleStep boolStep => $"val:{boolStep.Value}",
-            StringPuzzleStep strStep => $"val:\"{strStep.Value}\"",
-            _ => string.Empty,
-        };
-
-        private static string GateSummary(SerializedProperty gateProp)
-        {
-            string typeName = ManagedRefTypeName(gateProp);
-            var requiredProp = gateProp.FindPropertyRelative("requiredSteps");
-            if (requiredProp != null) return $"{typeName} [{requiredProp.arraySize} шагов]";
-            return typeName;
-        }
-
-        private static string ManagedRefTypeName(SerializedProperty prop)
-        {
-            string full = prop.managedReferenceFullTypename;
-            if (string.IsNullOrEmpty(full)) return string.Empty;
-            int dot = full.LastIndexOf('.');
-            return dot >= 0 ? full[(dot + 1)..] : full;
-        }
-
-        private void DrawLinkedInputsSection(IPuzzleStep step)
-        {
-            ColorLabel("  СВЯЗАННЫЕ ОБЪЕКТЫ (сцена)", EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSectionHeader);
-            DrawDividerH(EditorToolsConstraints.COLOR_LIGHT_GREEN * 0.4f);
-            EditorGUILayout.Space(2);
-
-            var stepAsset = step as ScriptableObject;
-            bool found = false;
-
-            if (stepAsset != null)
-            {
-                foreach (var link in sceneInputLinks)
-                {
-                    if (link.StateAsset != stepAsset || link.Component == null) continue;
-
-                    found = true;
-                    string typeName = link.Component.GetType().Name.Replace("Interactable", "");
-
-                    EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-                    ColorLabel($"→ {link.Component.gameObject.name}  [{typeName}]",
-                        EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSmall);
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Ping", GUILayout.Width(44), GUILayout.Height(16)))
-                    {
-                        Selection.activeGameObject = link.Component.gameObject;
-                        EditorGUIUtility.PingObject(link.Component.gameObject);
-                    }
-                    EditorGUILayout.EndHorizontal();
-                }
-            }
-
-            if (!found)
-                EditorGUILayout.LabelField("  (нет связанных объектов в сцене)", styleSmall);
-        }
-
-        private void DrawEffectsBlock(string title, IReadOnlyList<PuzzleEffect> effects, Color color)
-        {
-            ColorLabel($"  {title}", color, styleSectionHeader);
-            DrawDividerH(color * 0.4f);
-            EditorGUILayout.Space(2);
-
-            if (effects == null || effects.Count == 0)
-            {
-                EditorGUILayout.LabelField("  (нет)", styleSmall);
-                return;
-            }
-
-            foreach (var effect in effects)
-            {
-                if (effect == null) { EditorGUILayout.LabelField("  ○ null", styleSmall); continue; }
-
-                EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-                EditorGUILayout.LabelField($"  {effect.GetType().Name.Replace("Effect", "")}", styleSmall);
+                using (new EditorGUI.DisabledScope(true))
+                    GUILayout.Button("○ (шаг не назначен)", styleMainButton, GUILayout.Height(SQUARE));
                 EditorGUILayout.EndHorizontal();
+                return;
             }
+
+            string label = BuildStepLabel(stepAsset);
+
+            if (GUILayout.Button(label, styleMainButton, GUILayout.Height(SQUARE)))
+                Selection.activeObject = stepAsset;
+
+            DrawPingButton(stepAsset);
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawPingButton(Object asset)
+        {
+            SetBG(EditorToolsConstraints.COLOR_CYAN);
+            if (GUILayout.Button("●", GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+                EditorGUIUtility.PingObject(asset);
+            ResetBG();
         }
 
         #endregion
 
-        #region Scene
+        #region Build
 
-        private void RefreshSceneObjects()
+        private void Refresh()
         {
-            lastSceneRefreshTime = EditorApplication.timeSinceStartup;
-            sceneInputLinks.Clear();
+            sequences.Clear();
 
-            foreach (var click in FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None))
+            foreach (var guid in AssetDatabase.FindAssets("t:PuzzleSequence"))
             {
-                var so = new SerializedObject(click);
-                var stateRef = so.FindProperty(STATE_PROP)?.objectReferenceValue as ScriptableObject;
-                sceneInputLinks.Add(new InputLink { Component = click, StateAsset = stateRef });
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var asset = AssetDatabase.LoadAssetAtPath<PuzzleSequence>(path);
+                if (asset == null) continue;
+
+                sequences.Add(new SequenceInfo { Asset = asset, Guid = guid });
             }
 
-            foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
-            {
-                var so = new SerializedObject(drag);
-                var stateRef = so.FindProperty(STATE_PROP)?.objectReferenceValue as ScriptableObject;
-                sceneInputLinks.Add(new InputLink { Component = drag, StateAsset = stateRef });
-            }
+            sequences.Sort((a, b) => string.Compare(a.Asset.name, b.Asset.name, System.StringComparison.OrdinalIgnoreCase));
         }
 
         #endregion
 
-        #region Asset creation
+        #region Helpers
 
-        private void AddStep()
+        private static string BuildStepLabel(ScriptableObject stepAsset)
         {
-            if (selectedSequence == null) return;
+            string typeName = stepAsset.GetType().Name.Replace("PuzzleStep", "");
+            string stepLabel = stepAsset is IPuzzleStep step && !string.IsNullOrEmpty(step.StepLabel)
+                ? step.StepLabel
+                : stepAsset.name;
 
-            var so = new SerializedObject(selectedSequence);
-            var stepsProp = so.FindProperty("steps");
-            int nextGroup = 0;
-
-            if (stepsProp.arraySize > 0)
-            {
-                var last = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-                nextGroup = last.FindPropertyRelative(GROUP_INDEX_PROP).intValue + 1;
-            }
-
-            stepsProp.arraySize++;
-            var newEntry = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-            newEntry.FindPropertyRelative("step").objectReferenceValue = null;
-            newEntry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = nextGroup;
-            newEntry.FindPropertyRelative("activationEffects").ClearArray();
-            newEntry.FindPropertyRelative("completionEffects").ClearArray();
-            so.ApplyModifiedProperties();
-
-            selectedStepIndex = stepsProp.arraySize - 1;
+            return $"  {typeName} · {stepLabel}";
         }
-
-        private static void CreateAsset<T>(string defaultName) where T : ScriptableObject
-        {
-            string path = EditorUtility.SaveFilePanelInProject(
-                $"Создать {typeof(T).Name}", defaultName, "asset", string.Empty);
-
-            if (string.IsNullOrEmpty(path)) return;
-
-            var asset = CreateInstance<T>();
-            AssetDatabase.CreateAsset(asset, path);
-            AssetDatabase.SaveAssets();
-            Selection.activeObject = asset;
-        }
-
-        #endregion
-
-        #region Drawing helpers
-
-        private static void ColorLabel(string text, Color color, GUIStyle style)
-        {
-            var prev = GUI.contentColor;
-            GUI.contentColor = color;
-            GUILayout.Label(text, style);
-            GUI.contentColor = prev;
-        }
-
-        private static void DrawDividerH(Color? color = null)
-        {
-            var rect = EditorGUILayout.GetControlRect(false, 1f);
-            EditorGUI.DrawRect(rect, color ?? new Color(0.15f, 0.15f, 0.15f, 1f));
-        }
-
-        private static void DrawDividerV()
-        {
-            var rect = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandHeight(true));
-            EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
-        }
-
-        #endregion
-
-        #region Drag-drop
-
-        private void HandleStepRowDrag(Rect rowRect, IPuzzleStep step)
-        {
-            var evt = Event.current;
-            if (!rowRect.Contains(evt.mousePosition)) return;
-
-            var stepAsset = step as ScriptableObject;
-            if (stepAsset == null) return;
-
-            switch (evt.type)
-            {
-                case EventType.DragUpdated:
-                {
-                    var comp = GetDraggedInteractable();
-                    if (comp != null && CanAssign(stepAsset, comp))
-                    {
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Link;
-                        evt.Use();
-                    }
-                    break;
-                }
-                case EventType.DragPerform:
-                {
-                    var comp = GetDraggedInteractable();
-                    if (comp != null && CanAssign(stepAsset, comp))
-                    {
-                        DragAndDrop.AcceptDrag();
-                        AssignStepToInteractable(stepAsset, comp);
-                        RefreshSceneObjects();
-                        evt.Use();
-                    }
-                    break;
-                }
-                case EventType.Repaint:
-                {
-                    if (DragAndDrop.visualMode == DragAndDropVisualMode.Link)
-                    {
-                        var comp = GetDraggedInteractable();
-                        if (comp != null && CanAssign(stepAsset, comp))
-                            EditorGUI.DrawRect(rowRect, new Color(0.3f, 0.8f, 0.3f, 0.25f));
-                    }
-                    break;
-                }
-            }
-        }
-
-        private static MonoBehaviour GetDraggedInteractable()
-        {
-            foreach (var obj in DragAndDrop.objectReferences)
-            {
-                if (obj is not GameObject go) continue;
-                var click = go.GetComponent<ClickInteractable>();
-                if (click != null) return click;
-                var drag = go.GetComponent<DraggableInteractable>();
-                if (drag != null) return drag;
-            }
-            return null;
-        }
-
-        private static bool CanAssign(ScriptableObject stepAsset, MonoBehaviour interactable)
-        {
-            return (interactable is ClickInteractable && stepAsset is IntValue)
-                || (interactable is DraggableInteractable && stepAsset is BoolValue);
-        }
-
-        private static void AssignStepToInteractable(ScriptableObject stepAsset, MonoBehaviour interactable)
-        {
-            var so = new SerializedObject(interactable);
-            var stateProp = so.FindProperty(STATE_PROP);
-            if (stateProp == null) return;
-            stateProp.objectReferenceValue = stepAsset;
-            so.ApplyModifiedProperties();
-        }
-
-        #endregion
-
-        #region Styles
 
         private void EnsureStyles()
         {
-            styleTitle ??= new GUIStyle(EditorStyles.boldLabel)
+            styleMainButton ??= new GUIStyle("Button")
             {
-                fontSize = EditorToolsConstraints.BASE_FONT_SIZE + 1,
-                padding = new RectOffset(EditorToolsConstraints.TEXT_PADDING, 0, 4, 0)
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
+                padding = new RectOffset(8, 6, 2, 2),
             };
-
-            styleSectionHeader ??= new GUIStyle(EditorStyles.miniLabel)
-                { fontStyle = FontStyle.Bold, fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1 };
 
             styleGroupHeader ??= new GUIStyle(EditorStyles.miniLabel)
             {
                 fontStyle = FontStyle.Bold,
                 fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1,
-                padding = new RectOffset(2, 0, 2, 2)
-            };
-
-            styleStepNormal ??= new GUIStyle("Button")
-            {
-                alignment = TextAnchor.MiddleLeft,
-                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
-                padding = new RectOffset(10, 6, 2, 2)
-            };
-
-            styleStepSelected ??= new GUIStyle("Button")
-            {
-                alignment = TextAnchor.MiddleLeft,
-                fontStyle = FontStyle.Bold,
-                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
-                padding = new RectOffset(10, 6, 2, 2)
             };
 
             styleSmall ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
         }
+
+        private static void SetBG(Color color) => GUI.backgroundColor = color;
+        private static void ResetBG() => GUI.backgroundColor = Color.white;
 
         #endregion
     }

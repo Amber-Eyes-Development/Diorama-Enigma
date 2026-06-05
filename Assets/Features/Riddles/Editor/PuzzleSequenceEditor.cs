@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Extensions.EditorTools;
 using UnityEditor;
 using UnityEngine;
 
@@ -38,7 +39,6 @@ namespace DioramaEnigma.Riddles.Editor
         private readonly Dictionary<int, SerializedObject> stepSOCache = new();
 
         private static readonly Color SeparatorColor = new(0.45f, 0.65f, 0.95f, 1f);
-        private static readonly Color StepBlockColor = new(0.32f, 0.33f, 0.36f, 1f);
 
         private static readonly (string label, Type type)[] StepTypes =
         {
@@ -69,29 +69,25 @@ namespace DioramaEnigma.Riddles.Editor
         private void OnDisable()
         {
             stepSOCache.Clear();
-            if (stepBlockBackground != null) DestroyImmediate(stepBlockBackground);
         }
 
         private GUIStyle StepBlockStyle
         {
             get
             {
-                if (stepBlockStyle != null) return stepBlockStyle;
-
-                stepBlockBackground = new Texture2D(1, 1);
-                stepBlockBackground.SetPixel(0, 0, StepBlockColor);
-                stepBlockBackground.Apply();
+                if (stepBlockStyle != null)
+                {
+                    return stepBlockStyle;
+                }
 
                 stepBlockStyle = new GUIStyle(EditorStyles.helpBox)
                 {
                     padding = new RectOffset(8, 8, 8, 8),
                 };
-                stepBlockStyle.normal.background = stepBlockBackground;
 
                 return stepBlockStyle;
             }
         }
-
         public override void OnInspectorGUI()
         {
             headerStyle ??= new GUIStyle(EditorStyles.boldLabel) { fontSize = 11 };
@@ -176,7 +172,19 @@ namespace DioramaEnigma.Riddles.Editor
             var stepProp = entry.FindPropertyRelative(STEP_PROP);
             bool stepIsNull = stepProp.objectReferenceValue == null;
 
-            EditorGUILayout.BeginVertical(StepBlockStyle);
+            Rect blockRect = EditorGUILayout.BeginVertical(StepBlockStyle);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect fillRect = new Rect(
+                    blockRect.x + 2f,
+                    blockRect.y + 2f,
+                    blockRect.width - 4f,
+                    blockRect.height - 4f
+                );
+
+                EditorGUI.DrawRect(fillRect, EditorToolsConstraints.COLOR_ACCENT);
+            }
 
             EditorGUILayout.BeginHorizontal();
 
@@ -184,15 +192,26 @@ namespace DioramaEnigma.Riddles.Editor
 
             if (stepIsNull)
             {
-                // Копия для лямбды — избегаем замыкания на переменную цикла
                 var capturedProp = stepProp.Copy();
+
                 if (GUILayout.Button("Создать ▾", GUILayout.Width(72)))
+                {
                     ShowCreateMenuForEntry(capturedProp);
+                }
             }
 
             int moveDir = 0;
-            if (GUILayout.Button("▲", GUILayout.Width(20))) moveDir = -1;
-            if (GUILayout.Button("▼", GUILayout.Width(20))) moveDir = +1;
+
+            if (GUILayout.Button("▲", GUILayout.Width(20)))
+            {
+                moveDir = -1;
+            }
+
+            if (GUILayout.Button("▼", GUILayout.Width(20)))
+            {
+                moveDir = +1;
+            }
+
             bool delete = GUILayout.Button("✕", GUILayout.Width(20));
 
             EditorGUILayout.EndHorizontal();
@@ -215,7 +234,10 @@ namespace DioramaEnigma.Riddles.Editor
             {
                 if (stepAsset is IPuzzleStep puzzleStep)
                 {
-                    string label = string.IsNullOrEmpty(puzzleStep.StepLabel) ? "(без метки)" : puzzleStep.StepLabel;
+                    string label = string.IsNullOrEmpty(puzzleStep.StepLabel)
+                        ? "(без метки)"
+                        : puzzleStep.StepLabel;
+
                     string typeName = stepAsset.GetType().Name.Replace("PuzzleStep", "");
                     EditorGUILayout.LabelField($"  {typeName} · {label}", EditorStyles.miniLabel);
                 }
