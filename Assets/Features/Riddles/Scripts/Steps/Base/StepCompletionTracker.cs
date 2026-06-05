@@ -20,11 +20,10 @@ namespace DioramaEnigma.Riddles
         [Tooltip("Доп. условие, блокирующее изменение состояния (помимо порядка групп). Опционально")]
         [SerializeReference] private StepGate gate;
 
-        [NonSerialized] private bool isActive;
-        [NonSerialized] private bool lastCompleted;
+        private bool isActive;
+        private bool lastCompleted;
 
         /// <summary> Инициализировать исходную завершённость (вызывать в OnEnable шага) </summary>
-        /// <param name="completed">Завершённость при значении по-умолчанию</param>
         public void Initialize(bool completed)
         {
             isActive = false;
@@ -32,11 +31,9 @@ namespace DioramaEnigma.Riddles
         }
 
         /// <summary> Активировать/деактивировать изменение состояния </summary>
-        /// <param name="active">true — изменение разрешено</param>
         public void SetActive(bool active) => isActive = active;
 
         /// <summary> Уведомить подписчиков, если завершённость изменилась </summary>
-        /// <param name="completed">Текущая завершённость</param>
         public void NotifyIfChanged(bool completed)
         {
             if (completed == lastCompleted) return;
@@ -44,5 +41,13 @@ namespace DioramaEnigma.Riddles
             lastCompleted = completed;
             onCompletionChanged?.Invoke(completed);
         }
+
+#if UNITY_EDITOR
+        public void EditorValidate(UnityEngine.Object context)
+        {
+            if (gate is RequireStepsCompletedGate reqGate)
+                reqGate.EditorValidate(context);
+        }
+#endif
     }
 }

@@ -57,5 +57,10 @@ namespace DioramaEnigma.Riddles
                 return;
             }
         }
+
+#if UNITY_EDITOR
+        public BoolValue Editor_StateRef => state;
+        public DropZoneObject Editor_TargetZone => targetZone;
+#endif
     }
 }

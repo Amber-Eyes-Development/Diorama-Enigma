@@ -38,6 +38,14 @@ namespace DioramaEnigma.Riddles
             tracker.Initialize(DefaultValue == completedWhen);
         }
 
+#if UNITY_EDITOR
+        protected override void OnValidate()
+        {
+            base.OnValidate();
+            tracker.EditorValidate(this);
+        }
+#endif
+
         /// <inheritdoc/>
         public override void SetValue(bool newValue)
         {

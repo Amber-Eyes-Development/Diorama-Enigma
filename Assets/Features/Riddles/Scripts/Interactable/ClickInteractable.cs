@@ -27,5 +27,10 @@ namespace DioramaEnigma.Riddles
                 state.SetValue(next);
             });
         }
+
+#if UNITY_EDITOR
+        public IntValue Editor_StateRef => state;
+        public int Editor_StateCount => stateCount;
+#endif
     }
 }

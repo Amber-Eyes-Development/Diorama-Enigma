@@ -17,9 +17,8 @@ namespace DioramaEnigma.Riddles
 
             StateSource.onValueChanged += OnStateChanged;
 
-            // Восстановление текущего состояния без эффектов
-            if (StateSource.Value != 0)
-                Dispatch(new ReactionTrigger(TriggerKind.StateEntered, StateSource.Value), silent: true);
+            // Восстанавливаем текущее состояние без эффектов (включая state 0, у которого могут быть биндинги)
+            Dispatch(new ReactionTrigger(TriggerKind.StateEntered, StateSource.Value), silent: true);
         }
 
         protected sealed override void Unsubscribe()

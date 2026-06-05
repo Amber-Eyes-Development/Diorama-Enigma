@@ -10,8 +10,8 @@ namespace DioramaEnigma.Riddles
     [Serializable]
     public sealed class RequireStepsCompletedGate : StepGate
     {
-        [Tooltip("Шаги, которые должны быть завершены для разблокировки изменения состояния. " +
-                 "Ссылки на ассеты-шаги, в т.ч. из другой последовательности")]
+        [Tooltip("Шаги, которые должны быть завершены для разблокировки. " +
+                 "Принимаются только ассеты-шаги (IPuzzleStep)")]
         [SerializeField] private IdentifiableObject[] requiredSteps;
 
         /// <inheritdoc/>
@@ -21,11 +21,27 @@ namespace DioramaEnigma.Riddles
 
             foreach (var required in requiredSteps)
             {
-                if (required is not IPuzzleStep step) continue;
+                if (required == null) continue; // пустой слот — пропускаем
+
+                // Некорректная ссылка (не шаг) блокирует гейт, а не пропускается
+                if (required is not IPuzzleStep step) return false;
+
                 if (!step.IsCompleted) return false;
             }
 
             return true;
         }
+
+#if UNITY_EDITOR
+        public void EditorValidate(UnityEngine.Object context)
+        {
+            if (requiredSteps == null) return;
+
+            foreach (var required in requiredSteps)
+                if (required != null && required is not IPuzzleStep)
+                    Extensions.Log.ServiceDebug.LogWarning(context,
+                        $"RequireStepsCompletedGate: «{required.name}» не реализует IPuzzleStep");
+        }
+#endif
     }
 }

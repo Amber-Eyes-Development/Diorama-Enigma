@@ -99,12 +99,13 @@ namespace DioramaEnigma.Riddles
             AdvanceToNextGroup();
         }
 
-        /// <summary> Перезапустить текущую группу шагов </summary>
+        /// <summary> Перезапустить текущую группу шагов (со сбросом их значений) </summary>
         public void RestartStep()
         {
             if (sequence == null) return;
 
             StopSequence();
+            ResetGroupSteps(currentGroupIndex);
             ActivateGroup(currentGroupIndex);
         }
 
@@ -214,6 +215,13 @@ namespace DioramaEnigma.Riddles
         {
             foreach (var entry in sequence.Steps)
                 entry?.Step?.ResetState();
+        }
+
+        private void ResetGroupSteps(int groupIndex)
+        {
+            foreach (var entry in sequence.Steps)
+                if (entry?.Step != null && entry.GroupIndex == groupIndex)
+                    entry.Step.ResetState();
         }
 
         private bool AnyStepCompleted()

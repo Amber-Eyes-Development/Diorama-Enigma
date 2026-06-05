@@ -31,8 +31,8 @@ namespace DioramaEnigma.Riddles
         [Min(1)]
         [SerializeField] private int atLeast = 1;
 
-        [NonSerialized] private bool subscribed;
-        [NonSerialized] private bool lastCompleted;
+        private bool subscribed;
+        private bool lastCompleted;
 
         private void OnEnable() => subscribed = false;
 
