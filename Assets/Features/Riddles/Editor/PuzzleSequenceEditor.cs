@@ -15,24 +15,30 @@ namespace DioramaEnigma.Riddles.Editor
     {
         private const string STEPS_FOLDER_PATH = "Assets/Features/Riddles/Data";
         private const string STEPS_FOLDER_NAME = "Steps";
-            
+
+        private const string STEPS_PROP = "steps";
+        private const string STEP_PROP = "step";
+        private const string GROUP_INDEX_PROP = "groupIndex";
+        private const string ACTIVATION_EFFECTS_PROP = "activationEffects";
+        private const string COMPLETION_EFFECTS_PROP = "completionEffects";
+
         private SerializedProperty sequenceLabelProp;
         private SerializedProperty stepsProp;
 
         private GUIStyle headerStyle;
+        private GUIStyle stepBlockStyle;
+        private Texture2D stepBlockBackground;
 
-        // ─── Warnings cache ───────────────────────────────────────────────────
         private readonly HashSet<int> disconnectedSteps = new();
         private readonly Dictionary<int, List<string>> sharedSteps = new();
         private bool warningsBuilt;
 
-        // ─── Step SO cache ────────────────────────────────────────────────────
         // Кешируем SerializedObject шагов: Unity откладывает callback [SerializeReference]
         // пикера; если пересоздавать SO каждый кадр, ссылка устаревает до выбора типа.
         private readonly Dictionary<int, SerializedObject> stepSOCache = new();
 
-        private static readonly Color SeparatorEven = new(0.25f, 0.45f, 0.65f, 1f);
-        private static readonly Color SeparatorOdd = new(0.35f, 0.55f, 0.35f, 1f);
+        private static readonly Color SeparatorColor = new(0.45f, 0.65f, 0.95f, 1f);
+        private static readonly Color StepBlockColor = new(0.32f, 0.33f, 0.36f, 1f);
 
         private static readonly (string label, Type type)[] StepTypes =
         {
@@ -56,11 +62,35 @@ namespace DioramaEnigma.Riddles.Editor
         private void OnEnable()
         {
             sequenceLabelProp = serializedObject.FindProperty("sequenceLabel");
-            stepsProp = serializedObject.FindProperty("steps");
+            stepsProp = serializedObject.FindProperty(STEPS_PROP);
             RefreshWarnings();
         }
 
-        private void OnDisable() => stepSOCache.Clear();
+        private void OnDisable()
+        {
+            stepSOCache.Clear();
+            if (stepBlockBackground != null) DestroyImmediate(stepBlockBackground);
+        }
+
+        private GUIStyle StepBlockStyle
+        {
+            get
+            {
+                if (stepBlockStyle != null) return stepBlockStyle;
+
+                stepBlockBackground = new Texture2D(1, 1);
+                stepBlockBackground.SetPixel(0, 0, StepBlockColor);
+                stepBlockBackground.Apply();
+
+                stepBlockStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    padding = new RectOffset(8, 8, 8, 8),
+                };
+                stepBlockStyle.normal.background = stepBlockBackground;
+
+                return stepBlockStyle;
+            }
+        }
 
         public override void OnInspectorGUI()
         {
@@ -94,14 +124,12 @@ namespace DioramaEnigma.Riddles.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
-        // ─── Groups ───────────────────────────────────────────────────────────
+        #region Groups
 
         private void DrawGroup(int groupIndex, int position, List<int> groups)
         {
-            Color separatorColor = position % 2 == 0 ? SeparatorEven : SeparatorOdd;
-
             var rect = EditorGUILayout.GetControlRect(false, 2);
-            EditorGUI.DrawRect(rect, separatorColor);
+            EditorGUI.DrawRect(rect, SeparatorColor);
             EditorGUILayout.Space(2);
 
             int count = CountStepsInGroup(groupIndex);
@@ -124,33 +152,39 @@ namespace DioramaEnigma.Riddles.Editor
             if (moveUp) { SwapGroups(groupIndex, groups[position - 1]); return; }
             if (moveDown) { SwapGroups(groupIndex, groups[position + 1]); return; }
 
+            bool firstInGroup = true;
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
                 var entry = stepsProp.GetArrayElementAtIndex(i);
-                if (entry.FindPropertyRelative("groupIndex").intValue != groupIndex) continue;
+                if (entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue != groupIndex) continue;
+
+                if (!firstInGroup) EditorGUILayout.Space(6);
+                firstInGroup = false;
+
                 DrawStepEntry(entry, i);
             }
 
-            EditorGUILayout.Space(2);
+            EditorGUILayout.Space(4);
         }
 
-        // ─── Step Entry ───────────────────────────────────────────────────────
+        #endregion
+
+        #region Step entry
 
         private void DrawStepEntry(SerializedProperty entry, int arrayIndex)
         {
-            var stepProp = entry.FindPropertyRelative("step");
+            var stepProp = entry.FindPropertyRelative(STEP_PROP);
             bool stepIsNull = stepProp.objectReferenceValue == null;
 
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginVertical(StepBlockStyle);
 
-            // Header row: step asset picker + [Создать] (when null) + move + delete
             EditorGUILayout.BeginHorizontal();
 
             EditorGUILayout.PropertyField(stepProp, GUIContent.none);
 
             if (stepIsNull)
             {
-                // Capture for lambda; copy avoids closure-over-loop-variable
+                // Копия для лямбды — избегаем замыкания на переменную цикла
                 var capturedProp = stepProp.Copy();
                 if (GUILayout.Button("Создать ▾", GUILayout.Width(72)))
                     ShowCreateMenuForEntry(capturedProp);
@@ -177,7 +211,6 @@ namespace DioramaEnigma.Riddles.Editor
                 return;
             }
 
-            // Step asset summary + inline gate editing
             if (stepProp.objectReferenceValue is ScriptableObject stepAsset)
             {
                 if (stepAsset is IPuzzleStep puzzleStep)
@@ -195,13 +228,15 @@ namespace DioramaEnigma.Riddles.Editor
                 DrawStepGate(stepAsset);
             }
 
-            DrawManagedRefArray(entry.FindPropertyRelative("activationEffects"), "ЭФФЕКТЫ ПРИ АКТИВАЦИИ", EffectTypes);
-            DrawManagedRefArray(entry.FindPropertyRelative("completionEffects"), "ЭФФЕКТЫ ПРИ ЗАВЕРШЕНИИ", EffectTypes);
+            DrawManagedRefArray(entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP), "ЭФФЕКТЫ ПРИ АКТИВАЦИИ", EffectTypes);
+            DrawManagedRefArray(entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP), "ЭФФЕКТЫ ПРИ ЗАВЕРШЕНИИ", EffectTypes);
 
             EditorGUILayout.EndVertical();
         }
 
-        // ─── Gate (nested SO editor) ──────────────────────────────────────────
+        #endregion
+
+        #region Gate (nested SO editor)
 
         private void DrawStepGate(ScriptableObject stepAsset)
         {
@@ -218,7 +253,6 @@ namespace DioramaEnigma.Riddles.Editor
 
             bool hasGate = !string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
 
-            // ── Header row ─────────────────────────────────────────────────────
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Гейт:", EditorStyles.miniLabel, GUILayout.Width(38));
 
@@ -242,7 +276,6 @@ namespace DioramaEnigma.Riddles.Editor
 
             EditorGUILayout.EndHorizontal();
 
-            // ── Gate body ──────────────────────────────────────────────────────
             if (hasGate)
             {
                 EditorGUI.indentLevel++;
@@ -281,7 +314,9 @@ namespace DioramaEnigma.Riddles.Editor
             return so;
         }
 
-        // ─── SerializeReference array ─────────────────────────────────────────
+        #endregion
+
+        #region SerializeReference array
 
         private void DrawManagedRefArray(SerializedProperty arrayProp, string label, (string, Type)[] addChoices)
         {
@@ -331,9 +366,11 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUI.indentLevel--;
         }
 
-        // ─── Step creation menus ──────────────────────────────────────────────
+        #endregion
 
-        /// <summary>Меню создания шага с добавлением новой записи в последовательность</summary>
+        #region Step creation menus
+
+        /// <summary> Меню создания шага с добавлением новой записи в последовательность </summary>
         private void ShowCreateStepMenu(int groupIndex)
         {
             var menu = new GenericMenu();
@@ -351,10 +388,10 @@ namespace DioramaEnigma.Riddles.Editor
                     int idx = stepsProp.arraySize;
                     stepsProp.arraySize++;
                     var entry = stepsProp.GetArrayElementAtIndex(idx);
-                    entry.FindPropertyRelative("step").objectReferenceValue = asset;
-                    entry.FindPropertyRelative("groupIndex").intValue = capturedGroup;
-                    entry.FindPropertyRelative("activationEffects").ClearArray();
-                    entry.FindPropertyRelative("completionEffects").ClearArray();
+                    entry.FindPropertyRelative(STEP_PROP).objectReferenceValue = asset;
+                    entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = capturedGroup;
+                    entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP).ClearArray();
+                    entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP).ClearArray();
                     serializedObject.ApplyModifiedProperties();
                 });
             }
@@ -365,7 +402,7 @@ namespace DioramaEnigma.Riddles.Editor
             menu.ShowAsContext();
         }
 
-        /// <summary>Меню создания шага и назначения его в существующий пустой слот</summary>
+        /// <summary> Меню создания шага и назначения его в существующий пустой слот </summary>
         private void ShowCreateMenuForEntry(SerializedProperty stepProp)
         {
             var menu = new GenericMenu();
@@ -388,7 +425,9 @@ namespace DioramaEnigma.Riddles.Editor
             menu.ShowAsContext();
         }
 
-        // ─── Asset creation ───────────────────────────────────────────────────
+        #endregion
+
+        #region Asset creation
 
         private ScriptableObject CreateStepAsset(Type stepType)
         {
@@ -444,7 +483,9 @@ namespace DioramaEnigma.Riddles.Editor
             return sb.ToString().Trim('_', ' ');
         }
 
-        // ─── Effect type menu ─────────────────────────────────────────────────
+        #endregion
+
+        #region Effect type menu
 
         private void ShowAddMenu(string arrayPath, (string label, Type type)[] choices)
         {
@@ -475,24 +516,26 @@ namespace DioramaEnigma.Riddles.Editor
             return dot >= 0 ? full[(dot + 1)..] : full;
         }
 
-        // ─── Step / group management ──────────────────────────────────────────
+        #endregion
+
+        #region Step / group management
 
         private void AddStep(int groupIndex)
         {
             int idx = stepsProp.arraySize;
             stepsProp.arraySize++;
             var entry = stepsProp.GetArrayElementAtIndex(idx);
-            entry.FindPropertyRelative("step").objectReferenceValue = null;
-            entry.FindPropertyRelative("groupIndex").intValue = groupIndex;
-            entry.FindPropertyRelative("activationEffects").ClearArray();
-            entry.FindPropertyRelative("completionEffects").ClearArray();
+            entry.FindPropertyRelative(STEP_PROP).objectReferenceValue = null;
+            entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = groupIndex;
+            entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP).ClearArray();
+            entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP).ClearArray();
         }
 
         private List<int> GetSortedGroups()
         {
             var set = new SortedSet<int>();
             for (int i = 0; i < stepsProp.arraySize; i++)
-                set.Add(stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("groupIndex").intValue);
+                set.Add(stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative(GROUP_INDEX_PROP).intValue);
             return new List<int>(set);
         }
 
@@ -500,7 +543,7 @@ namespace DioramaEnigma.Riddles.Editor
         {
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
-                var gp = stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("groupIndex");
+                var gp = stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative(GROUP_INDEX_PROP);
                 if (gp.intValue == groupA) gp.intValue = groupB;
                 else if (gp.intValue == groupB) gp.intValue = groupA;
             }
@@ -509,7 +552,7 @@ namespace DioramaEnigma.Riddles.Editor
         private void MoveStepToAdjacentGroup(int arrayIndex, int direction)
         {
             var groups = GetSortedGroups();
-            var gp = stepsProp.GetArrayElementAtIndex(arrayIndex).FindPropertyRelative("groupIndex");
+            var gp = stepsProp.GetArrayElementAtIndex(arrayIndex).FindPropertyRelative(GROUP_INDEX_PROP);
             int currentPos = groups.IndexOf(gp.intValue);
             int targetPos = currentPos + direction;
 
@@ -522,12 +565,14 @@ namespace DioramaEnigma.Riddles.Editor
         {
             int count = 0;
             for (int i = 0; i < stepsProp.arraySize; i++)
-                if (stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative("groupIndex").intValue == groupIndex)
+                if (stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative(GROUP_INDEX_PROP).intValue == groupIndex)
                     count++;
             return count;
         }
 
-        // ─── Warnings ─────────────────────────────────────────────────────────
+        #endregion
+
+        #region Warnings
 
         private void RefreshWarnings()
         {
@@ -535,26 +580,24 @@ namespace DioramaEnigma.Riddles.Editor
             sharedSteps.Clear();
             warningsBuilt = false;
 
-            // Collect step assets of this sequence that need scene connections
             var valueStepIDs = new HashSet<int>();
             var allStepIDs = new HashSet<int>();
 
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
                 var asset = stepsProp.GetArrayElementAtIndex(i)
-                    .FindPropertyRelative("step").objectReferenceValue as ScriptableObject;
+                    .FindPropertyRelative(STEP_PROP).objectReferenceValue as ScriptableObject;
                 if (asset == null) continue;
 
                 allStepIDs.Add(asset.GetInstanceID());
 
-                // Only value-based steps need direct scene input
+                // Прямого ввода из сцены требуют только шаги-значения
                 if (asset is StateSetPuzzleStep || asset is BoolPuzzleStep || asset is StringPuzzleStep)
                     valueStepIDs.Add(asset.GetInstanceID());
             }
 
             if (allStepIDs.Count == 0) { warningsBuilt = true; return; }
 
-            // ── Scene connection check ──────────────────────────────────────
             var connectedIDs = new HashSet<int>();
             CollectConnectedStateIDs(connectedIDs, FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None));
             CollectConnectedStateIDs(connectedIDs, FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None));
@@ -563,7 +606,7 @@ namespace DioramaEnigma.Riddles.Editor
                 if (!connectedIDs.Contains(id))
                     disconnectedSteps.Add(id);
 
-            // ── Cross-sequence sharing check ────────────────────────────────
+            // Шаги, используемые также в других последовательностях
             var guids = AssetDatabase.FindAssets("t:PuzzleSequence");
             foreach (var guid in guids)
             {
@@ -572,12 +615,12 @@ namespace DioramaEnigma.Riddles.Editor
                 if (otherSeq == null || otherSeq == target) continue;
 
                 var otherSO = new SerializedObject(otherSeq);
-                var otherSteps = otherSO.FindProperty("steps");
+                var otherSteps = otherSO.FindProperty(STEPS_PROP);
 
                 for (int i = 0; i < otherSteps.arraySize; i++)
                 {
                     var otherAsset = otherSteps.GetArrayElementAtIndex(i)
-                        .FindPropertyRelative("step").objectReferenceValue as ScriptableObject;
+                        .FindPropertyRelative(STEP_PROP).objectReferenceValue as ScriptableObject;
                     if (otherAsset == null || !allStepIDs.Contains(otherAsset.GetInstanceID())) continue;
 
                     int id = otherAsset.GetInstanceID();
@@ -623,5 +666,7 @@ namespace DioramaEnigma.Riddles.Editor
                 GUI.contentColor = prev;
             }
         }
+
+        #endregion
     }
 }

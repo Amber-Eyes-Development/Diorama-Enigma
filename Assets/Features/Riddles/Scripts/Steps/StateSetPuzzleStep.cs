@@ -5,8 +5,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Шаг-значение типа int (набор состояний): завершён, когда текущее состояние входит в допустимые.
-    /// Наследует <see cref="IntValue"/> — встречается с системой взаимодействия на значении.
+    /// Шаг-значение типа int (набор состояний): завершён, когда текущее состояние входит в допустимые
     /// </summary>
     [CreateAssetMenu(menuName = "Riddles/Steps/State Set Step", fileName = nameof(StateSetPuzzleStep))]
     public sealed class StateSetPuzzleStep : IntValue, IPuzzleStep

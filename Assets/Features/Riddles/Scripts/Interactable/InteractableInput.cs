@@ -6,9 +6,12 @@ namespace DioramaEnigma.Riddles
 {
     /// <summary>
     /// База компонента ввода: применяет изменение значения с опциональной задержкой,
-    /// блокируя повторный ввод на время задержки. Корректность «не раньше времени»
-    /// обеспечивает veto самого шага (<see cref="StepCompletionTracker"/>), а не блокировка ввода.
+    /// блокируя повторный ввод на её время
     /// </summary>
+    /// <remarks>
+    /// Корректность «не раньше времени» обеспечивает veto самого шага
+    /// (<see cref="StepCompletionTracker"/>), а не блокировка ввода.
+    /// </remarks>
     public abstract class InteractableInput : MonoBehaviour
     {
         [Header("Задержка"), Space]

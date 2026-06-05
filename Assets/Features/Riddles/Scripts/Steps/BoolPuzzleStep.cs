@@ -5,8 +5,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Шаг-значение типа bool: завершён при совпадении с целевым значением.
-    /// Наследует <see cref="BoolValue"/> — встречается с системой взаимодействия на значении.
+    /// Шаг-значение типа bool: завершён при совпадении с целевым значением
     /// </summary>
     [CreateAssetMenu(menuName = "Riddles/Steps/Bool Step", fileName = nameof(BoolPuzzleStep))]
     public sealed class BoolPuzzleStep : BoolValue, IPuzzleStep

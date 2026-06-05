@@ -9,7 +9,7 @@ namespace DioramaEnigma.Riddles
     [Serializable]
     public abstract class PuzzleEffect
     {
-        /// <summary> Выполнение эффект </summary>
+        /// <summary> Выполнить эффект </summary>
         public abstract void Execute(EventHub hub);
     }
 }

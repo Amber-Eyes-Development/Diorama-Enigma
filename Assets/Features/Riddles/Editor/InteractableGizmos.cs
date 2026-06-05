@@ -18,7 +18,7 @@ namespace DioramaEnigma.Riddles.Editor
         private static GUIStyle ClickStyle => _clickStyle ??= BuildStyle(new Color(0.4f, 1f, 1f));
         private static GUIStyle DragStyle  => _dragStyle  ??= BuildStyle(new Color(1f, 0.9f, 0.35f));
 
-        // ─── Click ────────────────────────────────────────────────────────────
+        #region Click
 
         [DrawGizmo(GizmoType.InSelectionHierarchy | GizmoType.NotInSelectionHierarchy)]
         static void DrawClickGizmo(ClickInteractable click, GizmoType gizmoType)
@@ -33,7 +33,9 @@ namespace DioramaEnigma.Riddles.Editor
             Handles.Label(click.transform.position + Vector3.up * LabelOffsetY, text, ClickStyle);
         }
 
-        // ─── Drag ─────────────────────────────────────────────────────────────
+        #endregion
+
+        #region Drag
 
         [DrawGizmo(GizmoType.InSelectionHierarchy | GizmoType.NotInSelectionHierarchy)]
         static void DrawDragGizmo(DraggableInteractable drag, GizmoType gizmoType)
@@ -47,7 +49,7 @@ namespace DioramaEnigma.Riddles.Editor
             string text = BuildLabel("⬡", stateRef, stateRef.Value.ToString());
             Handles.Label(drag.transform.position + Vector3.up * LabelOffsetY, text, DragStyle);
 
-            // Dotted line to target zone (edit mode only, when selected)
+            // Пунктирная линия к целевой зоне (только в режиме редактирования, при выделении)
             var zone = drag.Editor_TargetZone;
             if (zone != null && inSelection)
             {
@@ -58,7 +60,9 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        // ─── Helpers ──────────────────────────────────────────────────────────
+        #endregion
+
+        #region Helpers
 
         private static string BuildLabel(string icon, BaseScriptableValue stateRef, string valueStr)
         {
@@ -80,5 +84,7 @@ namespace DioramaEnigma.Riddles.Editor
                 normal = { textColor = textColor },
             };
         }
+
+        #endregion
     }
 }

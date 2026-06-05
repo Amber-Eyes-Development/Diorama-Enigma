@@ -6,8 +6,7 @@ using UnityEngine.EventSystems;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Ввод: перетаскивание и дроп в зону выставляет значение-состояние в true.
-    /// Целевая зона — прямая ссылка на <see cref="DropZoneObject"/> (без идентификаторов).
+    /// Ввод: перетаскивание и дроп в зону выставляет значение-состояние в true
     /// </summary>
     public sealed class DraggableInteractable : InteractableInput, IBeginDragHandler, IDragHandler, IEndDragHandler
     {

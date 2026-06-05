@@ -150,12 +150,16 @@ namespace DioramaEnigma.Riddles
                 }
 
                 entry.Step.SetActive(true);
-                entry.Step.onCompletionChanged += OnActiveStepCompletionChanged;
                 activeEntries.Add(entry);
             }
 
+            // Эффекты до подписки: их побочное завершение шага не должно входить в CompleteGroup,
+            // пока группа ещё активируется (иначе очистка activeEntries рвёт перечисление)
             foreach (var entry in activeEntries)
                 RunEffects(entry.ActivationEffects);
+
+            foreach (var entry in activeEntries)
+                entry.Step.onCompletionChanged += OnActiveStepCompletionChanged;
 
             CheckGroupCompletion();
         }

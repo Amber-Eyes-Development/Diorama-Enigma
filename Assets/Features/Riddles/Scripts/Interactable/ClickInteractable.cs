@@ -5,9 +5,9 @@ using UnityEngine.EventSystems;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Ввод: клик циклически переключает значение-состояние.
-    /// О «шагах» не знает — пишет <see cref="IntValue"/>, который может быть шагом-ассетом.
+    /// Ввод: клик циклически переключает значение-состояние
     /// </summary>
+    /// <remarks>О «шагах» не знает — пишет <see cref="IntValue"/>, который может быть шагом-ассетом.</remarks>
     public sealed class ClickInteractable : InteractableInput, IPointerClickHandler
     {
         [Header("Клик"), Space]
@@ -21,11 +21,7 @@ namespace DioramaEnigma.Riddles
         {
             if (state == null) return;
 
-            Apply(() =>
-            {
-                int next = stateCount > 0 ? (state.Value + 1) % stateCount : state.Value + 1;
-                state.SetValue(next);
-            });
+            Apply(() => state.SetValue((state.Value + 1) % stateCount));
         }
 
 #if UNITY_EDITOR

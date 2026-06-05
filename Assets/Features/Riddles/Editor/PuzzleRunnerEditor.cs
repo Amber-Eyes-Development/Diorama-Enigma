@@ -44,7 +44,7 @@ namespace DioramaEnigma.Riddles.Editor
             DrawControls(runner);
         }
 
-        // ─── State ────────────────────────────────────────────────────────────
+        #region State
 
         private void DrawCurrentState(PuzzleRunner runner)
         {
@@ -79,13 +79,11 @@ namespace DioramaEnigma.Riddles.Editor
 
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
-            // Step name
             var prevColor = GUI.contentColor;
             GUI.contentColor = done ? ColorDone : Color.white;
             EditorGUILayout.LabelField($"  ● {name}", stepNameStyle);
             GUI.contentColor = prevColor;
 
-            // Progress info: val:X  →  target
             if (!string.IsNullOrEmpty(progress))
             {
                 prevColor = GUI.contentColor;
@@ -97,7 +95,9 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        // ─── Progress info ────────────────────────────────────────────────────
+        #endregion
+
+        #region Progress info
 
         private static string GetStepProgressInfo(IPuzzleStep step)
         {
@@ -171,7 +171,9 @@ namespace DioramaEnigma.Riddles.Editor
             return sb.ToString();
         }
 
-        // ─── Controls ─────────────────────────────────────────────────────────
+        #endregion
+
+        #region Controls
 
         private void DrawControls(PuzzleRunner runner)
         {
@@ -205,7 +207,9 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        // ─── Helpers ──────────────────────────────────────────────────────────
+        #endregion
+
+        #region Helpers
 
         private void EnsureStyles()
         {
@@ -221,5 +225,7 @@ namespace DioramaEnigma.Riddles.Editor
             var rect = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(rect, color);
         }
+
+        #endregion
     }
 }

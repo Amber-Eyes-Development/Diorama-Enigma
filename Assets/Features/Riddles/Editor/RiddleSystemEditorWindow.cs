@@ -13,8 +13,10 @@ namespace DioramaEnigma.Riddles.Editor
     public sealed class RiddleSystemEditorWindow : EditorWindow
     {
         private const float LEFT_PANEL_WIDTH = 230f;
+        private const double SCENE_REFRESH_INTERVAL = 2.0;
 
-        // ─── State ────────────────────────────────────────────────────────────
+        private const string STATE_PROP = "state";
+        private const string GROUP_INDEX_PROP = "groupIndex";
 
         private PuzzleSequence selectedSequence;
         private int selectedStepIndex = -1;
@@ -31,16 +33,12 @@ namespace DioramaEnigma.Riddles.Editor
         private readonly List<InputLink> sceneInputLinks = new();
         private double lastSceneRefreshTime;
 
-        // ─── Styles (lazy) ────────────────────────────────────────────────────
-
         private GUIStyle styleTitle;
         private GUIStyle styleSectionHeader;
         private GUIStyle styleStepNormal;
         private GUIStyle styleStepSelected;
         private GUIStyle styleGroupHeader;
         private GUIStyle styleSmall;
-
-        // ─────────────────────────────────────────────────────────────────────
 
         [MenuItem("Diorama Enigma/Riddle System Editor", priority = 100)]
         public static void Open()
@@ -49,7 +47,7 @@ namespace DioramaEnigma.Riddles.Editor
             window.minSize = new Vector2(640f, 420f);
         }
 
-        /// <summary>Открыть окно и перейти к конкретному шагу</summary>
+        /// <summary> Открыть окно и перейти к конкретному шагу </summary>
         public static void Open(PuzzleSequence sequence, int stepIndex = -1)
         {
             var window = GetWindow<RiddleSystemEditorWindow>("Riddle System Editor");
@@ -70,7 +68,7 @@ namespace DioramaEnigma.Riddles.Editor
 
         private void OnEditorUpdate()
         {
-            if (EditorApplication.timeSinceStartup - lastSceneRefreshTime > 2.0)
+            if (EditorApplication.timeSinceStartup - lastSceneRefreshTime > SCENE_REFRESH_INTERVAL)
                 RefreshSceneObjects();
 
             if (Application.isPlaying)
@@ -87,7 +85,7 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        // ─── Main ─────────────────────────────────────────────────────────────
+        #region Main
 
         private void OnGUI()
         {
@@ -107,7 +105,9 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        // ─── Toolbar ──────────────────────────────────────────────────────────
+        #endregion
+
+        #region Toolbar
 
         private void DrawToolbar()
         {
@@ -138,7 +138,9 @@ namespace DioramaEnigma.Riddles.Editor
             DrawDividerH();
         }
 
-        // ─── Empty State ──────────────────────────────────────────────────────
+        #endregion
+
+        #region Empty state
 
         private void DrawEmptyState()
         {
@@ -160,7 +162,9 @@ namespace DioramaEnigma.Riddles.Editor
             GUILayout.FlexibleSpace();
         }
 
-        // ─── Left Panel ───────────────────────────────────────────────────────
+        #endregion
+
+        #region Left panel
 
         private void DrawLeftPanel()
         {
@@ -230,7 +234,9 @@ namespace DioramaEnigma.Riddles.Editor
             if (step != null) HandleStepRowDrag(rowRect, step);
         }
 
-        // ─── Right Panel ──────────────────────────────────────────────────────
+        #endregion
+
+        #region Right panel
 
         private void DrawRightPanel()
         {
@@ -275,8 +281,6 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUILayout.EndScrollView();
             EditorGUILayout.EndVertical();
         }
-
-        // ─── Step Info Block ──────────────────────────────────────────────────
 
         private void DrawStepInfoBlock(IPuzzleStep step)
         {
@@ -344,8 +348,6 @@ namespace DioramaEnigma.Riddles.Editor
             return dot >= 0 ? full[(dot + 1)..] : full;
         }
 
-        // ─── Linked Inputs Section ────────────────────────────────────────────
-
         private void DrawLinkedInputsSection(IPuzzleStep step)
         {
             ColorLabel("  СВЯЗАННЫЕ ОБЪЕКТЫ (сцена)", EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSectionHeader);
@@ -381,8 +383,6 @@ namespace DioramaEnigma.Riddles.Editor
                 EditorGUILayout.LabelField("  (нет связанных объектов в сцене)", styleSmall);
         }
 
-        // ─── Effects Block ────────────────────────────────────────────────────
-
         private void DrawEffectsBlock(string title, IReadOnlyList<PuzzleEffect> effects, Color color)
         {
             ColorLabel($"  {title}", color, styleSectionHeader);
@@ -405,7 +405,9 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        // ─── Scene ────────────────────────────────────────────────────────────
+        #endregion
+
+        #region Scene
 
         private void RefreshSceneObjects()
         {
@@ -415,19 +417,21 @@ namespace DioramaEnigma.Riddles.Editor
             foreach (var click in FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None))
             {
                 var so = new SerializedObject(click);
-                var stateRef = so.FindProperty("state")?.objectReferenceValue as ScriptableObject;
+                var stateRef = so.FindProperty(STATE_PROP)?.objectReferenceValue as ScriptableObject;
                 sceneInputLinks.Add(new InputLink { Component = click, StateAsset = stateRef });
             }
 
             foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
             {
                 var so = new SerializedObject(drag);
-                var stateRef = so.FindProperty("state")?.objectReferenceValue as ScriptableObject;
+                var stateRef = so.FindProperty(STATE_PROP)?.objectReferenceValue as ScriptableObject;
                 sceneInputLinks.Add(new InputLink { Component = drag, StateAsset = stateRef });
             }
         }
 
-        // ─── Asset Creation ───────────────────────────────────────────────────
+        #endregion
+
+        #region Asset creation
 
         private void AddStep()
         {
@@ -440,13 +444,13 @@ namespace DioramaEnigma.Riddles.Editor
             if (stepsProp.arraySize > 0)
             {
                 var last = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
-                nextGroup = last.FindPropertyRelative("groupIndex").intValue + 1;
+                nextGroup = last.FindPropertyRelative(GROUP_INDEX_PROP).intValue + 1;
             }
 
             stepsProp.arraySize++;
             var newEntry = stepsProp.GetArrayElementAtIndex(stepsProp.arraySize - 1);
             newEntry.FindPropertyRelative("step").objectReferenceValue = null;
-            newEntry.FindPropertyRelative("groupIndex").intValue = nextGroup;
+            newEntry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = nextGroup;
             newEntry.FindPropertyRelative("activationEffects").ClearArray();
             newEntry.FindPropertyRelative("completionEffects").ClearArray();
             so.ApplyModifiedProperties();
@@ -467,7 +471,9 @@ namespace DioramaEnigma.Riddles.Editor
             Selection.activeObject = asset;
         }
 
-        // ─── Drawing Helpers ──────────────────────────────────────────────────
+        #endregion
+
+        #region Drawing helpers
 
         private static void ColorLabel(string text, Color color, GUIStyle style)
         {
@@ -489,7 +495,9 @@ namespace DioramaEnigma.Riddles.Editor
             EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
         }
 
-        // ─── Drag-drop ────────────────────────────────────────────────────────
+        #endregion
+
+        #region Drag-drop
 
         private void HandleStepRowDrag(Rect rowRect, IPuzzleStep step)
         {
@@ -558,13 +566,15 @@ namespace DioramaEnigma.Riddles.Editor
         private static void AssignStepToInteractable(ScriptableObject stepAsset, MonoBehaviour interactable)
         {
             var so = new SerializedObject(interactable);
-            var stateProp = so.FindProperty("state");
+            var stateProp = so.FindProperty(STATE_PROP);
             if (stateProp == null) return;
             stateProp.objectReferenceValue = stepAsset;
             so.ApplyModifiedProperties();
         }
 
-        // ─── Styles ───────────────────────────────────────────────────────────
+        #endregion
+
+        #region Styles
 
         private void EnsureStyles()
         {
@@ -601,5 +611,7 @@ namespace DioramaEnigma.Riddles.Editor
 
             styleSmall ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
         }
+
+        #endregion
     }
 }

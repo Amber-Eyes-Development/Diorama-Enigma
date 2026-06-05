@@ -5,8 +5,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Шаг-значение типа string: завершён при совпадении с одним из допустимых значений.
-    /// Наследует <see cref="StringValue"/> — встречается с системой взаимодействия на значении.
+    /// Шаг-значение типа string: завершён при совпадении с одним из допустимых значений
     /// </summary>
     [CreateAssetMenu(menuName = "Riddles/Steps/String Step", fileName = nameof(StringPuzzleStep))]
     public sealed class StringPuzzleStep : StringValue, IPuzzleStep

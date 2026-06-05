@@ -16,13 +16,13 @@ namespace DioramaEnigma.Riddles.Editor
     [CustomEditor(typeof(CompositePuzzleStep))]
     internal sealed class CompositePuzzleStepEditor : PuzzleStepEditorBase { }
 
-    // ─────────────────────────────────────────────────────────────────────────
-
     /// <summary>
-    /// Базовый инспектор ассета-шага: стандартный инспектор + секция «Используется в».
+    /// Базовый инспектор ассета-шага: стандартный инспектор + секция «Используется в»
     /// </summary>
     internal abstract class PuzzleStepEditorBase : UnityEditor.Editor
     {
+        private const double RefreshIntervalSeconds = 5.0;
+
         private readonly List<(PuzzleSequence seq, int entryIndex, int groupIndex)> usedIn = new();
         private double lastRefreshTime = double.MinValue;
 
@@ -34,15 +34,14 @@ namespace DioramaEnigma.Riddles.Editor
         {
             DrawDefaultInspector();
 
-            // Lazy refresh every 5 seconds
-            if (EditorApplication.timeSinceStartup - lastRefreshTime > 5.0)
+            if (EditorApplication.timeSinceStartup - lastRefreshTime > RefreshIntervalSeconds)
                 RefreshUsedIn();
 
             EditorGUILayout.Space(10);
             DrawUsedInSection();
         }
 
-        // ─── Used-in section ──────────────────────────────────────────────────
+        #region Used-in section
 
         private void DrawUsedInSection()
         {
@@ -85,7 +84,9 @@ namespace DioramaEnigma.Riddles.Editor
             }
         }
 
-        // ─── Scan ─────────────────────────────────────────────────────────────
+        #endregion
+
+        #region Scan
 
         private void RefreshUsedIn()
         {
@@ -112,5 +113,7 @@ namespace DioramaEnigma.Riddles.Editor
                 }
             }
         }
+
+        #endregion
     }
 }
