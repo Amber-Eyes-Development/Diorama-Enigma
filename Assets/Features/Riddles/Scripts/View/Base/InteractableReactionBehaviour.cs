@@ -3,7 +3,7 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Реакция на состояние шага и наведение: диспетчеризация триггеров по списку биндингов
+    /// Реакция на состояние шага: диспетчеризация триггеров по списку биндингов
     /// </summary>
     /// <typeparam name="TBinding">Тип биндинга медиума (визуал / частицы / звук)</typeparam>
     public abstract class InteractableReactionBehaviour<TBinding> : InteractableViewBehaviour
@@ -13,24 +13,17 @@ namespace DioramaEnigma.Riddles
 
         protected sealed override void Subscribe()
         {
-            if (Hover != null)
-                Hover.onHoverChanged += OnHoverChanged;
+            if (StateSource == null) return;
 
-            if (StateSource != null)
-            {
-                StateSource.onValueChanged += OnStateChanged;
+            StateSource.onValueChanged += OnStateChanged;
 
-                // Восстановление текущего состояния без эффектов
-                if (StateSource.Value != 0)
-                    Dispatch(new ReactionTrigger(TriggerKind.StateEntered, StateSource.Value), silent: true);
-            }
+            // Восстановление текущего состояния без эффектов
+            if (StateSource.Value != 0)
+                Dispatch(new ReactionTrigger(TriggerKind.StateEntered, StateSource.Value), silent: true);
         }
 
         protected sealed override void Unsubscribe()
         {
-            if (Hover != null)
-                Hover.onHoverChanged -= OnHoverChanged;
-
             if (StateSource != null)
                 StateSource.onValueChanged -= OnStateChanged;
         }
@@ -41,9 +34,6 @@ namespace DioramaEnigma.Riddles
         protected abstract void Apply(TBinding binding, bool silent);
 
         #region Internal
-
-        private void OnHoverChanged(bool isHovered) =>
-            Dispatch(new ReactionTrigger(isHovered ? TriggerKind.HoverEnter : TriggerKind.HoverExit), silent: false);
 
         private void OnStateChanged(int stateIndex) =>
             Dispatch(new ReactionTrigger(TriggerKind.StateEntered, stateIndex), silent: false);
