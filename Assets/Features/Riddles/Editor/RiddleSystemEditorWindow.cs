@@ -190,7 +190,7 @@ namespace DioramaEnigma.Riddles.Editor
 
         private static string BuildStepLabel(ScriptableObject stepAsset)
         {
-            string typeName = stepAsset.GetType().Name.Replace("PuzzleStep", "");
+            string typeName = stepAsset.GetType().Name.Replace("Puzzle", "");
             string stepLabel = stepAsset is IPuzzleStep step && !string.IsNullOrEmpty(step.StepLabel)
                 ? step.StepLabel
                 : stepAsset.name;

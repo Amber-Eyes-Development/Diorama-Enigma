@@ -32,6 +32,28 @@ namespace DioramaEnigma.Riddles
             return true;
         }
 
+        /// <inheritdoc/>
+        public override void StartObserving()
+        {
+            if (requiredSteps == null) return;
+
+            foreach (var required in requiredSteps)
+                if (required is IPuzzleStep step)
+                    step.onCompletionChanged += OnRequiredCompletionChanged;
+        }
+
+        /// <inheritdoc/>
+        public override void StopObserving()
+        {
+            if (requiredSteps == null) return;
+
+            foreach (var required in requiredSteps)
+                if (required is IPuzzleStep step)
+                    step.onCompletionChanged -= OnRequiredCompletionChanged;
+        }
+
+        private void OnRequiredCompletionChanged(bool _) => RaiseSatisfactionChanged();
+
 #if UNITY_EDITOR
         public void EditorValidate(UnityEngine.Object context)
         {

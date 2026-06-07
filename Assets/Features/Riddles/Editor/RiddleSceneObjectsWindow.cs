@@ -11,12 +11,10 @@ namespace DioramaEnigma.Riddles.Editor
     /// </summary>
     public sealed class RiddleSceneObjectsWindow : EditorWindow
     {
-        private const string STATE_PROP = "state";
-
         private class ClickEntry
         {
             public ClickInteractable Component;
-            public IntValue StateRef;
+            public BoolValue StateRef;
         }
 
         private class DragEntry
@@ -160,16 +158,14 @@ namespace DioramaEnigma.Riddles.Editor
 
             foreach (var click in FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None))
             {
-                var so = new SerializedObject(click);
-                var stateRef = so.FindProperty(STATE_PROP)?.objectReferenceValue as IntValue;
+                var stateRef = click.GetComponent<StepReference>()?.Step;
                 clicks.Add(new ClickEntry { Component = click, StateRef = stateRef });
             }
 
             foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
             {
-                var so = new SerializedObject(drag);
-                var stateRef = so.FindProperty(STATE_PROP)?.objectReferenceValue as BoolValue;
-                var zone = so.FindProperty("targetZone")?.objectReferenceValue as DropZoneObject;
+                var stateRef = drag.GetComponent<StepReference>()?.Step;
+                var zone = drag.Editor_TargetZone;
                 drags.Add(new DragEntry
                 {
                     Component = drag,

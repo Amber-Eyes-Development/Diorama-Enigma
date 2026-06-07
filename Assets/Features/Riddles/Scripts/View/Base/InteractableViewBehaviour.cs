@@ -1,19 +1,20 @@
-using Extensions.ScriptableValues;
 using UnityEngine;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// База визуальной реакции: состояние берётся из значения-шага
+    /// База визуальной реакции: источник — шаг (значение/завершённость и разблокировка)
     /// </summary>
+    /// <remarks>Ссылку на шаг берёт из <see cref="StepReference"/> на том же объекте.</remarks>
+    [RequireComponent(typeof(StepReference))]
     public abstract class InteractableViewBehaviour : MonoBehaviour
     {
-        /// <summary> Источник состояния (значение-шаг) </summary>
-        protected IntValue StateSource => stateSource;
+        /// <summary> Источник состояния (шаг): значение/завершённость и разблокировка </summary>
+        protected PuzzleStep StateSource => stateSource;
 
-        [Header("Источники"), Space]
-        [Tooltip("Состояние-источник (например StateSetPuzzleStep)")]
-        [SerializeField] private IntValue stateSource;
+        private PuzzleStep stateSource;
+
+        protected virtual void Awake() => stateSource = GetComponent<StepReference>().Step;
 
         protected virtual void OnEnable() => Subscribe();
 

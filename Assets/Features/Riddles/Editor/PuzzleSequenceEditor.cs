@@ -20,6 +20,7 @@ namespace DioramaEnigma.Riddles.Editor
         private const string STEPS_PROP = "steps";
         private const string STEP_PROP = "step";
         private const string GROUP_INDEX_PROP = "groupIndex";
+        private const string AVAILABILITY_PROP = "availability";
         private const string ACTIVATION_EFFECTS_PROP = "activationEffects";
         private const string COMPLETION_EFFECTS_PROP = "completionEffects";
 
@@ -42,9 +43,7 @@ namespace DioramaEnigma.Riddles.Editor
 
         private static readonly (string label, Type type)[] StepTypes =
         {
-            ("Bool Step",      typeof(BoolPuzzleStep)),
-            ("State Set Step", typeof(StateSetPuzzleStep)),
-            ("String Step",    typeof(StringPuzzleStep)),
+            ("Step",           typeof(PuzzleStep)),
             ("Composite Step", typeof(CompositePuzzleStep)),
         };
 
@@ -148,6 +147,14 @@ namespace DioramaEnigma.Riddles.Editor
             if (moveUp) { SwapGroups(groupIndex, groups[position - 1]); return; }
             if (moveDown) { SwapGroups(groupIndex, groups[position + 1]); return; }
 
+            // Доступность группы (свойство группы; пишется на все её записи)
+            var availability = GetGroupAvailability(groupIndex);
+            EditorGUI.BeginChangeCheck();
+            var nextAvailability = (GroupAvailability)EditorGUILayout.EnumPopup("Доступность", availability);
+            if (EditorGUI.EndChangeCheck())
+                SetGroupAvailability(groupIndex, nextAvailability);
+            EditorGUILayout.Space(2);
+
             bool firstInGroup = true;
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
@@ -238,7 +245,7 @@ namespace DioramaEnigma.Riddles.Editor
                         ? "(без метки)"
                         : puzzleStep.StepLabel;
 
-                    string typeName = stepAsset.GetType().Name.Replace("PuzzleStep", "");
+                    string typeName = stepAsset.GetType().Name.Replace("Puzzle", "");
                     EditorGUILayout.LabelField($"  {typeName} · {label}", EditorStyles.miniLabel);
                 }
                 else
@@ -407,11 +414,13 @@ namespace DioramaEnigma.Riddles.Editor
                     if (asset == null) return;
 
                     serializedObject.Update();
+                    var inherited = GetGroupAvailability(capturedGroup);
                     int idx = stepsProp.arraySize;
                     stepsProp.arraySize++;
                     var entry = stepsProp.GetArrayElementAtIndex(idx);
                     entry.FindPropertyRelative(STEP_PROP).objectReferenceValue = asset;
                     entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = capturedGroup;
+                    entry.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex = (int)inherited;
                     entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP).ClearArray();
                     entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP).ClearArray();
                     serializedObject.ApplyModifiedProperties();
@@ -458,6 +467,15 @@ namespace DioramaEnigma.Riddles.Editor
 
             string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{stepType.Name}.asset");
             var asset = ScriptableObject.CreateInstance(stepType);
+
+            // CreateInstance не зовёт Reset — выставляем дефолт «сохраняемый» вручную
+            if (asset is PuzzleStep)
+            {
+                var so = new SerializedObject(asset);
+                so.FindProperty("isSaveable").boolValue = true;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             AssetDatabase.CreateAsset(asset, assetPath);
             AssetDatabase.SaveAssets();
             EditorGUIUtility.PingObject(asset);
@@ -544,11 +562,13 @@ namespace DioramaEnigma.Riddles.Editor
 
         private void AddStep(int groupIndex)
         {
+            var inherited = GetGroupAvailability(groupIndex);
             int idx = stepsProp.arraySize;
             stepsProp.arraySize++;
             var entry = stepsProp.GetArrayElementAtIndex(idx);
             entry.FindPropertyRelative(STEP_PROP).objectReferenceValue = null;
             entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = groupIndex;
+            entry.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex = (int)inherited;
             entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP).ClearArray();
             entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP).ClearArray();
         }
@@ -561,8 +581,30 @@ namespace DioramaEnigma.Riddles.Editor
             return new List<int>(set);
         }
 
+        private GroupAvailability GetGroupAvailability(int groupIndex)
+        {
+            for (int i = 0; i < stepsProp.arraySize; i++)
+            {
+                var entry = stepsProp.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue == groupIndex)
+                    return (GroupAvailability)entry.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex;
+            }
+            return GroupAvailability.AfterPreviousGroups;
+        }
+
+        private void SetGroupAvailability(int groupIndex, GroupAvailability value)
+        {
+            for (int i = 0; i < stepsProp.arraySize; i++)
+            {
+                var entry = stepsProp.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue == groupIndex)
+                    entry.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex = (int)value;
+            }
+        }
+
         private void SwapGroups(int groupA, int groupB)
         {
+            // Доступность — свойство группы; переезжает вместе с записями (групп.индексом не меняется)
             for (int i = 0; i < stepsProp.arraySize; i++)
             {
                 var gp = stepsProp.GetArrayElementAtIndex(i).FindPropertyRelative(GROUP_INDEX_PROP);
@@ -581,6 +623,18 @@ namespace DioramaEnigma.Riddles.Editor
             if (targetPos < 0) gp.intValue = groups[0] - 1;
             else if (targetPos >= groups.Count) gp.intValue = groups[^1] + 1;
             else gp.intValue = groups[targetPos];
+
+            // В существующую группу — перенять её доступность; в новую — запись сама задаёт её
+            for (int i = 0; i < stepsProp.arraySize; i++)
+            {
+                if (i == arrayIndex) continue;
+                var other = stepsProp.GetArrayElementAtIndex(i);
+                if (other.FindPropertyRelative(GROUP_INDEX_PROP).intValue != gp.intValue) continue;
+
+                stepsProp.GetArrayElementAtIndex(arrayIndex).FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex =
+                    other.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex;
+                break;
+            }
         }
 
         private int CountStepsInGroup(int groupIndex)
@@ -614,7 +668,7 @@ namespace DioramaEnigma.Riddles.Editor
                 allStepIDs.Add(asset.GetInstanceID());
 
                 // Прямого ввода из сцены требуют только шаги-значения
-                if (asset is StateSetPuzzleStep || asset is BoolPuzzleStep || asset is StringPuzzleStep)
+                if (asset is PuzzleStep)
                     valueStepIDs.Add(asset.GetInstanceID());
             }
 
@@ -662,8 +716,8 @@ namespace DioramaEnigma.Riddles.Editor
             foreach (var comp in components)
             {
                 if (comp == null) continue;
-                var so = new SerializedObject(comp);
-                var stateRef = so.FindProperty("state")?.objectReferenceValue as ScriptableObject;
+                // Ссылка на шаг живёт в StepReference на том же объекте
+                var stateRef = comp.GetComponent<StepReference>()?.Step;
                 if (stateRef != null) ids.Add(stateRef.GetInstanceID());
             }
         }

@@ -8,18 +8,23 @@ namespace DioramaEnigma.Riddles
     /// <summary>
     /// Ввод: перетаскивание и дроп в зону выставляет значение-состояние в true
     /// </summary>
+    /// <remarks>Ссылку на значение берёт из <see cref="StepReference"/> на том же объекте.</remarks>
+    [RequireComponent(typeof(StepReference))]
     public sealed class DraggableInteractable : InteractableInput, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [Header("Перетаскивание"), Space]
-        [Tooltip("Состояние, выставляемое в true при дропе в нужную зону")]
-        [SerializeField] private BoolValue state;
         [Tooltip("Целевая зона. Пусто — принимается любая DropZoneObject")]
         [SerializeField] private DropZoneObject targetZone;
 
+        private BoolValue state;
         private Camera mainCamera;
         private float dragDepth;
 
-        private void Awake() => mainCamera = Camera.main;
+        private void Awake()
+        {
+            state = GetComponent<StepReference>().Step;
+            mainCamera = Camera.main;
+        }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
@@ -58,7 +63,6 @@ namespace DioramaEnigma.Riddles
         }
 
 #if UNITY_EDITOR
-        public BoolValue Editor_StateRef => state;
         public DropZoneObject Editor_TargetZone => targetZone;
 #endif
     }

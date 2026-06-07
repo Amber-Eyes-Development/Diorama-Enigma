@@ -68,6 +68,8 @@ namespace DioramaEnigma.Riddles
                 hub.Publish(new PuzzleSequenceResetEvent(sequence.SequenceLabel));
             }
 
+            ActivateAlwaysAvailableGroups();
+
             currentGroupIndex = -1;
             AdvanceToNextGroup();
         }
@@ -76,14 +78,15 @@ namespace DioramaEnigma.Riddles
         public void StopSequence()
         {
             foreach (var entry in activeEntries)
-            {
-                if (entry?.Step == null) continue;
-
-                entry.Step.onCompletionChanged -= OnActiveStepCompletionChanged;
-                entry.Step.SetActive(false);
-            }
+                if (entry?.Step != null)
+                    entry.Step.onCompletionChanged -= OnActiveStepCompletionChanged;
 
             activeEntries.Clear();
+
+            // Снять активность со ВСЕХ шагов, включая «всегда доступные» (активированы вне activeEntries)
+            if (sequence == null) return;
+            foreach (var entry in sequence.Steps)
+                entry?.Step?.SetActive(false);
         }
 
         /// <summary> Сбросить состояние всех шагов и перезапустить с начала </summary>
@@ -95,6 +98,8 @@ namespace DioramaEnigma.Riddles
             ResetAllSteps();
             hub.Publish(new PuzzleSequenceResetEvent(sequence.SequenceLabel));
 
+            ActivateAlwaysAvailableGroups();
+
             currentGroupIndex = -1;
             AdvanceToNextGroup();
         }
@@ -105,11 +110,28 @@ namespace DioramaEnigma.Riddles
             if (sequence == null) return;
 
             StopSequence();
+            ActivateAlwaysAvailableGroups();
             ResetGroupSteps(currentGroupIndex);
             ActivateGroup(currentGroupIndex);
         }
 
         #region Internal
+
+        /// <summary>
+        /// Активировать ввод для групп с доступностью Always — сразу на старте, вне порядка.
+        /// Прогресс/эффекты по-прежнему идут по очереди: до своей очереди группа лишь принимает ввод,
+        /// а её эффекты и продвижение раннер обработает, когда дойдёт до неё.
+        /// </summary>
+        private void ActivateAlwaysAvailableGroups()
+        {
+            foreach (var entry in sequence.Steps)
+            {
+                if (entry?.Step == null) continue;
+
+                if (sequence.AvailabilityOf(entry.GroupIndex) == GroupAvailability.Always)
+                    entry.Step.SetActive(true);
+            }
+        }
 
         private void AdvanceToNextGroup()
         {

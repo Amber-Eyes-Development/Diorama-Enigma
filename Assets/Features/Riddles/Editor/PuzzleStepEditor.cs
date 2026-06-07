@@ -4,14 +4,8 @@ using UnityEngine;
 
 namespace DioramaEnigma.Riddles.Editor
 {
-    [CustomEditor(typeof(BoolPuzzleStep))]
-    internal sealed class BoolPuzzleStepEditor : PuzzleStepEditorBase { }
-
-    [CustomEditor(typeof(StateSetPuzzleStep))]
-    internal sealed class StateSetPuzzleStepEditor : PuzzleStepEditorBase { }
-
-    [CustomEditor(typeof(StringPuzzleStep))]
-    internal sealed class StringPuzzleStepEditor : PuzzleStepEditorBase { }
+    [CustomEditor(typeof(PuzzleStep))]
+    internal sealed class PuzzleStepInspector : PuzzleStepEditorBase { }
 
     [CustomEditor(typeof(CompositePuzzleStep))]
     internal sealed class CompositePuzzleStepEditor : PuzzleStepEditorBase { }
@@ -78,6 +72,7 @@ namespace DioramaEnigma.Riddles.Editor
                 {
                     Selection.activeObject = seq;
                     EditorGUIUtility.PingObject(seq);
+                    AssetDatabase.OpenAsset(seq);
                 }
 
                 EditorGUILayout.EndHorizontal();

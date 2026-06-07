@@ -5,28 +5,24 @@ using UnityEngine.EventSystems;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Ввод: клик циклически переключает значение-состояние
+    /// Ввод: клик переключает булево состояние-шаг
     /// </summary>
-    /// <remarks>О «шагах» не знает — пишет <see cref="IntValue"/>, который может быть шагом-ассетом.</remarks>
+    /// <remarks>
+    /// О «шагах» не знает — пишет <see cref="BoolValue"/>, который может быть шагом-ассетом.
+    /// Ссылку на значение берёт из <see cref="StepReference"/> на том же объекте.
+    /// </remarks>
+    [RequireComponent(typeof(StepReference))]
     public sealed class ClickInteractable : InteractableInput, IPointerClickHandler
     {
-        [Header("Клик"), Space]
-        [Tooltip("Состояние, циклически переключаемое по клику")]
-        [SerializeField] private IntValue state;
-        [Tooltip("Количество циклически переключаемых состояний")]
-        [Min(2)]
-        [SerializeField] private int stateCount = 2;
+        private BoolValue state;
+
+        private void Awake() => state = GetComponent<StepReference>().Step;
 
         public void OnPointerClick(PointerEventData eventData)
         {
             if (state == null) return;
 
-            Apply(() => state.SetValue((state.Value + 1) % stateCount));
+            Apply(() => state.SetValue(!state.Value));
         }
-
-#if UNITY_EDITOR
-        public IntValue Editor_StateRef => state;
-        public int Editor_StateCount => stateCount;
-#endif
     }
 }

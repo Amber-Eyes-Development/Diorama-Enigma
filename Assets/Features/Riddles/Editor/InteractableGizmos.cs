@@ -23,13 +23,11 @@ namespace DioramaEnigma.Riddles.Editor
         [DrawGizmo(GizmoType.InSelectionHierarchy | GizmoType.NotInSelectionHierarchy)]
         static void DrawClickGizmo(ClickInteractable click, GizmoType gizmoType)
         {
-            bool inSelection = (gizmoType & (GizmoType.InSelectionHierarchy | GizmoType.Selected)) != 0;
-            if (!Application.isPlaying && !inSelection) return;
+            var stateRef = click.GetComponent<StepReference>()?.Step;
+            string text = stateRef != null
+                ? BuildLabel("◉", stateRef, ValueString(stateRef))
+                : "◉ (шаг не задан)";
 
-            var stateRef = click.Editor_StateRef;
-            if (stateRef == null) return;
-
-            string text = BuildLabel("◉", stateRef, stateRef.Value.ToString());
             Handles.Label(click.transform.position + Vector3.up * LabelOffsetY, text, ClickStyle);
         }
 
@@ -41,15 +39,15 @@ namespace DioramaEnigma.Riddles.Editor
         static void DrawDragGizmo(DraggableInteractable drag, GizmoType gizmoType)
         {
             bool inSelection = (gizmoType & (GizmoType.InSelectionHierarchy | GizmoType.Selected)) != 0;
-            if (!Application.isPlaying && !inSelection) return;
 
-            var stateRef = drag.Editor_StateRef;
-            if (stateRef == null) return;
+            var stateRef = drag.GetComponent<StepReference>()?.Step;
+            string text = stateRef != null
+                ? BuildLabel("⬡", stateRef, ValueString(stateRef))
+                : "⬡ (шаг не задан)";
 
-            string text = BuildLabel("⬡", stateRef, stateRef.Value.ToString());
             Handles.Label(drag.transform.position + Vector3.up * LabelOffsetY, text, DragStyle);
 
-            // Пунктирная линия к целевой зоне (только в режиме редактирования, при выделении)
+            // Пунктирная линия к целевой зоне (только при выделении)
             var zone = drag.Editor_TargetZone;
             if (zone != null && inSelection)
             {
@@ -63,6 +61,8 @@ namespace DioramaEnigma.Riddles.Editor
         #endregion
 
         #region Helpers
+
+        private static string ValueString(BoolValue value) => value != null ? value.Value.ToString() : string.Empty;
 
         private static string BuildLabel(string icon, BaseScriptableValue stateRef, string valueStr)
         {

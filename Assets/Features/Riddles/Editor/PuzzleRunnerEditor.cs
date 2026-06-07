@@ -1,4 +1,3 @@
-using System.Text;
 using UnityEditor;
 using UnityEngine;
 
@@ -104,28 +103,12 @@ namespace DioramaEnigma.Riddles.Editor
             var asset = step as ScriptableObject;
             if (asset == null) return string.Empty;
 
-            if (step is StateSetPuzzleStep intStep)
+            if (step is PuzzleStep valueStep)
             {
                 var so = new SerializedObject(asset);
-                var prop = so.FindProperty("acceptingStates");
-                string targets = prop != null ? IntArrayStr(prop) : "?";
-                return $"val:{intStep.Value}  →  [{targets}]";
-            }
-
-            if (step is BoolPuzzleStep boolStep)
-            {
-                var so = new SerializedObject(asset);
-                var prop = so.FindProperty("completedWhen");
+                var prop = so.FindProperty("completionState");
                 string target = prop != null ? prop.boolValue.ToString().ToLower() : "?";
-                return $"val:{boolStep.Value}  →  {target}";
-            }
-
-            if (step is StringPuzzleStep strStep)
-            {
-                var so = new SerializedObject(asset);
-                var prop = so.FindProperty("acceptedValues");
-                string targets = prop != null ? StrArrayStr(prop) : "?";
-                return $"\"{strStep.Value}\"  →  {targets}";
+                return $"val:{valueStep.Value}  →  {target}";
             }
 
             if (step is CompositePuzzleStep)
@@ -143,32 +126,6 @@ namespace DioramaEnigma.Riddles.Editor
             }
 
             return string.Empty;
-        }
-
-        private static string IntArrayStr(SerializedProperty prop)
-        {
-            if (prop.arraySize == 0) return "∅";
-            var sb = new StringBuilder();
-            for (int i = 0; i < prop.arraySize; i++)
-            {
-                if (i > 0) sb.Append(", ");
-                sb.Append(prop.GetArrayElementAtIndex(i).intValue);
-            }
-            return sb.ToString();
-        }
-
-        private static string StrArrayStr(SerializedProperty prop)
-        {
-            if (prop.arraySize == 0) return "∅";
-            var sb = new StringBuilder();
-            for (int i = 0; i < prop.arraySize; i++)
-            {
-                if (i > 0) sb.Append(", ");
-                sb.Append('"');
-                sb.Append(prop.GetArrayElementAtIndex(i).stringValue);
-                sb.Append('"');
-            }
-            return sb.ToString();
         }
 
         #endregion

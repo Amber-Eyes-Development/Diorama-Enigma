@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using Extensions.AnimationSequencer;
 using UnityEngine;
@@ -21,6 +22,9 @@ namespace DioramaEnigma.Riddles
             
             [SerializeField] private ReactionTrigger reactionTrigger;
         }
+
+        [SerializeField] private Binding[] bindings;
+        protected override IReadOnlyList<Binding> Bindings => bindings;
 
         protected override void Apply(Binding binding, bool silent)
         {

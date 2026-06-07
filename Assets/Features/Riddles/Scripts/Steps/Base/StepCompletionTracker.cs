@@ -4,11 +4,10 @@ using UnityEngine;
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Общая логика шага-значения: гейт, активность и отслеживание признака завершённости
+    /// Общая логика шага: гейт, активность, необратимость и отслеживание завершённости/разблокировки
     /// </summary>
     /// <remarks>
-    /// Композируется в конкретные шаги (наследники BoolValue / IntValue / StringValue),
-    /// т.к. общий базовый класс невозможен из-за разных типов значения.
+    /// Композируется в <see cref="PuzzleStep"/> — единственный шаг-значение (булев).
     /// </remarks>
     [Serializable]
     public sealed class StepCompletionTracker
@@ -16,33 +15,87 @@ namespace DioramaEnigma.Riddles
         /// <summary> Изменение признака завершённости </summary>
         public event Action<bool> onCompletionChanged;
 
-        /// <summary> Разблокировано ли изменение состояния (активен и гейт открыт) </summary>
-        public bool IsUnlocked => isActive && (gate == null || gate.IsSatisfied());
+        /// <summary> Изменение разблокированности (можно ли менять состояние прямо сейчас) </summary>
+        public event Action<bool> onUnlockChanged;
+
+        /// <summary>
+        /// Разблокировано ли изменение состояния: активен (группа доступна), гейт открыт
+        /// и не сработал латч необратимости (завершённый необратимый шаг неизменен)
+        /// </summary>
+        public bool IsUnlocked => isActive
+            && (gate == null || gate.IsSatisfied())
+            && !(irreversible && lastCompleted);
 
         [Tooltip("Доп. условие, блокирующее изменение состояния (помимо порядка групп). Опционально")]
         [SerializeReference] private StepGate gate;
 
         private bool isActive;
+        private bool irreversible;
         private bool lastCompleted;
+        private bool lastUnlocked;
 
-        /// <summary> Инициализировать исходную завершённость (вызывать в OnEnable шага) </summary>
-        public void Initialize(bool completed)
+        /// <summary> Инициализировать исходную завершённость/необратимость (вызывать в OnEnable шага) </summary>
+        public void Initialize(bool completed, bool irreversible)
         {
             isActive = false;
+            this.irreversible = irreversible;
             lastCompleted = completed;
+            lastUnlocked = IsUnlocked;
         }
 
         /// <summary> Активировать/деактивировать изменение состояния </summary>
-        public void SetActive(bool active) => isActive = active;
+        public void SetActive(bool active)
+        {
+            if (isActive != active)
+            {
+                isActive = active;
+                ObserveGate(active);
+            }
 
-        /// <summary> Уведомить подписчиков, если завершённость изменилась </summary>
+            NotifyUnlockIfChanged();
+        }
+
+        /// <summary> Уведомить подписчиков, если завершённость изменилась (и пересчитать разблокировку) </summary>
         public void NotifyIfChanged(bool completed)
         {
-            if (completed == lastCompleted) return;
+            if (completed != lastCompleted)
+            {
+                lastCompleted = completed;
+                onCompletionChanged?.Invoke(completed);
+            }
 
-            lastCompleted = completed;
-            onCompletionChanged?.Invoke(completed);
+            // Завершённость влияет на латч необратимости → могла измениться разблокировка
+            NotifyUnlockIfChanged();
         }
+
+        #region Internal
+
+        private void ObserveGate(bool observe)
+        {
+            if (gate == null) return;
+
+            if (observe)
+            {
+                gate.StartObserving();
+                gate.onSatisfactionChanged += NotifyUnlockIfChanged;
+            }
+            else
+            {
+                gate.onSatisfactionChanged -= NotifyUnlockIfChanged;
+                gate.StopObserving();
+            }
+        }
+
+        private void NotifyUnlockIfChanged()
+        {
+            bool unlocked = IsUnlocked;
+            if (unlocked == lastUnlocked) return;
+
+            lastUnlocked = unlocked;
+            onUnlockChanged?.Invoke(unlocked);
+        }
+
+        #endregion
 
 #if UNITY_EDITOR
         public void EditorValidate(UnityEngine.Object context)

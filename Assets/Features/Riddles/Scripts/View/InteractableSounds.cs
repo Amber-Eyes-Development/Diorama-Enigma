@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Extensions.Audio;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -19,6 +20,9 @@ namespace DioramaEnigma.Riddles
             
             [SerializeField] private ReactionTrigger reactionTrigger;
         }
+
+        [SerializeField] private Binding[] bindings;
+        protected override IReadOnlyList<Binding> Bindings => bindings;
 
         [Header("Воспроизведение"), Space]
         [Tooltip("Тип аудио трека")]

@@ -1,30 +1,35 @@
-using UnityEngine;
+using System.Collections.Generic;
 
 namespace DioramaEnigma.Riddles
 {
     /// <summary>
-    /// Реакция на состояние шага: диспетчеризация триггеров по списку биндингов
+    /// Реакция на состояние шага: диспетчеризация триггеров по биндингам
     /// </summary>
     /// <typeparam name="TBinding">Тип биндинга медиума (визуал / частицы / звук)</typeparam>
     public abstract class InteractableReactionBehaviour<TBinding> : InteractableViewBehaviour
         where TBinding : IReactionBinding
     {
-        [SerializeField] private TBinding[] bindings;
+        /// <summary> Биндинги для диспетчеризации (список или один — решает наследник) </summary>
+        protected abstract IReadOnlyList<TBinding> Bindings { get; }
 
         protected sealed override void Subscribe()
         {
             if (StateSource == null) return;
 
             StateSource.onValueChanged += OnStateChanged;
+            StateSource.onUnlockChanged += OnUnlockChanged;
 
-            // Восстанавливаем текущее состояние без эффектов (включая state 0, у которого могут быть биндинги)
-            Dispatch(new ReactionTrigger(TriggerKind.StateEntered, StateSource.Value), silent: true);
+            // Восстанавливаем текущее состояние без эффектов: и стейт, и разблокировку
+            Dispatch(new ReactionTrigger(StateKind(StateSource.Value)), silent: true);
+            Dispatch(new ReactionTrigger(UnlockKind(StateSource.IsUnlocked)), silent: true);
         }
 
         protected sealed override void Unsubscribe()
         {
-            if (StateSource != null)
-                StateSource.onValueChanged -= OnStateChanged;
+            if (StateSource == null) return;
+
+            StateSource.onValueChanged -= OnStateChanged;
+            StateSource.onUnlockChanged -= OnUnlockChanged;
         }
 
         /// <summary> Применить реакцию биндинга </summary>
@@ -34,16 +39,23 @@ namespace DioramaEnigma.Riddles
 
         #region Internal
 
-        private void OnStateChanged(int stateIndex) =>
-            Dispatch(new ReactionTrigger(TriggerKind.StateEntered, stateIndex), silent: false);
+        private void OnStateChanged(bool state) =>
+            Dispatch(new ReactionTrigger(StateKind(state)), silent: false);
+
+        private void OnUnlockChanged(bool unlocked) =>
+            Dispatch(new ReactionTrigger(UnlockKind(unlocked)), silent: false);
+
+        private static TriggerKind StateKind(bool state) => state ? TriggerKind.StateOn : TriggerKind.StateOff;
+        private static TriggerKind UnlockKind(bool unlocked) => unlocked ? TriggerKind.Unlocked : TriggerKind.Locked;
 
         private void Dispatch(ReactionTrigger fired, bool silent)
         {
+            var bindings = Bindings;
             if (bindings == null) return;
 
-            foreach (var binding in bindings)
-                if (binding.ReactionTrigger.Matches(fired))
-                    Apply(binding, silent);
+            for (int i = 0; i < bindings.Count; i++)
+                if (bindings[i].ReactionTrigger.Matches(fired))
+                    Apply(bindings[i], silent);
         }
 
         #endregion

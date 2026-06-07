@@ -21,6 +21,19 @@ namespace DioramaEnigma.Riddles
         [SerializeField] private StepEntry[] steps = Array.Empty<StepEntry>();
 
         /// <summary>
+        /// Доступность группы (свойство группы, хранится на её записях; берётся с первой записи группы)
+        /// </summary>
+        /// <param name="groupIndex">Индекс группы</param>
+        public GroupAvailability AvailabilityOf(int groupIndex)
+        {
+            foreach (var entry in steps)
+                if (entry != null && entry.GroupIndex == groupIndex)
+                    return entry.Availability;
+
+            return GroupAvailability.AfterPreviousGroups;
+        }
+
+        /// <summary>
         /// Запись шага: ссылка на ассет-шаг, индекс параллельной группы и эффекты оркестрации
         /// </summary>
         [Serializable]
@@ -32,6 +45,9 @@ namespace DioramaEnigma.Riddles
             /// <summary> Индекс параллельной группы </summary>
             public int GroupIndex => groupIndex;
 
+            /// <summary> Доступность группы (свойство группы; на всех её записях должно совпадать) </summary>
+            public GroupAvailability Availability => availability;
+
             /// <summary> Эффекты при активации шага </summary>
             public IReadOnlyList<PuzzleEffect> ActivationEffects => activationEffects;
 
@@ -42,6 +58,8 @@ namespace DioramaEnigma.Riddles
             [Tooltip("Шаги с одинаковым GroupIndex активируются одновременно. " +
                      "Следующая группа стартует после завершения текущей")]
             [SerializeField] private int groupIndex;
+            [Tooltip("Доступность группы: с самого старта (Always) или только после предыдущих групп")]
+            [SerializeField] private GroupAvailability availability;
             [Tooltip("Выполняются при активации шага — до ожидания завершения")]
             [SerializeReference] private PuzzleEffect[] activationEffects = Array.Empty<PuzzleEffect>();
             [Tooltip("Выполняются при завершении шага")]
