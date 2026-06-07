@@ -10,20 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6232c38334e0094419e7c05032c59f73, type: 3}
-  m_Name: PuzzleSequence
+  m_Name: 1
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.PuzzleSequence
   sequenceLabel: 
   steps:
-  - step: {fileID: 11400000, guid: e28831cba94009348a7a149e9daa2618, type: 2}
-    groupIndex: 0
-    activationEffects: []
-    completionEffects: []
-  - step: {fileID: 11400000, guid: e138f8017489dce4a897a02e37c0e1bf, type: 2}
-    groupIndex: 0
-    activationEffects: []
-    completionEffects: []
-  - step: {fileID: 11400000, guid: 725b008a46bf5ee44a350de7ef85134e, type: 2}
-    groupIndex: 1
+  - step: {fileID: 11400000, guid: 9be3d93c86c487946ab4344188eb4998, type: 2}
+    groupIndex: 2
     activationEffects: []
     completionEffects: []
   references:

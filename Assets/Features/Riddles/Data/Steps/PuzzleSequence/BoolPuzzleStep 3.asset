@@ -9,18 +9,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e3414daa2ad8be44293e196a31a44738, type: 3}
-  m_Name: StateSetPuzzleStep
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.StateSetPuzzleStep
-  id: 
+  m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
+  m_Name: BoolPuzzleStep 3
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.PuzzleStep
+  id:
   isSaveable: 0
   isGlobal: 0
   defaultValue: 0
-  stepLabel: 
+  stepLabel:
   tracker:
     gate:
       rid: -2
-  acceptingStates: 01000000
+  completedWhen: 1
   references:
     version: 2
     RefIds:

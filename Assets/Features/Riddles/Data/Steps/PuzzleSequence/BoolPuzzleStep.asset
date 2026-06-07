@@ -11,18 +11,21 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
   m_Name: BoolPuzzleStep
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.BoolPuzzleStep
-  id: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.PuzzleStep
+  id: d75c6e2d937643b7a824bc23c99b984e
   isSaveable: 0
   isGlobal: 0
   defaultValue: 0
   stepLabel: 
   tracker:
     gate:
-      rid: -2
+      rid: 7045590367563415614
   completedWhen: 1
   references:
     version: 2
     RefIds:
-    - rid: -2
-      type: {class: , ns: , asm: }
+    - rid: 7045590367563415614
+      type: {class: RequireStepsCompletedGate, ns: DioramaEnigma.Riddles, asm: Assembly-CSharp}
+      data:
+        requiredSteps:
+        - {fileID: 0}

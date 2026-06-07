@@ -11,8 +11,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
   m_Name: BoolPuzzleStep 1
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.BoolPuzzleStep
-  id: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Riddles.PuzzleStep
+  id: e5faeaf1b8374ba1a8a8c5e3ae43f27b
   isSaveable: 0
   isGlobal: 0
   defaultValue: 0
