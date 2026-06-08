@@ -48,7 +48,6 @@ namespace DioramaEnigma.Sequences.Editor
         private static readonly (string label, Type type)[] EffectTypes =
         {
             ("Award Resource", typeof(AwardResourceEffect)),
-            ("Fire Event", typeof(FireEventEffect)),
         };
 
         private static readonly (string label, Type type)[] GateTypes =

@@ -1,5 +1,4 @@
 using System;
-using Extensions.Events;
 using Extensions.Helpers;
 using Extensions.ScriptableValues;
 using UnityEngine;
@@ -16,7 +15,7 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private bool valueToSet = true;
 
         /// <inheritdoc/>
-        public override void Execute(EventHub hub)
+        public override void Execute()
         {
             if (Logic.IsNull(resource, nameof(resource))) return;
 

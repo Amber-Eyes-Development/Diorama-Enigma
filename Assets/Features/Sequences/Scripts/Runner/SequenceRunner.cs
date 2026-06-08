@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Extensions.Events;
 using Extensions.Log;
 using UnityEngine;
 
@@ -22,7 +21,6 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private bool startOnEnable = true;
 
         private int currentGroupIndex;
-        private EventHub hub;
 
         private readonly List<StepEntry> activeEntries = new();
 
@@ -32,12 +30,6 @@ namespace DioramaEnigma.Sequences
         {
             if (sequence == null)
                 ServiceDebug.LogError(this, "sequence не назначен");
-
-            SequenceContext context = GetComponentInParent<SequenceContext>();
-            if (context == null)
-                ServiceDebug.LogError(this, "SequenceContext не найден в родителях — добавьте его на корень префаба загадки");
-            else
-                hub = context.Hub;
         }
 
         private void OnEnable()
@@ -59,10 +51,7 @@ namespace DioramaEnigma.Sequences
             bool resuming = AnyStepCompleted();
 
             if (!resuming)
-            {
                 ResetAllSteps();
-                if (hub != null) hub.Publish(new SequenceResetEvent(sequence.SequenceLabel));
-            }
 
             ActivateAlwaysAvailableGroups();
 
@@ -91,7 +80,6 @@ namespace DioramaEnigma.Sequences
 
             StopSequence();
             ResetAllSteps();
-            if (hub != null) hub.Publish(new SequenceResetEvent(sequence.SequenceLabel));
 
             ActivateAlwaysAvailableGroups();
 
@@ -200,8 +188,6 @@ namespace DioramaEnigma.Sequences
             foreach (var entry in completedEntries)
                 RunEffects(entry.CompletionEffects);
 
-            if (hub != null) hub.Publish(new SequenceStepCompletedEvent(sequence.SequenceLabel, currentGroupIndex));
-
             AdvanceToNextGroup();
         }
 
@@ -221,7 +207,7 @@ namespace DioramaEnigma.Sequences
             if (effects == null) return;
 
             foreach (var effect in effects)
-                effect?.Execute(hub);
+                effect?.Execute();
         }
 
         private void ResetAllSteps()

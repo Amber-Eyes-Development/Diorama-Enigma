@@ -1,5 +1,4 @@
 using System;
-using Extensions.Events;
 
 namespace DioramaEnigma.Sequences
 {
@@ -10,6 +9,6 @@ namespace DioramaEnigma.Sequences
     public abstract class SequenceStepEffect
     {
         /// <summary> Выполнить эффект </summary>
-        public abstract void Execute(EventHub hub);
+        public abstract void Execute();
     }
 }
