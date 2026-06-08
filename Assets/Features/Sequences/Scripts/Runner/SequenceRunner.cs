@@ -21,8 +21,17 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private bool startOnEnable = true;
 
         private int currentGroupIndex;
+        private bool isCompleted;
 
-        private readonly List<StepEntry> activeEntries = new();
+        /// <summary> Активный шаг группы с подписками на события (для эффектов и завершения группы) </summary>
+        private sealed class ActiveStep
+        {
+            public StepEntry Entry;
+            public Action<bool> CompletionHandler;
+            public Action<bool> UnlockHandler;
+        }
+
+        private readonly List<ActiveStep> activeSteps = new();
 
         #region MonoBehaviour
 
@@ -56,21 +65,35 @@ namespace DioramaEnigma.Sequences
             ActivateAlwaysAvailableGroups();
 
             currentGroupIndex = -1;
+            isCompleted = false;
             AdvanceToNextGroup();
         }
 
         /// <summary> Остановить выполнение и снять подписки </summary>
         public void StopSequence()
         {
-            foreach (var entry in activeEntries)
-                if (entry?.Step != null)
-                    entry.Step.onCompletionChanged -= OnActiveStepCompletionChanged;
-
-            activeEntries.Clear();
+            DeactivateActiveSteps();
 
             if (sequence == null) return;
             foreach (var entry in sequence.Steps)
                 entry?.Step?.SetActive(false);
+        }
+
+        /// <summary> Откатить (сбросить к исходному значению) один шаг </summary>
+        public void ResetStep(AbstractSequenceStep step) => step?.ResetState();
+
+        /// <summary> Откатить все шаги группы к исходным значениям </summary>
+        public void ResetGroup(int groupIndex)
+        {
+            if (sequence == null) return;
+            ResetGroupSteps(groupIndex);
+        }
+
+        /// <summary> Откатить все шаги последовательности к исходным значениям </summary>
+        public void ResetSequence()
+        {
+            if (sequence == null) return;
+            ResetAllSteps();
         }
 
         /// <summary> Сбросить состояние всех шагов и перезапустить с начала </summary>
@@ -84,6 +107,7 @@ namespace DioramaEnigma.Sequences
             ActivateAlwaysAvailableGroups();
 
             currentGroupIndex = -1;
+            isCompleted = false;
             AdvanceToNextGroup();
         }
 
@@ -93,6 +117,7 @@ namespace DioramaEnigma.Sequences
             if (sequence == null) return;
 
             StopSequence();
+            isCompleted = false;
             ActivateAlwaysAvailableGroups();
             ResetGroupSteps(currentGroupIndex);
             ActivateGroup(currentGroupIndex);
@@ -100,7 +125,6 @@ namespace DioramaEnigma.Sequences
 
         #region Internal
 
-        /// <summary> Активировать ввод для групп с доступностью Always </summary>
         private void ActivateAlwaysAvailableGroups()
         {
             foreach (var entry in sequence.Steps)
@@ -124,6 +148,7 @@ namespace DioramaEnigma.Sequences
 
             if (currentGroupIndex > maxGroup)
             {
+                isCompleted = true;
                 onSequenceCompleted?.Invoke();
                 return;
             }
@@ -149,65 +174,96 @@ namespace DioramaEnigma.Sequences
                     continue;
                 }
 
+                var active = new ActiveStep { Entry = entry };
+                active.CompletionHandler = completed => OnStepCompletionChanged(active, completed);
+                active.UnlockHandler = unlocked => OnStepUnlockChanged(active, unlocked);
+                activeSteps.Add(active);
+
+                entry.Step.onCompletionChanged += active.CompletionHandler;
+                entry.Step.onUnlockChanged += active.UnlockHandler;
                 entry.Step.SetActive(true);
-                activeEntries.Add(entry);
             }
-
-            foreach (var entry in activeEntries)
-                RunEffects(entry.ActivationEffects);
-
-            foreach (var entry in activeEntries)
-                entry.Step.onCompletionChanged += OnActiveStepCompletionChanged;
 
             CheckGroupCompletion();
         }
 
-        private void OnActiveStepCompletionChanged(bool _) => CheckGroupCompletion();
+        private void OnStepCompletionChanged(ActiveStep active, bool completed)
+        {
+            RunMatchingEffects(active.Entry, completed ? TriggerKind.Completed : TriggerKind.NotCompleted);
+            CheckGroupCompletion();
+        }
+
+        private void OnStepUnlockChanged(ActiveStep active, bool unlocked)
+        {
+            RunMatchingEffects(active.Entry, unlocked ? TriggerKind.Unlocked : TriggerKind.Locked);
+        }
 
         private void CheckGroupCompletion()
         {
-            if (activeEntries.Count == 0) return;
+            if (activeSteps.Count == 0) return;
 
-            foreach (var entry in activeEntries)
-                if (entry.Step == null || !entry.Step.IsCompleted) return;
+            foreach (var active in activeSteps)
+                if (active.Entry.Step == null || !active.Entry.Step.IsCompleted) return;
 
             CompleteGroup();
         }
 
         private void CompleteGroup()
         {
-            var completedEntries = new List<StepEntry>(activeEntries);
-            activeEntries.Clear();
+            var completed = new List<ActiveStep>(activeSteps);
+            activeSteps.Clear();
 
-            foreach (var entry in completedEntries)
+            foreach (var active in completed)
             {
-                entry.Step.onCompletionChanged -= OnActiveStepCompletionChanged;
-                entry.Step.SetActive(false);
-            }
+                Unsubscribe(active);
 
-            foreach (var entry in completedEntries)
-                RunEffects(entry.CompletionEffects);
+                if (!sequence.InteractableAfterCompletionOf(active.Entry.GroupIndex))
+                    active.Entry.Step.SetActive(false);
+            }
 
             AdvanceToNextGroup();
         }
 
         private void RestoreCompletedGroup(int groupIndex)
         {
+            bool interactable = sequence.InteractableAfterCompletionOf(groupIndex);
+
             foreach (var entry in sequence.Steps)
             {
                 if (entry?.Step == null || entry.GroupIndex != groupIndex) continue;
 
-                RunEffects(entry.ActivationEffects);
-                RunEffects(entry.CompletionEffects);
+                RunMatchingEffects(entry, TriggerKind.Completed);
+
+                if (interactable)
+                    entry.Step.SetActive(true);
             }
         }
 
-        private void RunEffects(IReadOnlyList<SequenceStepEffect> effects)
+        private static void RunMatchingEffects(StepEntry entry, TriggerKind trigger)
         {
-            if (effects == null) return;
+            foreach (var effectEntry in entry.Effects)
+                if (effectEntry != null && effectEntry.Trigger == trigger)
+                    effectEntry.Effect?.Execute();
+        }
 
-            foreach (var effect in effects)
-                effect?.Execute();
+        /// <summary> Снять подписки и деактивировать текущие активные шаги </summary>
+        private void DeactivateActiveSteps()
+        {
+            foreach (var active in activeSteps)
+            {
+                Unsubscribe(active);
+                active.Entry?.Step?.SetActive(false);
+            }
+
+            activeSteps.Clear();
+        }
+
+        private static void Unsubscribe(ActiveStep active)
+        {
+            if (active.Entry?.Step == null) return;
+
+            active.Entry.Step.onCompletionChanged -= active.CompletionHandler;
+            active.Entry.Step.onUnlockChanged -= active.UnlockHandler;
         }
 
         private void ResetAllSteps()
@@ -272,20 +328,58 @@ namespace DioramaEnigma.Sequences
         /// <summary> Текущий индекс активной группы </summary>
         public int Editor_CurrentGroupIndex => currentGroupIndex;
 
+        /// <summary> Последовательность полностью пройдена (все группы завершены) </summary>
+        public bool Editor_IsCompleted => isCompleted;
+
         /// <summary> Шаги, ожидающие завершения </summary>
         public IEnumerable<AbstractSequenceStep> Editor_ActiveSteps
         {
             get
             {
-                foreach (var entry in activeEntries)
-                    if (entry?.Step != null) yield return entry.Step;
+                foreach (var active in activeSteps)
+                    if (active.Entry?.Step != null) yield return active.Entry.Step;
             }
         }
 
         /// <summary> Принудительно завершить активную группу </summary>
         public void Editor_ForceCompleteCurrentGroup()
         {
-            if (activeEntries.Count > 0) CompleteGroup();
+            if (activeSteps.Count > 0) CompleteGroup();
+        }
+
+        /// <summary> Есть ли предыдущая группа с шагами (можно ли шагнуть назад) </summary>
+        public bool Editor_HasPreviousGroup => PreviousGroupWithSteps() >= 0;
+
+        /// <summary> Перейти к следующей группе (принудительно завершив текущую) </summary>
+        public void Editor_GoToNextGroup() => Editor_ForceCompleteCurrentGroup();
+
+        /// <summary> Откатить текущую группу и вернуться к предыдущей (с её повторной активацией) </summary>
+        public void Editor_GoToPreviousGroup()
+        {
+            if (sequence == null) return;
+
+            int prev = PreviousGroupWithSteps();
+            if (prev < 0) return;
+
+            int current = currentGroupIndex;
+            DeactivateActiveSteps();
+            ResetGroupSteps(current); 
+
+            isCompleted = false;
+            currentGroupIndex = prev;
+            ResetGroupSteps(prev);  
+            ActivateGroup(prev);
+        }
+
+        /// <summary> Ближайшая предыдущая группа, содержащая шаги (или -1) </summary>
+        private int PreviousGroupWithSteps()
+        {
+            if (sequence == null) return -1;
+
+            for (int g = currentGroupIndex - 1; g >= 0; g--)
+                if (GroupHasSteps(g)) return g;
+
+            return -1;
         }
 #endif
     }

@@ -4,12 +4,14 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Гейт: требует завершения указанных шагов (в т.ч. из другой последовательности)
+    /// Гейт (условия доступности <see cref="SequenceStep"/> к измнению состояния)
     /// </summary>
     [Serializable]
     public sealed class RequireStepsCompletedGate : StepGate
     {
-        [Tooltip("Шаги, которые должны быть завершены для разблокировки")]
+        [Tooltip("Состояние шагов, при котором гейт считается пройденным")]
+        [SerializeField] private TriggerKind trigger = TriggerKind.Completed;
+        [Tooltip("Шаги, которые должны быть в нужном состоянии для разблокировки")]
         [SerializeField] private AbstractSequenceStep[] requiredSteps;
 
         /// <inheritdoc/>
@@ -20,7 +22,7 @@ namespace DioramaEnigma.Sequences
             foreach (var step in requiredSteps)
             {
                 if (step == null) continue;
-                if (!step.IsCompleted) return false;
+                if (!Matches(step)) return false;
             }
 
             return true;
@@ -32,8 +34,11 @@ namespace DioramaEnigma.Sequences
             if (requiredSteps == null) return;
 
             foreach (var step in requiredSteps)
-                if (step != null)
-                    step.onCompletionChanged += OnRequiredCompletionChanged;
+            {
+                if (step == null) continue;
+                step.onCompletionChanged += OnRequiredStateChanged;
+                step.onUnlockChanged += OnRequiredStateChanged;
+            }
         }
 
         /// <inheritdoc/>
@@ -42,10 +47,22 @@ namespace DioramaEnigma.Sequences
             if (requiredSteps == null) return;
 
             foreach (var step in requiredSteps)
-                if (step != null)
-                    step.onCompletionChanged -= OnRequiredCompletionChanged;
+            {
+                if (step == null) continue;
+                step.onCompletionChanged -= OnRequiredStateChanged;
+                step.onUnlockChanged -= OnRequiredStateChanged;
+            }
         }
 
-        private void OnRequiredCompletionChanged(bool _) => RaiseSatisfactionChanged();
+        private bool Matches(AbstractSequenceStep step) => trigger switch
+        {
+            TriggerKind.Completed => step.IsCompleted,
+            TriggerKind.NotCompleted => !step.IsCompleted,
+            TriggerKind.Unlocked => step.IsUnlocked,
+            TriggerKind.Locked => !step.IsUnlocked,
+            _ => step.IsCompleted,
+        };
+
+        private void OnRequiredStateChanged(bool _) => RaiseSatisfactionChanged();
     }
 }

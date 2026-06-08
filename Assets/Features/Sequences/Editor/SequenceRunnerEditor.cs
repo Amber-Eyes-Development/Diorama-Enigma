@@ -49,6 +49,16 @@ namespace DioramaEnigma.Sequences.Editor
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
+            if (runner.Editor_IsCompleted)
+            {
+                var prev = GUI.contentColor;
+                GUI.contentColor = ColorDone;
+                EditorGUILayout.LabelField("✓ Последовательность завершена", groupLabelStyle);
+                GUI.contentColor = prev;
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Группа:", GUILayout.Width(60));
             EditorGUILayout.LabelField(runner.Editor_CurrentGroupIndex.ToString(), groupLabelStyle);
@@ -138,21 +148,32 @@ namespace DioramaEnigma.Sequences.Editor
             EditorGUILayout.BeginHorizontal();
 
             GUI.backgroundColor = ColorButtonSkip;
-            if (GUILayout.Button("⏩  Пропустить группу", GUILayout.Height(28)))
-            {
-                runner.Editor_ForceCompleteCurrentGroup();
-                EditorUtility.SetDirty(runner);
-            }
+            using (new EditorGUI.DisabledScope(!runner.Editor_HasPreviousGroup))
+                if (GUILayout.Button("◀  Пред. группа", GUILayout.Height(28)))
+                {
+                    runner.Editor_GoToPreviousGroup();
+                    EditorUtility.SetDirty(runner);
+                }
+
+            using (new EditorGUI.DisabledScope(runner.Editor_IsCompleted))
+                if (GUILayout.Button("След. группа  ▶", GUILayout.Height(28)))
+                {
+                    runner.Editor_GoToNextGroup();
+                    EditorUtility.SetDirty(runner);
+                }
+
+            GUI.backgroundColor = prevColor;
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Space(4);
 
             GUI.backgroundColor = ColorButtonReset;
-            if (GUILayout.Button("↺  Перезапустить", GUILayout.Height(28)))
+            if (GUILayout.Button("↺  Перезапустить последовательность", GUILayout.Height(28)))
             {
                 runner.RestartSequence();
                 EditorUtility.SetDirty(runner);
             }
-
             GUI.backgroundColor = prevColor;
-            EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.Space(2);
 

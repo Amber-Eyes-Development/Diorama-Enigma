@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: "1.1 \u0412\u0435\u043D\u0442\u0438\u043B\u044C"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: 34f98ccd907e4641982285810060927b
-  isSaveable: 1
-  isGlobal: 0
-  defaultValue: 0
   stepLabel: "\u0412\u0435\u043D\u0442\u0438\u043B\u044C 1"
+  irreversible: 0
   tracker:
     gate:
       rid: -2
+  isSaveable: 1
+  isGlobal: 0
+  defaultValue: 0
   completionState: 1
-  irreversible: 0
   references:
     version: 2
     RefIds:

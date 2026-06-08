@@ -115,24 +115,37 @@ namespace DioramaEnigma.Sequences.Editor
             EditorGUILayout.EndScrollView();
         }
 
+        private const string SEP = "  |  ";
+
         private static string ClickLabel(ClickEntry entry)
         {
             string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
-            string playInfo = Application.isPlaying && entry.StateRef != null
-                ? $"   {(entry.StateRef.IsCompleted ? "✓" : "…")}"
-                : string.Empty;
-            return $"◉ {entry.Component.gameObject.name}   state:{stateName}{playInfo}";
+            return $"◉ {entry.Component.gameObject.name}{SEP}state: {stateName}{StepStateInfo(entry.StateRef)}{PlayInfo(entry.StateRef)}";
         }
 
         private static string DragLabel(DragEntry entry)
         {
             string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
             string zoneName = string.IsNullOrEmpty(entry.TargetZoneName) ? "любая" : entry.TargetZoneName;
-            string playInfo = Application.isPlaying && entry.StateRef != null
-                ? $"   {(entry.StateRef.IsCompleted ? "✓" : "…")}"
-                : string.Empty;
-            return $"⬡ {entry.Component.gameObject.name}   state:{stateName}   zone:{zoneName}{playInfo}";
+            return $"⬡ {entry.Component.gameObject.name}{SEP}state: {stateName}{SEP}zone: {zoneName}{StepStateInfo(entry.StateRef)}{PlayInfo(entry.StateRef)}";
         }
+
+        /// <summary> Целевое и текущее значение булева шага (true/false) </summary>
+        private static string StepStateInfo(AbstractSequenceStep step)
+        {
+            if (step is not SequenceStep valueStep) return string.Empty;
+            return $"{SEP}цель: {Bool(valueStep.CompletionState)}{SEP}тек: {Bool(valueStep.Value)}";
+        }
+
+        /// <summary> Индикатор завершённости в Play Mode </summary>
+        private static string PlayInfo(AbstractSequenceStep step)
+        {
+            return Application.isPlaying && step != null
+                ? $"{SEP}{(step.IsCompleted ? "✓" : "…")}"
+                : string.Empty;
+        }
+
+        private static string Bool(bool value) => value ? "true" : "false";
 
         private void DrawRow(GameObject go, string label, Color color)
         {

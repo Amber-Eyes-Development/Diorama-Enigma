@@ -180,19 +180,26 @@ namespace DioramaEnigma.Sequences.Editor
         private void DrawOpenButton(Object asset)
         {
             SetBG(COLOR_OPEN);
-            var content = EditorGUIUtility.IconContent("UnityEditor.InspectorWindow");
-            content.tooltip = "Открыть ассет (выделить в проекте)";
+            var content = EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_INSPECT);
+            content.tooltip = "Открыть в инспекторе";
             if (GUILayout.Button(content, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
-                Selection.activeObject = asset;
+                OpenInInspector(asset);
             ResetBG();
         }
 
         private void DrawPingButton(Object asset)
         {
             SetBG(EditorToolsConstraints.COLOR_CYAN);
-            if (GUILayout.Button("●", GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+            if (GUILayout.Button(EditorToolsConstraints.SYMBOL_PING, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
                 EditorGUIUtility.PingObject(asset);
             ResetBG();
+        }
+
+        /// <summary> Выделить ассет и открыть вкладку инспектора </summary>
+        private static void OpenInInspector(Object asset)
+        {
+            Selection.activeObject = asset;
+            EditorApplication.ExecuteMenuItem("Window/General/Inspector");
         }
 
         /// <summary> Inline-инспектор ассета прямо под его строкой </summary>

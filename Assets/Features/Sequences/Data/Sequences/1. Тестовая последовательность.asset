@@ -17,33 +17,33 @@ MonoBehaviour:
   - step: {fileID: 11400000, guid: 984b36345b3a15243bbe8d59df09df29, type: 2}
     groupIndex: 0
     availability: 0
-    activationEffects: []
-    completionEffects: []
+    interactableAfterCompletion: 1
+    effects: []
   - step: {fileID: 11400000, guid: 93ca65cc6ce7adf46b67a3a97dbf0c06, type: 2}
     groupIndex: 0
     availability: 0
-    activationEffects: []
-    completionEffects: []
+    interactableAfterCompletion: 1
+    effects: []
   - step: {fileID: 11400000, guid: 5372599f1083c1341b459597a0959f7b, type: 2}
     groupIndex: 0
     availability: 0
-    activationEffects: []
-    completionEffects: []
+    interactableAfterCompletion: 1
+    effects: []
   - step: {fileID: 11400000, guid: 41cfd3efb68f1ee4ca8011005424ef86, type: 2}
     groupIndex: 2
     availability: 0
-    activationEffects: []
-    completionEffects: []
+    interactableAfterCompletion: 0
+    effects: []
   - step: {fileID: 11400000, guid: e0181793b28a06c469edcc05d44c95ef, type: 2}
     groupIndex: 1
     availability: 0
-    activationEffects: []
-    completionEffects: []
+    interactableAfterCompletion: 0
+    effects: []
   - step: {fileID: 11400000, guid: 18dfa52e1e7d86b48b9123c7e275b826, type: 2}
     groupIndex: 0
     availability: 0
-    activationEffects: []
-    completionEffects: []
+    interactableAfterCompletion: 1
+    effects: []
   references:
     version: 2
     RefIds: []

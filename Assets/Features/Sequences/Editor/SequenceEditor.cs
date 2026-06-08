@@ -21,8 +21,10 @@ namespace DioramaEnigma.Sequences.Editor
         private const string STEP_PROP = "step";
         private const string GROUP_INDEX_PROP = "groupIndex";
         private const string AVAILABILITY_PROP = "availability";
-        private const string ACTIVATION_EFFECTS_PROP = "activationEffects";
-        private const string COMPLETION_EFFECTS_PROP = "completionEffects";
+        private const string INTERACTABLE_AFTER_COMPLETION_PROP = "interactableAfterCompletion";
+        private const string EFFECTS_PROP = "effects";
+        private const string EFFECT_TRIGGER_PROP = "trigger";
+        private const string EFFECT_REF_PROP = "effect";
 
         private SerializedProperty sequenceLabelProp;
         private SerializedProperty stepsProp;
@@ -149,6 +151,15 @@ namespace DioramaEnigma.Sequences.Editor
             var nextAvailability = (GroupAvailability)EditorGUILayout.EnumPopup("Доступность", availability);
             if (EditorGUI.EndChangeCheck())
                 SetGroupAvailability(groupIndex, nextAvailability);
+
+            bool interactable = GetGroupInteractableAfterCompletion(groupIndex);
+            EditorGUI.BeginChangeCheck();
+            bool nextInteractable = EditorGUILayout.Toggle(
+                new GUIContent("Доступна после завершения",
+                    "Шаги группы остаются доступны для изменения после её завершения (прогресс не откатывается)"),
+                interactable);
+            if (EditorGUI.EndChangeCheck())
+                SetGroupInteractableAfterCompletion(groupIndex, nextInteractable);
             EditorGUILayout.Space(2);
 
             bool firstInGroup = true;
@@ -255,8 +266,7 @@ namespace DioramaEnigma.Sequences.Editor
                 DrawStepGate(stepAsset);
             }
 
-            DrawManagedRefArray(entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP), "ЭФФЕКТЫ ПРИ АКТИВАЦИИ", EffectTypes);
-            DrawManagedRefArray(entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP), "ЭФФЕКТЫ ПРИ ЗАВЕРШЕНИИ", EffectTypes);
+            DrawEffects(entry.FindPropertyRelative(EFFECTS_PROP));
 
             EditorGUILayout.EndVertical();
         }
@@ -276,42 +286,41 @@ namespace DioramaEnigma.Sequences.Editor
             var gateProp = trackerProp.FindPropertyRelative("gate");
             if (gateProp == null) return;
 
-            EditorGUILayout.Space(2);
-
             bool hasGate = !string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
 
+            EditorGUILayout.Space(2);
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Гейт:", EditorStyles.miniLabel, GUILayout.Width(38));
-
-            if (hasGate)
-            {
-                EditorGUILayout.LabelField(ManagedRefTypeName(gateProp), EditorStyles.miniBoldLabel);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("✕", GUILayout.Width(20), GUILayout.Height(16)))
-                {
-                    gateProp.managedReferenceValue = null;
-                    so.ApplyModifiedProperties();
-                }
-            }
-            else
-            {
-                EditorGUILayout.LabelField("(нет)", EditorStyles.miniLabel);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("+ Добавить", GUILayout.Width(72), GUILayout.Height(16)))
-                    ShowGateMenu(gateProp, so);
-            }
-
+            EditorGUILayout.LabelField("УСЛОВИЯ ДОСТУПА", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (!hasGate && CompactButton(EditorToolsConstraints.SYMBOL_ADD, EditorToolsConstraints.COLOR_LIGHT_GREEN, "Добавить гейт"))
+                ShowGateMenu(gateProp, so);
             EditorGUILayout.EndHorizontal();
 
-            if (hasGate)
+            if (!hasGate) return;
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(ManagedRefTypeName(gateProp), EditorStyles.popup))
+                ShowGateMenu(gateProp, so);
+            GUILayout.FlexibleSpace();
+            bool remove = CompactButton(EditorToolsConstraints.SYMBOL_REMOVE, EditorToolsConstraints.COLOR_LIGHT_RED, "Удалить");
+            EditorGUILayout.EndHorizontal();
+
+            if (remove)
             {
-                EditorGUI.indentLevel++;
-                EditorGUI.BeginChangeCheck();
-                DrawManagedRefBody(gateProp);
-                if (EditorGUI.EndChangeCheck())
-                    so.ApplyModifiedProperties();
-                EditorGUI.indentLevel--;
+                gateProp.managedReferenceValue = null;
+                so.ApplyModifiedProperties();
+                EditorGUILayout.EndVertical();
+                return;
             }
+
+            EditorGUI.BeginChangeCheck();
+            DrawManagedRefBody(gateProp);
+            if (EditorGUI.EndChangeCheck())
+                so.ApplyModifiedProperties();
+
+            EditorGUILayout.EndVertical();
         }
 
         private void ShowGateMenu(SerializedProperty gateProp, SerializedObject so)
@@ -343,37 +352,62 @@ namespace DioramaEnigma.Sequences.Editor
 
         #endregion
 
-        #region SerializeReference array
+        #region Effects
 
-        private void DrawManagedRefArray(SerializedProperty arrayProp, string label, (string, Type)[] addChoices)
+        /// <summary> Эффекты шага: единый список, у каждого — триггер (как у вьюшек) и тип эффекта </summary>
+        private void DrawEffects(SerializedProperty effectsProp)
         {
             EditorGUILayout.Space(2);
-            EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("ЭФФЕКТЫ", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            bool add = CompactButton(EditorToolsConstraints.SYMBOL_ADD, EditorToolsConstraints.COLOR_LIGHT_GREEN, "Добавить эффект");
+            EditorGUILayout.EndHorizontal();
 
             int removeIndex = -1;
 
-            for (int i = 0; i < arrayProp.arraySize; i++)
+            for (int i = 0; i < effectsProp.arraySize; i++)
             {
-                var el = arrayProp.GetArrayElementAtIndex(i);
+                var el = effectsProp.GetArrayElementAtIndex(i);
+                var triggerProp = el.FindPropertyRelative(EFFECT_TRIGGER_PROP);
+                var effectProp = el.FindPropertyRelative(EFFECT_REF_PROP);
+                bool isNull = string.IsNullOrEmpty(effectProp.managedReferenceFullTypename);
 
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
                 EditorGUILayout.BeginHorizontal();
-                bool isNull = string.IsNullOrEmpty(el.managedReferenceFullTypename);
-                EditorGUILayout.LabelField(isNull ? "(null)" : ManagedRefTypeName(el), EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(triggerProp, GUIContent.none, GUILayout.Width(110));
+
+                var captured = effectProp.Copy();
+                string effectName = isNull ? "Выбрать эффект ▾" : ManagedRefTypeName(effectProp);
+                if (GUILayout.Button(effectName, EditorStyles.popup))
+                    ShowEffectTypeMenu(captured);
+
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("✕", GUILayout.Width(20), GUILayout.Height(18))) removeIndex = i;
+                if (CompactButton(EditorToolsConstraints.SYMBOL_REMOVE, EditorToolsConstraints.COLOR_LIGHT_RED, "Удалить"))
+                    removeIndex = i;
                 EditorGUILayout.EndHorizontal();
 
-                if (!isNull) DrawManagedRefBody(el);
+                if (!isNull) DrawManagedRefBody(effectProp);
 
                 EditorGUILayout.EndVertical();
             }
 
             if (removeIndex >= 0)
-                arrayProp.DeleteArrayElementAtIndex(removeIndex);
+                effectsProp.DeleteArrayElementAtIndex(removeIndex);
 
-            if (GUILayout.Button("+ Добавить", GUILayout.Height(20)))
-                ShowAddMenu(arrayProp.propertyPath, addChoices);
+            if (add)
+                AddEffectEntry(effectsProp.propertyPath);
+        }
+
+        /// <summary> Небольшая кнопка-символ с цветным фоном </summary>
+        private static bool CompactButton(string symbol, Color background, string tooltip = null)
+        {
+            var prev = GUI.backgroundColor;
+            GUI.backgroundColor = background;
+            bool clicked = GUILayout.Button(new GUIContent(symbol, tooltip), GUILayout.Width(22), GUILayout.Height(18));
+            GUI.backgroundColor = prev;
+            return clicked;
         }
 
         private void DrawManagedRefBody(SerializedProperty prop)
@@ -419,8 +453,9 @@ namespace DioramaEnigma.Sequences.Editor
                     entry.FindPropertyRelative(STEP_PROP).objectReferenceValue = asset;
                     entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = capturedGroup;
                     entry.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex = (int)inherited;
-                    entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP).ClearArray();
-                    entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP).ClearArray();
+                    entry.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue =
+                        GetGroupInteractableAfterCompletion(capturedGroup);
+                    entry.FindPropertyRelative(EFFECTS_PROP).ClearArray();
                     serializedObject.ApplyModifiedProperties();
                 });
             }
@@ -524,20 +559,46 @@ namespace DioramaEnigma.Sequences.Editor
 
         #region Effect type menu
 
-        private void ShowAddMenu(string arrayPath, (string label, Type type)[] choices)
+        /// <summary> Добавить пустую запись эффекта (триггер по умолчанию, эффект выбирается отдельно) </summary>
+        private void AddEffectEntry(string arrayPath)
         {
-            var menu = new GenericMenu();
+            serializedObject.Update();
+            var arr = serializedObject.FindProperty(arrayPath);
+            int idx = arr.arraySize;
+            arr.arraySize++;
 
-            foreach (var (menuLabel, type) in choices)
+            var added = arr.GetArrayElementAtIndex(idx);
+            added.FindPropertyRelative(EFFECT_REF_PROP).managedReferenceValue = null;
+            added.FindPropertyRelative(EFFECT_TRIGGER_PROP).enumValueIndex = 0;
+
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        /// <summary> Меню выбора типа эффекта для записи (SerializeReference) </summary>
+        private void ShowEffectTypeMenu(SerializedProperty effectProp)
+        {
+            var path = effectProp.propertyPath;
+            bool isNull = string.IsNullOrEmpty(effectProp.managedReferenceFullTypename);
+
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Нет"), isNull, () =>
+            {
+                serializedObject.Update();
+                var prop = serializedObject.FindProperty(path);
+                if (prop == null) return;
+                prop.managedReferenceValue = null;
+                serializedObject.ApplyModifiedProperties();
+            });
+
+            foreach (var (menuLabel, type) in EffectTypes)
             {
                 Type captured = type;
                 menu.AddItem(new GUIContent(menuLabel), false, () =>
                 {
                     serializedObject.Update();
-                    var arr = serializedObject.FindProperty(arrayPath);
-                    int idx = arr.arraySize;
-                    arr.arraySize++;
-                    arr.GetArrayElementAtIndex(idx).managedReferenceValue = Activator.CreateInstance(captured);
+                    var prop = serializedObject.FindProperty(path);
+                    if (prop == null) return;
+                    prop.managedReferenceValue = Activator.CreateInstance(captured);
                     serializedObject.ApplyModifiedProperties();
                 });
             }
@@ -566,8 +627,9 @@ namespace DioramaEnigma.Sequences.Editor
             entry.FindPropertyRelative(STEP_PROP).objectReferenceValue = null;
             entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue = groupIndex;
             entry.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex = (int)inherited;
-            entry.FindPropertyRelative(ACTIVATION_EFFECTS_PROP).ClearArray();
-            entry.FindPropertyRelative(COMPLETION_EFFECTS_PROP).ClearArray();
+            entry.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue =
+                GetGroupInteractableAfterCompletion(groupIndex);
+            entry.FindPropertyRelative(EFFECTS_PROP).ClearArray();
         }
 
         private List<int> GetSortedGroups()
@@ -599,6 +661,27 @@ namespace DioramaEnigma.Sequences.Editor
             }
         }
 
+        private bool GetGroupInteractableAfterCompletion(int groupIndex)
+        {
+            for (int i = 0; i < stepsProp.arraySize; i++)
+            {
+                var entry = stepsProp.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue == groupIndex)
+                    return entry.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue;
+            }
+            return false;
+        }
+
+        private void SetGroupInteractableAfterCompletion(int groupIndex, bool value)
+        {
+            for (int i = 0; i < stepsProp.arraySize; i++)
+            {
+                var entry = stepsProp.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative(GROUP_INDEX_PROP).intValue == groupIndex)
+                    entry.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue = value;
+            }
+        }
+
         private void SwapGroups(int groupA, int groupB)
         {
             for (int i = 0; i < stepsProp.arraySize; i++)
@@ -626,8 +709,11 @@ namespace DioramaEnigma.Sequences.Editor
                 var other = stepsProp.GetArrayElementAtIndex(i);
                 if (other.FindPropertyRelative(GROUP_INDEX_PROP).intValue != gp.intValue) continue;
 
-                stepsProp.GetArrayElementAtIndex(arrayIndex).FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex =
+                var moved = stepsProp.GetArrayElementAtIndex(arrayIndex);
+                moved.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex =
                     other.FindPropertyRelative(AVAILABILITY_PROP).enumValueIndex;
+                moved.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue =
+                    other.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue;
                 break;
             }
         }

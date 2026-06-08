@@ -22,6 +22,8 @@ namespace DioramaEnigma.Sequences
         }
         /// <summary> Значение по умолчанию </summary>
         public bool DefaultValue => defaultValue;
+        /// <summary> Целевое значение, при котором шаг считается завершённым </summary>
+        public bool CompletionState => completionState;
         /// <summary> Глобальный профиль сохранения, иначе — отдельно для активного профиля </summary>
         public bool IsGlobal => isGlobal;
 
