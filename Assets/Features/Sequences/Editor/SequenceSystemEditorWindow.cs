@@ -108,7 +108,7 @@ namespace DioramaEnigma.Sequences.Editor
                 else expanded.Add(info.Guid);
             }
 
-            string label = string.IsNullOrEmpty(info.Asset.SequenceLabel) ? info.Asset.name : info.Asset.SequenceLabel;
+            string label = info.Asset.name;
             string indicator = inspectorOpen ? "▼" : "▶";
 
             SetBG(EditorToolsConstraints.COLOR_ACCENT);
@@ -245,11 +245,7 @@ namespace DioramaEnigma.Sequences.Editor
         private static string BuildStepLabel(ScriptableObject stepAsset)
         {
             string typeName = stepAsset.GetType().Name.Replace("Sequence", "");
-            string stepLabel = stepAsset is AbstractSequenceStep step && !string.IsNullOrEmpty(step.StepLabel)
-                ? step.StepLabel
-                : stepAsset.name;
-
-            return $"  {typeName} · {stepLabel}";
+            return $"  {typeName} · {stepAsset.name}";
         }
 
         private void EnsureStyles()

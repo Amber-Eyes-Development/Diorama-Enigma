@@ -26,7 +26,6 @@ namespace DioramaEnigma.Sequences.Editor
         private const string EFFECT_TRIGGER_PROP = "trigger";
         private const string EFFECT_REF_PROP = "effect";
 
-        private SerializedProperty sequenceLabelProp;
         private SerializedProperty stepsProp;
 
         private GUIStyle headerStyle;
@@ -52,14 +51,8 @@ namespace DioramaEnigma.Sequences.Editor
             ("Award Resource", typeof(AwardResourceEffect)),
         };
 
-        private static readonly (string label, Type type)[] GateTypes =
-        {
-            ("Требует завершения шагов", typeof(RequireStepsCompletedGate)),
-        };
-
         private void OnEnable()
         {
-            sequenceLabelProp = serializedObject.FindProperty("sequenceLabel");
             stepsProp = serializedObject.FindProperty(STEPS_PROP);
             RefreshWarnings();
         }
@@ -93,7 +86,7 @@ namespace DioramaEnigma.Sequences.Editor
             serializedObject.Update();
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(sequenceLabelProp);
+            EditorGUILayout.LabelField(target.name, EditorStyles.boldLabel);
             if (GUILayout.Button("↺", GUILayout.Width(24), GUILayout.Height(18)))
                 RefreshWarnings();
             EditorGUILayout.EndHorizontal();
@@ -108,12 +101,12 @@ namespace DioramaEnigma.Sequences.Editor
 
             int maxGroup = groups.Count > 0 ? groups[^1] : -1;
 
-            EditorGUILayout.BeginHorizontal();
+            var newGroupSeparator = EditorGUILayout.GetControlRect(false, 2);
+            EditorGUI.DrawRect(newGroupSeparator, SeparatorColor);
+            EditorGUILayout.Space(2);
+
             if (GUILayout.Button("+ Создать шаг (новая группа)"))
                 ShowCreateStepMenu(maxGroup + 1);
-            if (groups.Count > 0 && GUILayout.Button("+ Создать шаг (в ту же группу)"))
-                ShowCreateStepMenu(maxGroup);
-            EditorGUILayout.EndHorizontal();
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -173,6 +166,10 @@ namespace DioramaEnigma.Sequences.Editor
 
                 DrawStepEntry(entry, i);
             }
+
+            EditorGUILayout.Space(2);
+            if (GUILayout.Button("+ Добавить шаг в группу"))
+                ShowCreateStepMenu(groupIndex);
 
             EditorGUILayout.Space(4);
         }
@@ -248,14 +245,10 @@ namespace DioramaEnigma.Sequences.Editor
 
             if (stepProp.objectReferenceValue is ScriptableObject stepAsset)
             {
-                if (stepAsset is AbstractSequenceStep sequenceStep)
+                if (stepAsset is AbstractSequenceStep)
                 {
-                    string label = string.IsNullOrEmpty(sequenceStep.StepLabel)
-                        ? "(без метки)"
-                        : sequenceStep.StepLabel;
-
                     string typeName = stepAsset.GetType().Name.Replace("Sequence", "");
-                    EditorGUILayout.LabelField($"  {typeName} · {label}", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField($"  {typeName} · {stepAsset.name}", EditorStyles.miniLabel);
                 }
                 else
                 {
@@ -280,63 +273,92 @@ namespace DioramaEnigma.Sequences.Editor
             var so = GetStepSO(stepAsset);
             so.Update();
 
-            var trackerProp = so.FindProperty("tracker");
-            if (trackerProp == null) return;
-
-            var gateProp = trackerProp.FindPropertyRelative("gate");
-            if (gateProp == null) return;
-
-            bool hasGate = !string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
+            var gatesProp = so.FindProperty("gates");
+            if (gatesProp == null) return;
 
             EditorGUILayout.Space(2);
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("УСЛОВИЯ ДОСТУПА", EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            if (!hasGate && CompactButton(EditorToolsConstraints.SYMBOL_ADD, EditorToolsConstraints.COLOR_LIGHT_GREEN, "Добавить гейт"))
-                ShowGateMenu(gateProp, so);
+            bool add = CompactButton(EditorToolsConstraints.SYMBOL_ADD, EditorToolsConstraints.COLOR_LIGHT_GREEN, "Добавить условие");
             EditorGUILayout.EndHorizontal();
 
-            if (!hasGate) return;
+            int removeIndex = -1;
 
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button(ManagedRefTypeName(gateProp), EditorStyles.popup))
-                ShowGateMenu(gateProp, so);
-            GUILayout.FlexibleSpace();
-            bool remove = CompactButton(EditorToolsConstraints.SYMBOL_REMOVE, EditorToolsConstraints.COLOR_LIGHT_RED, "Удалить");
-            EditorGUILayout.EndHorizontal();
-
-            if (remove)
+            for (int i = 0; i < gatesProp.arraySize; i++)
             {
-                gateProp.managedReferenceValue = null;
-                so.ApplyModifiedProperties();
+                var el = gatesProp.GetArrayElementAtIndex(i);
+                bool isNull = string.IsNullOrEmpty(el.managedReferenceFullTypename);
+
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+                EditorGUILayout.BeginHorizontal();
+                var captured = el.Copy();
+                string gateName = isNull ? "Выбрать условие ▾" : ManagedRefTypeName(el);
+                if (GUILayout.Button(gateName, EditorStyles.popup))
+                    ShowGateTypeMenu(captured);
+                GUILayout.FlexibleSpace();
+                if (CompactButton(EditorToolsConstraints.SYMBOL_REMOVE, EditorToolsConstraints.COLOR_LIGHT_RED, "Удалить"))
+                    removeIndex = i;
+                EditorGUILayout.EndHorizontal();
+
+                if (!isNull) DrawManagedRefBody(el);
+
                 EditorGUILayout.EndVertical();
-                return;
             }
 
-            EditorGUI.BeginChangeCheck();
-            DrawManagedRefBody(gateProp);
-            if (EditorGUI.EndChangeCheck())
-                so.ApplyModifiedProperties();
+            if (removeIndex >= 0)
+                gatesProp.DeleteArrayElementAtIndex(removeIndex);
 
-            EditorGUILayout.EndVertical();
+            if (add)
+                AddGateEntry(so, gatesProp.propertyPath);
+
+            so.ApplyModifiedProperties();
         }
 
-        private void ShowGateMenu(SerializedProperty gateProp, SerializedObject so)
+        /// <summary> Добавить пустую запись гейта (тип выбирается отдельно) </summary>
+        private static void AddGateEntry(SerializedObject so, string arrayPath)
         {
+            so.Update();
+            var arr = so.FindProperty(arrayPath);
+            int idx = arr.arraySize;
+            arr.arraySize++;
+
+            // arraySize++ копирует ссылку предыдущего элемента (SerializeReference) — обнуляем
+            arr.GetArrayElementAtIndex(idx).managedReferenceValue = null;
+
+            so.ApplyModifiedProperties();
+        }
+
+        /// <summary> Меню выбора типа гейта (любой наследник StepGate) </summary>
+        private static void ShowGateTypeMenu(SerializedProperty gateProp)
+        {
+            var so = gateProp.serializedObject;
+            var path = gateProp.propertyPath;
+            bool isNull = string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
+
             var menu = new GenericMenu();
-            foreach (var (menuLabel, type) in GateTypes)
+            menu.AddItem(new GUIContent("Нет"), isNull, () => AssignGate(so, path, null));
+
+            foreach (var type in TypeCache.GetTypesDerivedFrom<StepGate>())
             {
+                if (type.IsAbstract || type.IsGenericType || type.GetConstructor(Type.EmptyTypes) == null) continue;
+
                 Type captured = type;
-                menu.AddItem(new GUIContent(menuLabel), false, () =>
-                {
-                    so.Update();
-                    gateProp.managedReferenceValue = Activator.CreateInstance(captured);
-                    so.ApplyModifiedProperties();
-                });
+                menu.AddItem(new GUIContent(captured.Name), false, () => AssignGate(so, path, captured));
             }
+
             menu.ShowAsContext();
+        }
+
+        private static void AssignGate(SerializedObject so, string path, Type type)
+        {
+            so.Update();
+            var prop = so.FindProperty(path);
+            if (prop == null) return;
+
+            prop.managedReferenceValue = type == null ? null : Activator.CreateInstance(type);
+            so.ApplyModifiedProperties();
         }
 
         private SerializedObject GetStepSO(ScriptableObject stepAsset)
@@ -517,11 +539,7 @@ namespace DioramaEnigma.Sequences.Editor
         private string GetOrCreateStepFolder()
         {
             var sequence = (Sequence)target;
-            string label = string.IsNullOrEmpty(sequence.SequenceLabel)
-                ? sequence.name
-                : sequence.SequenceLabel;
-
-            string folderName = SanitizeFolderName(label);
+            string folderName = SanitizeFolderName(sequence.name);
             if (string.IsNullOrEmpty(folderName)) folderName = "Default";
 
             string targetFolder = $"{STEPS_FOLDER_PATH}/{STEPS_FOLDER_NAME}/{folderName}";
@@ -620,6 +638,9 @@ namespace DioramaEnigma.Sequences.Editor
 
         private void AddStep(int groupIndex)
         {
+            // Вызывается из отложенного колбэка меню — нужны явные Update/Apply
+            serializedObject.Update();
+
             var inherited = GetGroupAvailability(groupIndex);
             int idx = stepsProp.arraySize;
             stepsProp.arraySize++;
@@ -630,6 +651,8 @@ namespace DioramaEnigma.Sequences.Editor
             entry.FindPropertyRelative(INTERACTABLE_AFTER_COMPLETION_PROP).boolValue =
                 GetGroupInteractableAfterCompletion(groupIndex);
             entry.FindPropertyRelative(EFFECTS_PROP).ClearArray();
+
+            serializedObject.ApplyModifiedProperties();
         }
 
         private List<int> GetSortedGroups()

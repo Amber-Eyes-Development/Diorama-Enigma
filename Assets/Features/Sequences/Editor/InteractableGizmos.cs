@@ -65,9 +65,7 @@ namespace DioramaEnigma.Sequences.Editor
 
         private static string BuildLabel(string icon, AbstractSequenceStep stateRef, string valueStr)
         {
-            string name = !string.IsNullOrEmpty(stateRef.StepLabel)
-                ? stateRef.StepLabel
-                : stateRef.name;
+            string name = stateRef.name;
 
             return Application.isPlaying
                 ? $"{icon} {name}  [{valueStr}]"

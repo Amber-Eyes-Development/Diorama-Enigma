@@ -10,8 +10,6 @@ namespace DioramaEnigma.Sequences
     [CreateAssetMenu(menuName = "Sequences/Sequence", fileName = nameof(Sequence))]
     public sealed class Sequence : ScriptableObject
     {
-        /// <summary> Метка последовательности </summary>
-        public string SequenceLabel => sequenceLabel;
         /// <summary> Записи шагов последовательности </summary>
         public IReadOnlyList<StepEntry> Steps => steps;
 
@@ -34,7 +32,6 @@ namespace DioramaEnigma.Sequences
             }
         }
 
-        [SerializeField] private string sequenceLabel;
         [SerializeField] private StepEntry[] steps = Array.Empty<StepEntry>();
 
         /// <summary>

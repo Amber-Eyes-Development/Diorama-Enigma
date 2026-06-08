@@ -1,19 +1,41 @@
 using Extensions.AnimationSequencer;
-using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Реакция на событие шага запуском AnimationSequencer
+    /// Проигрывание AnimationSequencer на события шага (прямое — Command, откат — ReverseMode)
     /// </summary>
-    public sealed class InteractableAnimationSequence : InteractableReactionBehaviour
+    public sealed class InteractableAnimationSequence : InteractableActionsBehaviour<AnimationSequenceAction>
     {
-        [SerializeField] private AnimationSequencer sequencer;
-
-        protected override void React(bool silent)
+        protected override void Apply(AnimationSequenceAction action, bool reverse, bool silent)
         {
-            if (!silent && sequencer != null)
-                sequencer.Play();
+            var sequencer = action.Target;
+            if (sequencer == null) return;
+
+            if (reverse)
+            {
+                if (action.ReverseMode == AnimationReverseMode.Backwards) Backwards(sequencer, silent);
+                else StopAt(sequencer, silent);
+            }
+            else
+            {
+                if (action.Command == AnimationCommand.Play) PlayForward(sequencer, silent);
+                else StopAt(sequencer, silent);
+            }
         }
+
+        private static void PlayForward(AnimationSequencer sequencer, bool silent)
+        {
+            if (silent) sequencer.SetAtEnd();
+            else sequencer.Play();
+        }
+
+        private static void Backwards(AnimationSequencer sequencer, bool silent)
+        {
+            if (silent) sequencer.SetAtStart();
+            else sequencer.PlayBackwards();
+        }
+
+        private static void StopAt(AnimationSequencer sequencer, bool silent) => sequencer.SetAtStart();
     }
 }

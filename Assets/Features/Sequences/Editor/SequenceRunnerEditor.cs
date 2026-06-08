@@ -83,7 +83,7 @@ namespace DioramaEnigma.Sequences.Editor
         private void DrawActiveStep(AbstractSequenceStep step)
         {
             bool done = step.IsCompleted;
-            string name = string.IsNullOrEmpty(step.StepLabel) ? "(без названия)" : step.StepLabel;
+            string name = step.name;
             string progress = GetStepProgressInfo(step);
 
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);

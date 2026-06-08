@@ -1,14 +1,15 @@
-using UnityEngine;
-
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Реакция на событие шага переключением активности объектов
+    /// Переключение активности объектов на события шага
     /// </summary>
-    public sealed class InteractableObjectsSwitcher : InteractableReactionBehaviour
+    public sealed class InteractableObjectsSwitcher : InteractableActionsBehaviour<GameObjectActivationAction>
     {
-        [SerializeField] private GameObjectActivation[] objects;
+        protected override void Apply(GameObjectActivationAction action, bool reverse, bool silent)
+        {
+            if (action.Target == null) return;
 
-        protected override void React(bool silent) => objects.Apply();
+            action.Target.SetActive(reverse ? !action.Active : action.Active);
+        }
     }
 }

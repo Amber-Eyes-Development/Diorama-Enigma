@@ -6,10 +6,10 @@ using UnityEngine.UIElements;
 namespace DioramaEnigma.Sequences.Editor
 {
     /// <summary>
-    /// Общий инспектор реакций (цвет фона скрипта для индикации)
+    /// Общий инспектор вьюшек (цвет фона скрипта для индикации)
     /// </summary>
-    [CustomEditor(typeof(InteractableReactionBehaviour), editorForChildClasses: true)]
-    internal sealed class InteractableReactionBehaviourEditor : UnityEditor.Editor
+    [CustomEditor(typeof(InteractableViewBehaviour), editorForChildClasses: true)]
+    internal sealed class InteractableViewBehaviourEditor : UnityEditor.Editor
     {
         private static readonly Color Tint = new(0.77f, 0.5f, 0.82f, 0.075f);
 

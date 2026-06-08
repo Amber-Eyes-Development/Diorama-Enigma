@@ -1,15 +1,11 @@
 using System;
-using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Общая логика шага: гейт, активность, необратимость и отслеживание завершённости/разблокировки
+    /// Рантайм-логика шага: активность, гейты, необратимость и отслеживание завершённости/разблокировки.
+    /// Конфиг (гейты) хранится на самом шаге и передаётся в <see cref="Initialize"/>.
     /// </summary>
-    /// <remarks>
-    /// Композируется в <see cref="SequenceStep"/> — единственный шаг-значение (булев).
-    /// </remarks>
-    [Serializable]
     public sealed class StepCompletionTracker
     {
         /// <summary> Изменение признака завершённости </summary>
@@ -18,24 +14,23 @@ namespace DioramaEnigma.Sequences
         public event Action<bool> onUnlockChanged;
 
         /// <summary>
-        /// Разблокировано ли изменение состояния: активен (группа доступна), гейт открыт
+        /// Разблокировано ли изменение состояния: активен (группа доступна), все гейты открыты
         /// и не сработал латч необратимости (завершённый необратимый шаг неизменен)
         /// </summary>
         public bool IsUnlocked => isActive
-            && (gate == null || gate.IsSatisfied())
+            && AllGatesSatisfied()
             && !(irreversible && lastCompleted);
 
-        [Tooltip("Доп. условие, блокирующее изменение состояния (помимо порядка групп). Опционально")]
-        [SerializeReference] private StepGate gate;
-
+        private StepGate[] gates;
         private bool isActive;
         private bool irreversible;
         private bool lastCompleted;
         private bool lastUnlocked;
 
-        /// <summary> Инициализировать исходную завершённость/необратимость (вызывать в OnEnable шага) </summary>
-        public void Initialize(bool completed, bool irreversible)
+        /// <summary> Инициализировать исходную завершённость/необратимость и гейты (вызывать в OnEnable шага) </summary>
+        public void Initialize(bool completed, bool irreversible, StepGate[] gates)
         {
+            this.gates = gates;
             isActive = false;
             this.irreversible = irreversible;
             lastCompleted = completed;
@@ -71,19 +66,35 @@ namespace DioramaEnigma.Sequences
 
         #region Internal
 
+        private bool AllGatesSatisfied()
+        {
+            if (gates == null) return true;
+
+            foreach (var gate in gates)
+                if (gate != null && !gate.IsSatisfied())
+                    return false;
+
+            return true;
+        }
+
         private void ObserveGate(bool observe)
         {
-            if (gate == null) return;
+            if (gates == null) return;
 
-            if (observe)
+            foreach (var gate in gates)
             {
-                gate.StartObserving();
-                gate.onSatisfactionChanged += NotifyUnlockIfChanged;
-            }
-            else
-            {
-                gate.onSatisfactionChanged -= NotifyUnlockIfChanged;
-                gate.StopObserving();
+                if (gate == null) continue;
+
+                if (observe)
+                {
+                    gate.StartObserving();
+                    gate.onSatisfactionChanged += NotifyUnlockIfChanged;
+                }
+                else
+                {
+                    gate.onSatisfactionChanged -= NotifyUnlockIfChanged;
+                    gate.StopObserving();
+                }
             }
         }
 

@@ -1,26 +1,21 @@
 using Extensions.Audio;
-using UnityEngine;
-using UnityEngine.Audio;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Звуковая реакция на событие шага (3D one-shot через <see cref="AudioController"/>)
+    /// 3D one-shot звуки на события шага (через <see cref="AudioController"/>)
     /// </summary>
-    public sealed class InteractableSounds : InteractableReactionBehaviour
+    public sealed class InteractableSounds : InteractableActionsBehaviour<SoundAction>
     {
-        [SerializeField] private AudioResource sound;
-        [Tooltip("Тип аудио трека")]
-        [SerializeField] private AudioModel model = AudioModel.Sfx;
-
-        protected override void React(bool silent)
+        protected override void Apply(SoundAction action, bool reverse, bool silent)
         {
-            if (silent || sound == null) return;
+            // Тихое восстановление звук не проигрывает (откат на reversible отсекает база)
+            if (silent || action.Sound == null) return;
 
             AudioController controller = AudioController.Instance;
             if (controller == null) return;
 
-            controller.Play(sound, transform.position, model);
+            controller.Play(action.Sound, transform.position, action.Model);
         }
     }
 }

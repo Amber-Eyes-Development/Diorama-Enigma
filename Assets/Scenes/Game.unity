@@ -298,9 +298,6 @@ GameObject:
   - component: {fileID: 263367972}
   - component: {fileID: 263367975}
   - component: {fileID: 263367977}
-  - component: {fileID: 263367976}
-  - component: {fileID: 263367978}
-  - component: {fileID: 263367979}
   m_Layer: 0
   m_Name: "2. \u0412\u0435\u043D\u0442\u0438\u043B\u044C"
   m_TagString: Untagged
@@ -426,8 +423,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 0
-  animation: {fileID: 263367973}
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 263367973}
+    command: 0
+    reverseMode: 0
 --- !u!114 &263367973
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -561,25 +562,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 0
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
---- !u!114 &263367976
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 263367965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 1
-  objects:
-  - Target: {fileID: 1759786993}
-    Active: 0
+  actions:
+  - trigger: 0
+    reversible: 1
+    sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
+    model: 3
 --- !u!114 &263367977
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -592,39 +579,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 0
-  objects:
-  - Target: {fileID: 1759786993}
-    Active: 1
---- !u!114 &263367978
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 263367965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 1
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
---- !u!114 &263367979
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 263367965}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 1
-  animation: {fileID: 263367973}
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 1759786993}
+    active: 1
 --- !u!1 &275459774
 GameObject:
   m_ObjectHideFlags: 0
@@ -921,8 +880,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 0
-  animation: {fileID: 297188364}
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 297188364}
+    command: 0
+    reverseMode: 0
 --- !u!114 &297188366
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -935,10 +898,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 0
-  objects:
-  - Target: {fileID: 2052244852}
-    Active: 1
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 2052244852}
+    active: 1
 --- !u!114 &297188367
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -951,9 +915,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 0
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
+  actions:
+  - trigger: 0
+    reversible: 1
+    sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
+    model: 3
 --- !u!1 &348488910
 GameObject:
   m_ObjectHideFlags: 0
@@ -7104,8 +7070,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 2
-  animation: {fileID: 1025917350}
+  actions:
+  - trigger: 2
+    reversible: 1
+    target: {fileID: 1025917350}
+    command: 0
+    reverseMode: 0
 --- !u!114 &1025917352
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7259,8 +7229,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 2
-  animation: {fileID: 1109792965}
+  actions:
+  - trigger: 2
+    reversible: 1
+    target: {fileID: 1109792965}
+    command: 0
+    reverseMode: 1
 --- !u!114 &1109792964
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7896,7 +7870,6 @@ GameObject:
   - component: {fileID: 1508594554}
   - component: {fileID: 1508594556}
   - component: {fileID: 1508594555}
-  - component: {fileID: 1508594557}
   m_Layer: 0
   m_Name: "\u0418\u0434\u0442\u0438\u043A\u0430\u0442\u043E\u0440 \u0432\u0435\u043D\u0442\u0438\u043B\u0435\u0439
     1 \u0438 2"
@@ -7933,10 +7906,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 0
-  objects:
-  - Target: {fileID: 655034625}
-    Active: 1
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 655034625}
+    active: 1
 --- !u!114 &1508594556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7950,22 +7924,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.StepReference
   step: {fileID: 11400000, guid: 18dfa52e1e7d86b48b9123c7e275b826, type: 2}
---- !u!114 &1508594557
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1508594553}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 1
-  objects:
-  - Target: {fileID: 655034625}
-    Active: 0
 --- !u!1 &1526125030
 GameObject:
   m_ObjectHideFlags: 0
@@ -8165,9 +8123,6 @@ GameObject:
   - component: {fileID: 1671937407}
   - component: {fileID: 1671937409}
   - component: {fileID: 1671937411}
-  - component: {fileID: 1671937410}
-  - component: {fileID: 1671937412}
-  - component: {fileID: 1671937413}
   m_Layer: 0
   m_Name: "3. \u0412\u0435\u043D\u0442\u0438\u043B\u044C"
   m_TagString: Untagged
@@ -8306,8 +8261,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 0
-  animation: {fileID: 1671937408}
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 1671937408}
+    command: 0
+    reverseMode: 0
 --- !u!114 &1671937408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8428,25 +8387,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 0
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
---- !u!114 &1671937410
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1671937400}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 1
-  objects:
-  - Target: {fileID: 749553919}
-    Active: 0
+  actions:
+  - trigger: 0
+    reversible: 1
+    sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
+    model: 3
 --- !u!114 &1671937411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8459,39 +8404,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 0
-  objects:
-  - Target: {fileID: 749553919}
-    Active: 1
---- !u!114 &1671937412
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1671937400}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 1
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
---- !u!114 &1671937413
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1671937400}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 1
-  animation: {fileID: 1671937408}
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 749553919}
+    active: 1
 --- !u!1 &1759786993
 GameObject:
   m_ObjectHideFlags: 0
@@ -8636,12 +8553,8 @@ GameObject:
   - component: {fileID: 1896822508}
   - component: {fileID: 1896822507}
   - component: {fileID: 1896822506}
-  - component: {fileID: 1896822512}
   - component: {fileID: 1896822509}
   - component: {fileID: 1896822511}
-  - component: {fileID: 1896822510}
-  - component: {fileID: 1896822513}
-  - component: {fileID: 1896822514}
   m_Layer: 0
   m_Name: "1. \u0412\u0435\u043D\u0442\u0438\u043B\u044C"
   m_TagString: Untagged
@@ -8780,10 +8693,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be6517ef39ed31b4683955965524ab88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableParticles
-  trigger: 0
   actions:
-  - Particles: {fileID: 349000148}
-    Command: 1
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 349000148}
+    command: 0
 --- !u!114 &1896822507
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8796,8 +8710,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 0
-  animation: {fileID: 1896822508}
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 1896822508}
+    command: 0
+    reverseMode: 0
 --- !u!114 &1896822508
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8918,25 +8836,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 0
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
---- !u!114 &1896822510
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1896822499}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 1
-  objects:
-  - Target: {fileID: 551900199}
-    Active: 0
+  actions:
+  - trigger: 0
+    reversible: 1
+    sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
+    model: 3
 --- !u!114 &1896822511
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8949,55 +8853,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 0
-  objects:
-  - Target: {fileID: 551900199}
-    Active: 1
---- !u!114 &1896822512
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1896822499}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be6517ef39ed31b4683955965524ab88, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableParticles
-  trigger: 1
   actions:
-  - Particles: {fileID: 349000148}
-    Command: 0
---- !u!114 &1896822513
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1896822499}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 1
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
---- !u!114 &1896822514
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1896822499}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
-  trigger: 1
-  animation: {fileID: 1896822508}
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 551900199}
+    active: 1
 --- !u!1 &1936877673
 GameObject:
   m_ObjectHideFlags: 0
@@ -9213,9 +9073,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
-  trigger: 0
-  sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
-  model: 3
+  actions: []
 --- !u!1 &2086258894
 GameObject:
   m_ObjectHideFlags: 0
@@ -9227,6 +9085,7 @@ GameObject:
   - component: {fileID: 2086258895}
   - component: {fileID: 2086258897}
   - component: {fileID: 2086258896}
+  - component: {fileID: 2086258898}
   m_Layer: 0
   m_Name: "\u0418\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F
     \u0443\u0440\u043E\u0432\u043D\u044F"
@@ -9263,10 +9122,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  trigger: 0
-  objects:
-  - Target: {fileID: 1526125030}
-    Active: 1
+  actions:
+  - trigger: 0
+    reversible: 1
+    target: {fileID: 1526125030}
+    active: 1
 --- !u!114 &2086258897
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9280,6 +9140,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.StepReference
   step: {fileID: 11400000, guid: 41cfd3efb68f1ee4ca8011005424ef86, type: 2}
+--- !u!114 &2086258898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2086258894}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e349a92b001936a41981451c3c4a9552, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
+  actions:
+  - trigger: 0
+    reversible: 0
+    sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
+    model: 3
 --- !u!1 &2100693806
 GameObject:
   m_ObjectHideFlags: 0
