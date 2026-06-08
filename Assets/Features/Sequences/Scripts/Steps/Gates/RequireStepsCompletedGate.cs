@@ -11,6 +11,7 @@ namespace DioramaEnigma.Sequences
     public sealed class RequireStepsCompletedGate : StepGate
     {
         [Tooltip("Шаги, которые должны быть завершены для разблокировки")]
+        [SequenceStepReference]
         [SerializeField] private IdentifiableObject[] requiredSteps;
 
         /// <inheritdoc/>

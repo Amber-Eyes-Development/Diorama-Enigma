@@ -23,6 +23,7 @@ namespace DioramaEnigma.Sequences
         [Header("Шаг"), Space]
         [SerializeField] private string stepLabel;
         [Tooltip("Дочерние шаги (ссылки на ассеты-шаги)")]
+        [SequenceStepReference]
         [SerializeField] private IdentifiableObject[] children;
         [Tooltip("Условие завершения по дочерним шагам")]
         [SerializeField] private CompletionMode mode = CompletionMode.All;

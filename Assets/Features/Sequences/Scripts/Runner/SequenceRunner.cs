@@ -31,11 +31,11 @@ namespace DioramaEnigma.Sequences
         private void Awake()
         {
             if (sequence == null)
-                ServiceDebug.LogWarning(this, "sequence не назначен");
+                ServiceDebug.LogError(this, "sequence не назначен");
 
             SequenceContext context = GetComponentInParent<SequenceContext>();
             if (context == null)
-                ServiceDebug.LogWarning(this, "SequenceContext не найден в родителях — добавьте его на корень префаба загадки");
+                ServiceDebug.LogError(this, "SequenceContext не найден в родителях — добавьте его на корень префаба загадки");
             else
                 hub = context.Hub;
         }
@@ -53,11 +53,6 @@ namespace DioramaEnigma.Sequences
         public void StartSequence()
         {
             if (sequence == null) return;
-            if (hub == null)
-            {
-                ServiceDebug.LogError(this, "Хаб не инициализирован — нужен SequenceContext на префабе");
-                return;
-            }
 
             StopSequence();
 
@@ -66,7 +61,7 @@ namespace DioramaEnigma.Sequences
             if (!resuming)
             {
                 ResetAllSteps();
-                hub.Publish(new SequenceResetEvent(sequence.SequenceLabel));
+                if (hub != null) hub.Publish(new SequenceResetEvent(sequence.SequenceLabel));
             }
 
             ActivateAlwaysAvailableGroups();
@@ -92,11 +87,11 @@ namespace DioramaEnigma.Sequences
         /// <summary> Сбросить состояние всех шагов и перезапустить с начала </summary>
         public void RestartSequence()
         {
-            if (sequence == null || hub == null) return;
+            if (sequence == null) return;
 
             StopSequence();
             ResetAllSteps();
-            hub.Publish(new SequenceResetEvent(sequence.SequenceLabel));
+            if (hub != null) hub.Publish(new SequenceResetEvent(sequence.SequenceLabel));
 
             ActivateAlwaysAvailableGroups();
 
@@ -205,7 +200,7 @@ namespace DioramaEnigma.Sequences
             foreach (var entry in completedEntries)
                 RunEffects(entry.CompletionEffects);
 
-            hub.Publish(new SequenceStepCompletedEvent(sequence.SequenceLabel, currentGroupIndex));
+            if (hub != null) hub.Publish(new SequenceStepCompletedEvent(sequence.SequenceLabel, currentGroupIndex));
 
             AdvanceToNextGroup();
         }

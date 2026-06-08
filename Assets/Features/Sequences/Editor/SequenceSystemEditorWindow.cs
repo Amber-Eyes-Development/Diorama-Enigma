@@ -19,8 +19,13 @@ namespace DioramaEnigma.Sequences.Editor
             public string Guid;
         }
 
+        private static readonly Color COLOR_OPEN = new(1f, 0.52f, 0.05f);
+
         private readonly List<SequenceInfo> sequences = new();
         private readonly HashSet<string> expanded = new();
+
+        private readonly HashSet<int> inspectorExpanded = new();
+        private readonly Dictionary<int, UnityEditor.Editor> embeddedEditors = new();
 
         private Vector2 scroll;
 
@@ -48,6 +53,8 @@ namespace DioramaEnigma.Sequences.Editor
         }
 
         private void OnEnable() => Refresh();
+
+        private void OnDisable() => ReleaseEmbeddedEditors();
 
         #region GUI
 
@@ -88,25 +95,33 @@ namespace DioramaEnigma.Sequences.Editor
         private void DrawSequence(SequenceInfo info)
         {
             bool isExpanded = expanded.Contains(info.Guid);
+            int id = info.Asset.GetInstanceID();
+            bool inspectorOpen = inspectorExpanded.Contains(id);
 
             EditorGUILayout.BeginHorizontal();
 
-            if (GUILayout.Button(isExpanded ? "▼" : "▶", GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+            var folderIcon = EditorGUIUtility.IconContent(isExpanded ? "FolderOpened Icon" : "Folder Icon");
+            folderIcon.tooltip = isExpanded ? "Свернуть шаги" : "Развернуть шаги";
+            if (GUILayout.Button(folderIcon, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
             {
                 if (isExpanded) expanded.Remove(info.Guid);
                 else expanded.Add(info.Guid);
             }
 
             string label = string.IsNullOrEmpty(info.Asset.SequenceLabel) ? info.Asset.name : info.Asset.SequenceLabel;
+            string indicator = inspectorOpen ? "▼" : "▶";
 
             SetBG(EditorToolsConstraints.COLOR_ACCENT);
-            if (GUILayout.Button($"  {label}   ({info.Asset.Steps.Count} шагов)", styleMainButton, GUILayout.Height(SQUARE)))
-                Selection.activeObject = info.Asset;
+            if (GUILayout.Button($"  {indicator}  {label}   ({info.Asset.Steps.Count} шагов)", styleMainButton, GUILayout.Height(SQUARE)))
+                ToggleInspector(id);
             ResetBG();
 
+            DrawOpenButton(info.Asset);
             DrawPingButton(info.Asset);
 
             EditorGUILayout.EndHorizontal();
+
+            if (inspectorOpen) DrawInlineInspector(info.Asset, 1);
 
             if (isExpanded) DrawSteps(info.Asset);
         }
@@ -146,14 +161,30 @@ namespace DioramaEnigma.Sequences.Editor
                 return;
             }
 
+            int id = stepAsset.GetInstanceID();
+            bool inspectorOpen = inspectorExpanded.Contains(id);
+            string indicator = inspectorOpen ? "▾" : "▸";
             string label = BuildStepLabel(stepAsset);
 
-            if (GUILayout.Button(label, styleMainButton, GUILayout.Height(SQUARE)))
-                Selection.activeObject = stepAsset;
+            if (GUILayout.Button($"  {indicator}{label}", styleMainButton, GUILayout.Height(SQUARE)))
+                ToggleInspector(id);
 
+            DrawOpenButton(stepAsset);
             DrawPingButton(stepAsset);
 
             EditorGUILayout.EndHorizontal();
+
+            if (inspectorOpen) DrawInlineInspector(stepAsset, EditorGUI.indentLevel + 1);
+        }
+
+        private void DrawOpenButton(Object asset)
+        {
+            SetBG(COLOR_OPEN);
+            var content = EditorGUIUtility.IconContent("UnityEditor.InspectorWindow");
+            content.tooltip = "Открыть ассет (выделить в проекте)";
+            if (GUILayout.Button(content, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+                Selection.activeObject = asset;
+            ResetBG();
         }
 
         private void DrawPingButton(Object asset)
@@ -162,6 +193,22 @@ namespace DioramaEnigma.Sequences.Editor
             if (GUILayout.Button("●", GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
                 EditorGUIUtility.PingObject(asset);
             ResetBG();
+        }
+
+        /// <summary> Inline-инспектор ассета прямо под его строкой </summary>
+        private void DrawInlineInspector(Object asset, int indent)
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(indent * 12f);
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                var editor = GetEmbeddedEditor(asset);
+                if (editor != null) editor.OnInspectorGUI();
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(2);
         }
 
         #endregion
@@ -218,6 +265,35 @@ namespace DioramaEnigma.Sequences.Editor
 
         private static void SetBG(Color color) => GUI.backgroundColor = color;
         private static void ResetBG() => GUI.backgroundColor = Color.white;
+
+        private void ToggleInspector(int instanceId)
+        {
+            if (!inspectorExpanded.Remove(instanceId))
+                inspectorExpanded.Add(instanceId);
+        }
+
+        /// <summary> Получить (или создать) встроенный редактор ассета; кэшируется по InstanceID </summary>
+        private UnityEditor.Editor GetEmbeddedEditor(Object asset)
+        {
+            int id = asset.GetInstanceID();
+
+            if (embeddedEditors.TryGetValue(id, out var editor) && editor != null && editor.target == asset)
+                return editor;
+
+            if (editor != null) DestroyImmediate(editor);
+
+            editor = UnityEditor.Editor.CreateEditor(asset);
+            embeddedEditors[id] = editor;
+            return editor;
+        }
+
+        private void ReleaseEmbeddedEditors()
+        {
+            foreach (var editor in embeddedEditors.Values)
+                if (editor != null) DestroyImmediate(editor);
+
+            embeddedEditors.Clear();
+        }
 
         #endregion
     }
