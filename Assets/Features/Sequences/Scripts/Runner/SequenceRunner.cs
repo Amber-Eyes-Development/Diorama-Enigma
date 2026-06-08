@@ -20,6 +20,12 @@ namespace DioramaEnigma.Sequences
         [Tooltip("Запустить последовательность автоматически при включении объекта")]
         [SerializeField] private bool startOnEnable = true;
 
+        [Header("Условие старта (опционально)")]
+        [Tooltip("Если задан — старт по состоянию этого шага (вместо startOnEnable)")]
+        [SerializeField] private SequenceStep startStep;
+        [Tooltip("Состояние/событие шага старта, по которому запускается последовательность")]
+        [SerializeField] private TriggerKind startTrigger = TriggerKind.Completed;
+
         private int currentGroupIndex;
         private bool isCompleted;
 
@@ -43,10 +49,53 @@ namespace DioramaEnigma.Sequences
 
         private void OnEnable()
         {
-            if (startOnEnable) StartSequence();
+            if (startStep != null) BeginStartWatch();
+            else if (startOnEnable) StartSequence();
         }
 
-        private void OnDisable() => StopSequence();
+        private void OnDisable()
+        {
+            StopStartWatch();
+            StopSequence();
+        }
+
+        #endregion
+
+        #region Start condition
+
+        private void BeginStartWatch()
+        {
+            if (startTrigger.IsSatisfiedBy(startStep.IsCompleted, startStep.IsUnlocked))
+            {
+                StartSequence();
+                return;
+            }
+
+            startStep.onCompletionChanged += OnStartCompletionChanged;
+            startStep.onUnlockChanged += OnStartUnlockChanged;
+        }
+
+        private void StopStartWatch()
+        {
+            if (startStep == null) return;
+
+            startStep.onCompletionChanged -= OnStartCompletionChanged;
+            startStep.onUnlockChanged -= OnStartUnlockChanged;
+        }
+
+        private void OnStartCompletionChanged(bool completed) =>
+            TryStartByTrigger(completed ? TriggerKind.Completed : TriggerKind.NotCompleted);
+
+        private void OnStartUnlockChanged(bool unlocked) =>
+            TryStartByTrigger(unlocked ? TriggerKind.Unlocked : TriggerKind.Locked);
+
+        private void TryStartByTrigger(TriggerKind fired)
+        {
+            if (!startTrigger.Responds(fired)) return;
+
+            StopStartWatch();
+            StartSequence();
+        }
 
         #endregion
 
@@ -242,7 +291,7 @@ namespace DioramaEnigma.Sequences
         private static void RunMatchingEffects(StepEntry entry, TriggerKind trigger)
         {
             foreach (var effectEntry in entry.Effects)
-                if (effectEntry != null && effectEntry.Trigger == trigger)
+                if (effectEntry != null && effectEntry.Trigger.Responds(trigger))
                     effectEntry.Effect?.Execute();
         }
 
@@ -325,6 +374,9 @@ namespace DioramaEnigma.Sequences
         #endregion
 
 #if UNITY_EDITOR
+        /// <summary> Назначенная последовательность (для редакторских окон) </summary>
+        public Sequence Editor_Sequence => sequence;
+
         /// <summary> Текущий индекс активной группы </summary>
         public int Editor_CurrentGroupIndex => currentGroupIndex;
 

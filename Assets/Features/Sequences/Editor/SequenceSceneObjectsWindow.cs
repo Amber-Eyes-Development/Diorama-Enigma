@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Extensions.EditorTools;
 using UnityEditor;
@@ -6,38 +7,53 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences.Editor
 {
     /// <summary>
-    /// Окно обзора интерактивных компонентов и зон в сцене
+    /// Окно обзора интерактивных объектов сцены: объекты относятся к раннеру той последовательности,
+    /// которой они принадлежат (раннер с раскрытием инспектора, затем его объекты)
     /// </summary>
     public sealed class SequenceSceneObjectsWindow : EditorWindow
     {
-        private class ClickEntry
+        private const float SQUARE = EditorToolsConstraints.BASE_ELEMENT_HEIGHT;
+        private const string SEP = "  |  ";
+
+        private sealed class ClickEntry
         {
             public ClickInteractable Component;
             public AbstractSequenceStep StateRef;
         }
 
-        private class DragEntry
+        private sealed class DragEntry
         {
             public DraggableInteractable Component;
             public AbstractSequenceStep StateRef;
             public string TargetZoneName;
         }
 
-        private readonly List<ClickEntry> clicks = new();
-        private readonly List<DragEntry> drags = new();
-        private readonly List<DropZoneObject> dropZones = new();
+        private sealed class ObjectEntry
+        {
+            public GameObject Go;
+            public Color Color;
+            public Func<string> Label;
+        }
+
+        private readonly List<SequenceRunner> runners = new();
+        private readonly Dictionary<Sequence, List<ObjectEntry>> objectsBySequence = new();
+        private readonly List<ObjectEntry> orphanObjects = new();
+
+        private readonly HashSet<int> expandedRunners = new();
+        private readonly Dictionary<int, UnityEditor.Editor> runnerEditors = new();
 
         private Vector2 scroll;
         private double lastRefreshTime;
 
-        private GUIStyle styleSectionHeader;
         private GUIStyle styleSmall;
+        private GUIStyle styleRunnerButton;
+        private GUIStyle styleOrphanHeader;
 
         [MenuItem("Diorama Enigma/Step Objects in Scene", priority = 101)]
         public static void Open()
         {
             var window = GetWindow<SequenceSceneObjectsWindow>("Step Objects in Scene");
-            window.minSize = new Vector2(360f, 240f);
+            window.minSize = new Vector2(380f, 260f);
         }
 
         private void OnEnable()
@@ -46,7 +62,11 @@ namespace DioramaEnigma.Sequences.Editor
             Refresh();
         }
 
-        private void OnDisable() => EditorApplication.update -= OnEditorUpdate;
+        private void OnDisable()
+        {
+            EditorApplication.update -= OnEditorUpdate;
+            ReleaseRunnerEditors();
+        }
 
         private void OnEditorUpdate()
         {
@@ -57,65 +77,135 @@ namespace DioramaEnigma.Sequences.Editor
                 Repaint();
         }
 
+        #region GUI
+
         private void OnGUI()
         {
             EnsureStyles();
-
-            int total = clicks.Count + drags.Count;
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar,
-                GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
-            EditorGUILayout.LabelField($"Клик: {clicks.Count}   Перетаск: {drags.Count}   Зоны: {dropZones.Count}");
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("↺ Обновить", EditorStyles.toolbarButton, GUILayout.Width(90)))
-                Refresh();
-            EditorGUILayout.EndHorizontal();
+            DrawToolbar();
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
 
-            if (total == 0 && dropZones.Count == 0)
+            if (runners.Count == 0 && orphanObjects.Count == 0)
             {
                 EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-                EditorGUILayout.LabelField("  ClickInteractable, DraggableInteractable и DropZoneObject в сцене не найдены", styleSmall);
+                EditorGUILayout.LabelField("  Раннеры и интерактивные объекты в сцене не найдены", styleSmall);
                 EditorGUILayout.EndScrollView();
                 return;
             }
 
-            if (clicks.Count > 0)
+            var rendered = new HashSet<Sequence>();
+
+            foreach (var runner in runners)
             {
-                ColorLabel("  КЛИК", EditorToolsConstraints.COLOR_CYAN, styleSectionHeader);
-                foreach (var entry in clicks)
-                {
-                    if (entry?.Component == null) continue;
-                    DrawRow(entry.Component.gameObject, ClickLabel(entry), EditorToolsConstraints.COLOR_CYAN);
-                }
+                DrawRunnerRow(runner);
+
+                var sequence = runner.Editor_Sequence;
+                if (sequence == null || !rendered.Add(sequence)) continue;
+
+                if (objectsBySequence.TryGetValue(sequence, out var entries))
+                    foreach (var entry in entries)
+                        DrawObjectRow(entry);
             }
 
-            if (drags.Count > 0)
-            {
-                EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-                ColorLabel("  ПЕРЕТАСКИВАНИЕ", EditorToolsConstraints.COLOR_YELLOW, styleSectionHeader);
-                foreach (var entry in drags)
-                {
-                    if (entry?.Component == null) continue;
-                    DrawRow(entry.Component.gameObject, DragLabel(entry), EditorToolsConstraints.COLOR_YELLOW);
-                }
-            }
-
-            if (dropZones.Count > 0)
-            {
-                EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
-                ColorLabel("  ЗОНЫ ПРИЗЕМЛЕНИЯ", EditorToolsConstraints.COLOR_LIGHT_GREEN, styleSectionHeader);
-                foreach (var zone in dropZones)
-                {
-                    if (zone == null) continue;
-                    DrawRow(zone.gameObject, $"◈ {zone.gameObject.name}", EditorToolsConstraints.COLOR_LIGHT_GREEN);
-                }
-            }
+            DrawOrphans(rendered);
 
             EditorGUILayout.EndScrollView();
         }
 
-        private const string SEP = "  |  ";
+        private void DrawToolbar()
+        {
+            int objects = orphanObjects.Count;
+            foreach (var list in objectsBySequence.Values) objects += list.Count;
+
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar, GUILayout.Height(SQUARE));
+            EditorGUILayout.LabelField($"Раннеров: {runners.Count}   Объектов: {objects}");
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("↺ Обновить", EditorStyles.toolbarButton, GUILayout.Width(90)))
+                Refresh();
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawRunnerRow(SequenceRunner runner)
+        {
+            var separator = EditorGUILayout.GetControlRect(false, 2);
+            EditorGUI.DrawRect(separator, new Color(0.45f, 0.65f, 0.95f, 1f));
+            EditorGUILayout.Space(2);
+
+            int id = runner.GetInstanceID();
+            bool expanded = expandedRunners.Contains(id);
+            string sequenceName = runner.Editor_Sequence != null ? runner.Editor_Sequence.name : "(нет последовательности)";
+
+            EditorGUILayout.BeginHorizontal();
+
+            string indicator = expanded ? "▾" : "▸";
+            GUI.backgroundColor = EditorToolsConstraints.COLOR_ACCENT;
+            if (GUILayout.Button($"  {indicator}  ▶ {runner.gameObject.name}   ({sequenceName})", styleRunnerButton, GUILayout.Height(SQUARE)))
+            {
+                if (!expandedRunners.Remove(id)) expandedRunners.Add(id);
+            }
+            GUI.backgroundColor = Color.white;
+
+            DrawPingButton(runner.gameObject);
+
+            EditorGUILayout.EndHorizontal();
+
+            if (expanded)
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    var editor = GetRunnerEditor(runner);
+                    if (editor != null) editor.OnInspectorGUI();
+                }
+        }
+
+        private void DrawOrphans(HashSet<Sequence> rendered)
+        {
+            // Объекты последовательностей без раннера в сцене + объекты без последовательности + зоны
+            bool any = orphanObjects.Count > 0;
+            foreach (var pair in objectsBySequence)
+                if (!rendered.Contains(pair.Key)) { any = true; break; }
+
+            if (!any) return;
+
+            EditorGUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+            var separator = EditorGUILayout.GetControlRect(false, 2);
+            EditorGUI.DrawRect(separator, new Color(0.5f, 0.5f, 0.5f, 1f));
+            EditorGUILayout.LabelField("Без раннера", styleOrphanHeader);
+
+            foreach (var pair in objectsBySequence)
+                if (!rendered.Contains(pair.Key))
+                    foreach (var entry in pair.Value)
+                        DrawObjectRow(entry);
+
+            foreach (var entry in orphanObjects)
+                DrawObjectRow(entry);
+        }
+
+        private void DrawObjectRow(ObjectEntry entry)
+        {
+            if (entry.Go == null) return;
+
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            ColorLabel(entry.Label(), entry.Color, styleSmall);
+            GUILayout.FlexibleSpace();
+            DrawPingButton(entry.Go);
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private static void DrawPingButton(GameObject go)
+        {
+            GUI.backgroundColor = EditorToolsConstraints.COLOR_CYAN;
+            if (GUILayout.Button(EditorToolsConstraints.SYMBOL_PING, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+            {
+                Selection.activeGameObject = go;
+                EditorGUIUtility.PingObject(go);
+            }
+            GUI.backgroundColor = Color.white;
+        }
+
+        #endregion
+
+        #region Labels
 
         private static string ClickLabel(ClickEntry entry)
         {
@@ -130,65 +220,151 @@ namespace DioramaEnigma.Sequences.Editor
             return $"⬡ {entry.Component.gameObject.name}{SEP}state: {stateName}{SEP}zone: {zoneName}{StepStateInfo(entry.StateRef)}{PlayInfo(entry.StateRef)}";
         }
 
-        /// <summary> Целевое и текущее значение булева шага (true/false) </summary>
         private static string StepStateInfo(AbstractSequenceStep step)
         {
             if (step is not SequenceStep valueStep) return string.Empty;
             return $"{SEP}цель: {Bool(valueStep.CompletionState)}{SEP}тек: {Bool(valueStep.Value)}";
         }
 
-        /// <summary> Индикатор завершённости в Play Mode </summary>
-        private static string PlayInfo(AbstractSequenceStep step)
-        {
-            return Application.isPlaying && step != null
+        private static string PlayInfo(AbstractSequenceStep step) =>
+            Application.isPlaying && step != null
                 ? $"{SEP}{(step.IsCompleted ? "✓" : "…")}"
                 : string.Empty;
-        }
 
         private static string Bool(bool value) => value ? "true" : "false";
 
-        private void DrawRow(GameObject go, string label, Color color)
-        {
-            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-            ColorLabel(label, color, styleSmall);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Ping", GUILayout.Width(44), GUILayout.Height(16)))
-            {
-                Selection.activeGameObject = go;
-                EditorGUIUtility.PingObject(go);
-            }
-            EditorGUILayout.EndHorizontal();
-        }
+        #endregion
+
+        #region Build
 
         private void Refresh()
         {
             lastRefreshTime = EditorApplication.timeSinceStartup;
 
-            clicks.Clear();
-            drags.Clear();
-            dropZones.Clear();
+            runners.Clear();
+            objectsBySequence.Clear();
+            orphanObjects.Clear();
+
+            var stepToSequence = BuildStepToSequence();
+
+            runners.AddRange(FindObjectsByType<SequenceRunner>(FindObjectsSortMode.None));
+            runners.Sort((a, b) => string.Compare(a.gameObject.name, b.gameObject.name, StringComparison.OrdinalIgnoreCase));
 
             foreach (var click in FindObjectsByType<ClickInteractable>(FindObjectsSortMode.None))
             {
-                var stateRef = click.GetComponent<StepReference>()?.Step;
-                clicks.Add(new ClickEntry { Component = click, StateRef = stateRef });
+                var entry = new ClickEntry { Component = click, StateRef = click.GetComponent<StepReference>()?.Step };
+                Add(SequenceOf(entry.StateRef, stepToSequence), new ObjectEntry
+                {
+                    Go = click.gameObject,
+                    Color = EditorToolsConstraints.COLOR_CYAN,
+                    Label = () => ClickLabel(entry),
+                });
             }
 
             foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
             {
-                var stateRef = drag.GetComponent<StepReference>()?.Step;
                 var zone = drag.Editor_TargetZone;
-                drags.Add(new DragEntry
+                var entry = new DragEntry
                 {
                     Component = drag,
-                    StateRef = stateRef,
+                    StateRef = drag.GetComponent<StepReference>()?.Step,
                     TargetZoneName = zone != null ? zone.gameObject.name : string.Empty,
+                };
+                Add(SequenceOf(entry.StateRef, stepToSequence), new ObjectEntry
+                {
+                    Go = drag.gameObject,
+                    Color = EditorToolsConstraints.COLOR_YELLOW,
+                    Label = () => DragLabel(entry),
                 });
             }
 
-            dropZones.AddRange(FindObjectsByType<DropZoneObject>(FindObjectsSortMode.None));
+            foreach (var zone in FindObjectsByType<DropZoneObject>(FindObjectsSortMode.None))
+            {
+                var captured = zone;
+                orphanObjects.Add(new ObjectEntry
+                {
+                    Go = captured.gameObject,
+                    Color = EditorToolsConstraints.COLOR_LIGHT_GREEN,
+                    Label = () => $"◈ {captured.gameObject.name}",
+                });
+            }
+
+            SortByName(orphanObjects);
+            foreach (var list in objectsBySequence.Values) SortByName(list);
 
             Repaint();
+        }
+
+        private void Add(Sequence sequence, ObjectEntry entry)
+        {
+            if (sequence == null)
+            {
+                orphanObjects.Add(entry);
+                return;
+            }
+
+            if (!objectsBySequence.TryGetValue(sequence, out var list))
+                objectsBySequence[sequence] = list = new List<ObjectEntry>();
+
+            list.Add(entry);
+        }
+
+        private static void SortByName(List<ObjectEntry> list) =>
+            list.Sort((a, b) => string.Compare(
+                a.Go != null ? a.Go.name : string.Empty,
+                b.Go != null ? b.Go.name : string.Empty,
+                StringComparison.OrdinalIgnoreCase));
+
+        private static Sequence SequenceOf(AbstractSequenceStep step, Dictionary<int, Sequence> lookup)
+        {
+            if (step == null) return null;
+            return lookup.TryGetValue(step.GetInstanceID(), out var seq) ? seq : null;
+        }
+
+        private static Dictionary<int, Sequence> BuildStepToSequence()
+        {
+            var map = new Dictionary<int, Sequence>();
+
+            foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(Sequence)}"))
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var seq = AssetDatabase.LoadAssetAtPath<Sequence>(path);
+                if (seq == null) continue;
+
+                foreach (var entry in seq.Steps)
+                {
+                    if (entry?.Step == null) continue;
+                    map.TryAdd(entry.Step.GetInstanceID(), seq);
+                }
+            }
+
+            return map;
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private UnityEditor.Editor GetRunnerEditor(SequenceRunner runner)
+        {
+            int id = runner.GetInstanceID();
+
+            if (runnerEditors.TryGetValue(id, out var editor) && editor != null && editor.target == runner)
+                return editor;
+
+            if (editor != null) DestroyImmediate(editor);
+
+            editor = UnityEditor.Editor.CreateEditor(runner);
+            runnerEditors[id] = editor;
+            return editor;
+        }
+
+        private void ReleaseRunnerEditors()
+        {
+            foreach (var editor in runnerEditors.Values)
+                if (editor != null) DestroyImmediate(editor);
+
+            runnerEditors.Clear();
         }
 
         private static void ColorLabel(string text, Color color, GUIStyle style)
@@ -201,10 +377,19 @@ namespace DioramaEnigma.Sequences.Editor
 
         private void EnsureStyles()
         {
-            styleSectionHeader ??= new GUIStyle(EditorStyles.miniLabel)
-                { fontStyle = FontStyle.Bold, fontSize = EditorToolsConstraints.BASE_FONT_SIZE - 1 };
-
             styleSmall ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+
+            styleRunnerButton ??= new GUIStyle("Button")
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
+                padding = new RectOffset(8, 6, 2, 2),
+            };
+
+            styleOrphanHeader ??= new GUIStyle(EditorStyles.boldLabel)
+                { fontSize = EditorToolsConstraints.BASE_FONT_SIZE };
         }
+
+        #endregion
     }
 }

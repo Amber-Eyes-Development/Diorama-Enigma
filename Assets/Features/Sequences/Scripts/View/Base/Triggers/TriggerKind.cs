@@ -1,17 +1,21 @@
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Тип события шага, на которое реагирует вьюшка
+    /// Тип события шага, на которое реагируют вьюшки/эффекты/гейты
     /// </summary>
     public enum TriggerKind
     {
-        /// <summary> Шаг завершён: например пар при докрученном вентиле </summary>
+        /// <summary> Шаг завершён </summary>
         Completed = 0,
         /// <summary> Шаг не завершён </summary>
         NotCompleted = 1,
-        /// <summary> Шаг стал доступен для изменения: открыть кожух над кнопкой </summary>
+        /// <summary> Шаг стал доступен для изменения </summary>
         Unlocked = 2,
         /// <summary> Шаг стал недоступен для изменения </summary>
         Locked = 3,
+        /// <summary> Завершённость изменилась на любое значение </summary>
+        CompletionStateChange = 4,
+        /// <summary> Разблокированность изменилась на любое значение </summary>
+        LockStateChange = 5,
     }
 }

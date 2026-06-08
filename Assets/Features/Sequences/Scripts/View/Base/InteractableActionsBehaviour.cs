@@ -51,9 +51,9 @@ namespace DioramaEnigma.Sequences
             {
                 if (action == null) continue;
 
-                if (action.Trigger == fired)
+                if (action.Trigger.Responds(fired))
                     Apply(action, reverse: false, silent);
-                else if (action.Reversible && Opposite(action.Trigger) == fired)
+                else if (action.Reversible && !action.Trigger.IsChange() && action.Trigger.Opposite() == fired)
                     Apply(action, reverse: true, silent);
             }
         }
@@ -67,30 +67,15 @@ namespace DioramaEnigma.Sequences
             {
                 if (action == null) continue;
 
-                if (IsTriggerActive(action.Trigger))
+                // У триггеров «на изменение» нет стационарного состояния — нечего восстанавливать
+                if (action.Trigger.IsChange()) continue;
+
+                if (action.Trigger.IsSatisfiedBy(StateSource.IsCompleted, StateSource.IsUnlocked))
                     Apply(action, reverse: false, silent: true);
                 else if (action.Reversible)
                     Apply(action, reverse: true, silent: true);
             }
         }
-
-        private bool IsTriggerActive(TriggerKind trigger) => trigger switch
-        {
-            TriggerKind.Completed => StateSource.IsCompleted,
-            TriggerKind.NotCompleted => !StateSource.IsCompleted,
-            TriggerKind.Unlocked => StateSource.IsUnlocked,
-            TriggerKind.Locked => !StateSource.IsUnlocked,
-            _ => false,
-        };
-
-        private static TriggerKind Opposite(TriggerKind trigger) => trigger switch
-        {
-            TriggerKind.Completed => TriggerKind.NotCompleted,
-            TriggerKind.NotCompleted => TriggerKind.Completed,
-            TriggerKind.Unlocked => TriggerKind.Locked,
-            TriggerKind.Locked => TriggerKind.Unlocked,
-            _ => trigger,
-        };
 
         #endregion
     }

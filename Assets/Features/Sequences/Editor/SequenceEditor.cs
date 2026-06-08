@@ -49,6 +49,7 @@ namespace DioramaEnigma.Sequences.Editor
         private static readonly (string label, Type type)[] EffectTypes =
         {
             ("Award Resource", typeof(AwardResourceEffect)),
+            ("Set Step State", typeof(SetStepStateEffect)),
         };
 
         private void OnEnable()

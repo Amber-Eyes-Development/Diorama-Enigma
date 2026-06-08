@@ -54,14 +54,8 @@ namespace DioramaEnigma.Sequences
             }
         }
 
-        private bool Matches(AbstractSequenceStep step) => trigger switch
-        {
-            TriggerKind.Completed => step.IsCompleted,
-            TriggerKind.NotCompleted => !step.IsCompleted,
-            TriggerKind.Unlocked => step.IsUnlocked,
-            TriggerKind.Locked => !step.IsUnlocked,
-            _ => step.IsCompleted,
-        };
+        private bool Matches(AbstractSequenceStep step) =>
+            trigger.IsChange() || trigger.IsSatisfiedBy(step.IsCompleted, step.IsUnlocked);
 
         private void OnRequiredStateChanged(bool _) => RaiseSatisfactionChanged();
     }

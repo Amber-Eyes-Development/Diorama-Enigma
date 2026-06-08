@@ -61,6 +61,15 @@ namespace DioramaEnigma.Sequences
             ApplyValue(newValue);
         }
 
+        /// <summary> Принудительно установить значение, минуя проверку разблокировки (для оркестрации/эффектов) </summary>
+        public void ForceValue(bool newValue)
+        {
+            LoadIfNeeded();
+            if (runtimeValue == newValue) return;
+
+            ApplyValue(newValue);
+        }
+
         /// <inheritdoc/>
         public override void ResetState()
         {
