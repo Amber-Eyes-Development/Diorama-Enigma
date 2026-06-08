@@ -1,4 +1,5 @@
 using System;
+using Extensions.Helpers;
 
 namespace Extensions.Reactive
 {
@@ -22,7 +23,7 @@ namespace Extensions.Reactive
         /// <param name="callback">Событие</param>
         /// <param name="notifyImmediately">Оповестить после подписки</param>
         /// <returns>Подписка на реактивный источник</returns>
-        public ReactiveSubscription Subscribe(Action<T> callback, bool notifyImmediately = false)
+        public ActionDisposable Subscribe(Action<T> callback, bool notifyImmediately = false)
         {
             return source.Subscribe(callback, notifyImmediately);
         }
@@ -33,7 +34,7 @@ namespace Extensions.Reactive
         /// <param name="callback">Событие</param>
         /// <param name="notifyImmediately">Оповестить после подписки</param>
         /// <returns>Подписка на реактивный источник</returns>
-        public ReactiveSubscription Subscribe(Action<T, T> callback, bool notifyImmediately = false)
+        public ActionDisposable Subscribe(Action<T, T> callback, bool notifyImmediately = false)
         {
             return source.Subscribe(callback, notifyImmediately);
         }

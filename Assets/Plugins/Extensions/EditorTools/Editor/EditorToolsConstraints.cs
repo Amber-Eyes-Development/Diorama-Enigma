@@ -23,5 +23,15 @@ namespace Extensions.EditorTools
 
         public static readonly Color COLOR_CYAN = new Color(0.5f, 1f, 1f);
         public static readonly Color COLOR_PURPLE = new Color(0.87f, 0.32f, 0.87f);
+
+        public static readonly Color COLOR_ACCENT = new Color(0.45f, 0.45f, 0.45f);
+
+        // Имена встроенных иконок редактора (для EditorGUIUtility.IconContent)
+        public const string ICON_INSPECT = "Search Icon";
+
+        // Символы для текстовых кнопок
+        public const string SYMBOL_PING = "●";
+        public const string SYMBOL_ADD = "+";
+        public const string SYMBOL_REMOVE = "✕";
     }
 }

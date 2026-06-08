@@ -1,0 +1,112 @@
+using System;
+
+namespace DioramaEnigma.Sequences
+{
+    /// <summary>
+    /// Рантайм-логика шага: активность, гейты, необратимость и отслеживание завершённости/разблокировки.
+    /// Конфиг (гейты) хранится на самом шаге и передаётся в <see cref="Initialize"/>.
+    /// </summary>
+    public sealed class StepCompletionTracker
+    {
+        /// <summary> Изменение признака завершённости </summary>
+        public event Action<bool> onCompletionChanged;
+        /// <summary> Изменение разблокированности (можно ли менять состояние прямо сейчас) </summary>
+        public event Action<bool> onUnlockChanged;
+
+        /// <summary>
+        /// Разблокировано ли изменение состояния: активен (группа доступна), все гейты открыты
+        /// и не сработал латч необратимости (завершённый необратимый шаг неизменен)
+        /// </summary>
+        public bool IsUnlocked => isActive
+            && AllGatesSatisfied()
+            && !(irreversible && lastCompleted);
+
+        private StepGate[] gates;
+        private bool isActive;
+        private bool irreversible;
+        private bool lastCompleted;
+        private bool lastUnlocked;
+
+        /// <summary> Инициализировать исходную завершённость/необратимость и гейты (вызывать в OnEnable шага) </summary>
+        public void Initialize(bool completed, bool irreversible, StepGate[] gates)
+        {
+            this.gates = gates;
+            isActive = false;
+            this.irreversible = irreversible;
+            lastCompleted = completed;
+            lastUnlocked = IsUnlocked;
+        }
+
+        /// <summary> Активировать/деактивировать изменение состояния. Возвращает true, если активность изменилась </summary>
+        public bool SetActive(bool active)
+        {
+            bool changed = isActive != active;
+            if (changed)
+            {
+                isActive = active;
+                ObserveGate(active);
+            }
+
+            NotifyUnlockIfChanged();
+            return changed;
+        }
+
+        /// <summary> Уведомить подписчиков, если завершённость изменилась (и пересчитать разблокировку) </summary>
+        public void NotifyIfChanged(bool completed)
+        {
+            if (completed != lastCompleted)
+            {
+                lastCompleted = completed;
+                onCompletionChanged?.Invoke(completed);
+            }
+
+            // Завершённость влияет на латч необратимости → могла измениться разблокировка
+            NotifyUnlockIfChanged();
+        }
+
+        #region Internal
+
+        private bool AllGatesSatisfied()
+        {
+            if (gates == null) return true;
+
+            foreach (var gate in gates)
+                if (gate != null && !gate.IsSatisfied())
+                    return false;
+
+            return true;
+        }
+
+        private void ObserveGate(bool observe)
+        {
+            if (gates == null) return;
+
+            foreach (var gate in gates)
+            {
+                if (gate == null) continue;
+
+                if (observe)
+                {
+                    gate.StartObserving();
+                    gate.onSatisfactionChanged += NotifyUnlockIfChanged;
+                }
+                else
+                {
+                    gate.onSatisfactionChanged -= NotifyUnlockIfChanged;
+                    gate.StopObserving();
+                }
+            }
+        }
+
+        private void NotifyUnlockIfChanged()
+        {
+            bool unlocked = IsUnlocked;
+            if (unlocked == lastUnlocked) return;
+
+            lastUnlocked = unlocked;
+            onUnlockChanged?.Invoke(unlocked);
+        }
+
+        #endregion
+    }
+}

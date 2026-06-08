@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
+  m_Name: "1.4 \u041A\u043D\u043E\u043F\u043A\u0430"
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
+  id: e1da1453ef6b438eba48f6b9ffc2b6d0
+  isSaveable: 1
+  isGlobal: 0
+  defaultValue: 0
+  stepLabel: "\u041A\u043F\u043D\u043E\u043A\u0430"
+  tracker:
+    gate:
+      rid: -2
+  completionState: 1
+  irreversible: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Extensions.Helpers;
 
 namespace Extensions.Reactive
 {
@@ -7,7 +8,7 @@ namespace Extensions.Reactive
     /// Реактивное свойство
     /// </summary>
     /// <remarks>
-    /// Для отписки вызывать либо Unsubscribe с явным указанием слушателя, либо через ReactiveSubscription.Dispose
+    /// Для отписки вызывать либо Unsubscribe с явным указанием слушателя, либо через ActionDisposable.Dispose
     /// </remarks>
     public class ReactiveProperty<T>
     {
@@ -85,7 +86,7 @@ namespace Extensions.Reactive
         /// <param name="callback">Событие</param>
         /// <param name="notifyImmediately">Оповестить после подписки</param>
         /// <returns>Подписка на реактивный источник</returns>
-        public ReactiveSubscription Subscribe(Action<T> callback, bool notifyImmediately = false)
+        public ActionDisposable Subscribe(Action<T> callback, bool notifyImmediately = false)
         {
             if (!simpleSubscribers.Contains(callback))
                 simpleSubscribers.Add(callback);
@@ -93,7 +94,7 @@ namespace Extensions.Reactive
             if (notifyImmediately)
                 callback(_value);
 
-            return new ReactiveSubscription(() => Unsubscribe(callback));
+            return new ActionDisposable(() => Unsubscribe(callback));
         }
         
         /// <summary>
@@ -102,7 +103,7 @@ namespace Extensions.Reactive
         /// <param name="callback">Событие</param>
         /// <param name="notifyImmediately">Оповестить после подписки</param>
         /// <returns>Подписка на реактивный источник</returns>
-        public ReactiveSubscription Subscribe(Action<T, T> callback, bool notifyImmediately = false)
+        public ActionDisposable Subscribe(Action<T, T> callback, bool notifyImmediately = false)
         {
             if (!diffSubscribers.Contains(callback))
                 diffSubscribers.Add(callback);
@@ -110,11 +111,11 @@ namespace Extensions.Reactive
             if (notifyImmediately)
                 callback(_value, _value);
 
-            return new ReactiveSubscription(() => Unsubscribe(callback));
+            return new ActionDisposable(() => Unsubscribe(callback));
         }
         
         /// <summary>
-        /// Альтернативный способ отписки без хранения ReactiveSubscription
+        /// Альтернативный способ отписки без хранения ActionDisposable
         /// </summary>
         /// <remarks>
         /// Не смешивать с Dispose() одной и той же подписки
@@ -135,7 +136,7 @@ namespace Extensions.Reactive
 
         
         /// <summary>
-        /// Альтернативный способ отписки (с diff) без хранения ReactiveSubscription
+        /// Альтернативный способ отписки (с diff) без хранения ActionDisposable
         /// </summary>
         /// <remarks>
         /// Не смешивать с Dispose() одной и той же подписки
