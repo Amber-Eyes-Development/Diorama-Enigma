@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Extensions.EditorTools;
-using Extensions.ScriptableValues;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,13 +13,13 @@ namespace DioramaEnigma.Sequences.Editor
         private class ClickEntry
         {
             public ClickInteractable Component;
-            public BoolValue StateRef;
+            public AbstractSequenceStep StateRef;
         }
 
         private class DragEntry
         {
             public DraggableInteractable Component;
-            public BoolValue StateRef;
+            public AbstractSequenceStep StateRef;
             public string TargetZoneName;
         }
 
@@ -120,7 +119,7 @@ namespace DioramaEnigma.Sequences.Editor
         {
             string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
             string playInfo = Application.isPlaying && entry.StateRef != null
-                ? $"   val:{entry.StateRef.Value}"
+                ? $"   {(entry.StateRef.IsCompleted ? "✓" : "…")}"
                 : string.Empty;
             return $"◉ {entry.Component.gameObject.name}   state:{stateName}{playInfo}";
         }
@@ -130,7 +129,7 @@ namespace DioramaEnigma.Sequences.Editor
             string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
             string zoneName = string.IsNullOrEmpty(entry.TargetZoneName) ? "любая" : entry.TargetZoneName;
             string playInfo = Application.isPlaying && entry.StateRef != null
-                ? $"   val:{entry.StateRef.Value}"
+                ? $"   {(entry.StateRef.IsCompleted ? "✓" : "…")}"
                 : string.Empty;
             return $"⬡ {entry.Component.gameObject.name}   state:{stateName}   zone:{zoneName}{playInfo}";
         }

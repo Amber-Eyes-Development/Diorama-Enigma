@@ -1,119 +1,64 @@
-using System;
 using System.Collections.Generic;
-using Extensions.Identification;
-using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Композитный шаг (мульти-шаг): завершается по совокупности дочерних шагов
+    /// Композитный шаг: завершается по совокупности дочерних шагов
     /// </summary>
     [CreateAssetMenu(menuName = "Sequences/Steps/Composite Step", fileName = nameof(CompositeSequenceStep))]
-    public sealed class CompositeSequenceStep : IdentifiableObject, ISequenceStep
+    public sealed class CompositeSequenceStep : AbstractSequenceStep
     {
-        /// <summary> Изменение признака завершённости </summary>
-        public event Action<bool> onCompletionChanged;
+        /// <inheritdoc/>
+        public override bool IsCompleted => EvaluateCompleted();
 
-        /// <summary> Метка шага </summary>
-        public string StepLabel => stepLabel;
-        /// <summary> Завершён ли шаг </summary>
-        public bool IsCompleted => EvaluateCompleted();
-
-        [Header("Шаг"), Space]
-        [SerializeField] private string stepLabel;
-        [Tooltip("Дочерние шаги (ссылки на ассеты-шаги)")]
-        [SequenceStepReference]
-        [SerializeField] private IdentifiableObject[] children;
+        [Header("Композит"), Space]
+        [Tooltip("Дочерние шаги")]
+        [SerializeField] private AbstractSequenceStep[] children;
         [Tooltip("Условие завершения по дочерним шагам")]
         [SerializeField] private CompletionMode mode = CompletionMode.All;
         [Tooltip("Минимум завершённых (только для AtLeast)")]
         [Min(1)]
         [SerializeField] private int atLeast = 1;
 
-        private bool subscribed;
-        private bool lastCompleted;
-
-        private void OnEnable() => subscribed = false;
-
-        private void OnDisable() => Unsubscribe();
-
         /// <inheritdoc/>
-        public void SetActive(bool active)
+        public override void ResetState()
         {
-            if (active)
+            foreach (var child in Children()) child.ResetState();
+
+            NotifyCompletionChanged();
+        }
+
+        protected override void OnActiveChanged(bool active)
+        {
+            foreach (var child in Children())
             {
-                Subscribe();
-                foreach (var child in EnumerateSteps()) child.SetActive(true);
+                if (active)
+                {
+                    child.SetActive(true);
+                    child.onCompletionChanged += OnChildCompletionChanged;
+                }
+                else
+                {
+                    child.onCompletionChanged -= OnChildCompletionChanged;
+                    child.SetActive(false);
+                }
             }
-            else
-            {
-                foreach (var child in EnumerateSteps()) child.SetActive(false);
-                Unsubscribe();
-            }
         }
-
-        /// <inheritdoc/>
-        public void ResetState()
-        {
-            foreach (var child in EnumerateSteps()) child.ResetState();
-
-            lastCompleted = EvaluateCompleted();
-        }
-
-#if UNITY_EDITOR
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-
-            if (children == null) return;
-
-            foreach (var child in children)
-                if (child != null && child is not ISequenceStep)
-                    ServiceDebug.LogWarning(this, $"Дочерний объект «{child.name}» не является шагом ({nameof(SequenceStep)})");
-        }
-#endif
 
         #region Internal
 
-        private void Subscribe()
-        {
-            if (subscribed) return;
-            subscribed = true;
-
-            lastCompleted = EvaluateCompleted();
-
-            foreach (var child in EnumerateSteps())
-                child.onCompletionChanged += OnChildCompletionChanged;
-        }
-
-        private void Unsubscribe()
-        {
-            if (!subscribed) return;
-            subscribed = false;
-
-            foreach (var child in EnumerateSteps())
-                child.onCompletionChanged -= OnChildCompletionChanged;
-        }
-
-        private void OnChildCompletionChanged(bool _)
-        {
-            bool completed = EvaluateCompleted();
-            if (completed == lastCompleted) return;
-
-            lastCompleted = completed;
-            onCompletionChanged?.Invoke(completed);
-        }
+        private void OnChildCompletionChanged(bool _) => NotifyCompletionChanged();
 
         private bool EvaluateCompleted()
         {
             int total = 0;
             int done = 0;
 
-            foreach (var step in EnumerateSteps())
+            foreach (var child in Children())
             {
                 total++;
-                if (step.IsCompleted) done++;
+                if (child.IsCompleted) done++;
             }
 
             if (total == 0) return false;
@@ -127,13 +72,12 @@ namespace DioramaEnigma.Sequences
             };
         }
 
-        private IEnumerable<ISequenceStep> EnumerateSteps()
+        private IEnumerable<AbstractSequenceStep> Children()
         {
             if (children == null) yield break;
 
             foreach (var child in children)
-                if (child is ISequenceStep step)
-                    yield return step;
+                if (child != null) yield return child;
         }
 
         #endregion

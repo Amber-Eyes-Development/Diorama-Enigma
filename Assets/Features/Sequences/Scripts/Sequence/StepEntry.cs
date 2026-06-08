@@ -10,8 +10,8 @@ namespace DioramaEnigma.Sequences
     [Serializable]
     public sealed class StepEntry
     {
-        /// <summary> Шаг (ассет, реализующий <see cref="ISequenceStep"/>) </summary>
-        public ISequenceStep Step => step as ISequenceStep;
+        /// <summary> Шаг последовательности </summary>
+        public AbstractSequenceStep Step => step;
         /// <summary> Индекс параллельной группы </summary>
         public int GroupIndex => groupIndex;
         /// <summary> Доступность группы (свойство группы; на всех её записях должно совпадать) </summary>
@@ -21,7 +21,7 @@ namespace DioramaEnigma.Sequences
         /// <summary> Эффекты при завершении шага </summary>
         public IReadOnlyList<SequenceStepEffect> CompletionEffects => completionEffects;
 
-        [SerializeField] private SequenceStep step;
+        [SerializeField] private AbstractSequenceStep step;
         [Tooltip("Шаги с одинаковым GroupIndex активируются одновременно. " +
                  "Следующая группа стартует после завершения текущей")]
         [SerializeField] private int groupIndex;

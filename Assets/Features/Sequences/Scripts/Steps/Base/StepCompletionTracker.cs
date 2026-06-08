@@ -42,16 +42,18 @@ namespace DioramaEnigma.Sequences
             lastUnlocked = IsUnlocked;
         }
 
-        /// <summary> Активировать/деактивировать изменение состояния </summary>
-        public void SetActive(bool active)
+        /// <summary> Активировать/деактивировать изменение состояния. Возвращает true, если активность изменилась </summary>
+        public bool SetActive(bool active)
         {
-            if (isActive != active)
+            bool changed = isActive != active;
+            if (changed)
             {
                 isActive = active;
                 ObserveGate(active);
             }
 
             NotifyUnlockIfChanged();
+            return changed;
         }
 
         /// <summary> Уведомить подписчиков, если завершённость изменилась (и пересчитать разблокировку) </summary>
@@ -95,13 +97,5 @@ namespace DioramaEnigma.Sequences
         }
 
         #endregion
-
-#if UNITY_EDITOR
-        public void EditorValidate(UnityEngine.Object context)
-        {
-            if (gate is RequireStepsCompletedGate reqGate)
-                reqGate.EditorValidate(context);
-        }
-#endif
     }
 }

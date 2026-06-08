@@ -145,7 +145,7 @@ namespace DioramaEnigma.Sequences
                 if (entry == null || entry.GroupIndex != groupIndex) continue;
                 if (entry.Step == null)
                 {
-                    ServiceDebug.LogWarning(this, $"Шаг в группе {groupIndex} не назначен или не реализует {nameof(ISequenceStep)} — пропущен");
+                    ServiceDebug.LogWarning(this, $"Шаг в группе {groupIndex} не назначен — пропущен");
                     continue;
                 }
 
@@ -273,7 +273,7 @@ namespace DioramaEnigma.Sequences
         public int Editor_CurrentGroupIndex => currentGroupIndex;
 
         /// <summary> Шаги, ожидающие завершения </summary>
-        public IEnumerable<ISequenceStep> Editor_ActiveSteps
+        public IEnumerable<AbstractSequenceStep> Editor_ActiveSteps
         {
             get
             {

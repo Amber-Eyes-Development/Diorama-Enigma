@@ -70,7 +70,7 @@ namespace DioramaEnigma.Sequences.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawActiveStep(ISequenceStep step)
+        private void DrawActiveStep(AbstractSequenceStep step)
         {
             bool done = step.IsCompleted;
             string name = string.IsNullOrEmpty(step.StepLabel) ? "(без названия)" : step.StepLabel;
@@ -98,14 +98,13 @@ namespace DioramaEnigma.Sequences.Editor
 
         #region Progress info
 
-        private static string GetStepProgressInfo(ISequenceStep step)
+        private static string GetStepProgressInfo(AbstractSequenceStep step)
         {
-            var asset = step as ScriptableObject;
-            if (asset == null) return string.Empty;
+            if (step == null) return string.Empty;
 
             if (step is SequenceStep valueStep)
             {
-                var so = new SerializedObject(asset);
+                var so = new SerializedObject(valueStep);
                 var prop = so.FindProperty("completionState");
                 string target = prop != null ? prop.boolValue.ToString().ToLower() : "?";
                 return $"val:{valueStep.Value}  →  {target}";
@@ -113,14 +112,14 @@ namespace DioramaEnigma.Sequences.Editor
 
             if (step is CompositeSequenceStep)
             {
-                var so = new SerializedObject(asset);
+                var so = new SerializedObject(step);
                 var childrenProp = so.FindProperty("children");
                 if (childrenProp == null) return string.Empty;
 
                 int total = childrenProp.arraySize;
                 int done = 0;
                 for (int i = 0; i < total; i++)
-                    if (childrenProp.GetArrayElementAtIndex(i).objectReferenceValue is ISequenceStep child && child.IsCompleted)
+                    if (childrenProp.GetArrayElementAtIndex(i).objectReferenceValue is AbstractSequenceStep child && child.IsCompleted)
                         done++;
                 return $"{done}/{total} дочерних";
             }

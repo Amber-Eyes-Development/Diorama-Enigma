@@ -1,3 +1,4 @@
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -9,9 +10,14 @@ namespace DioramaEnigma.Sequences
     public sealed class StepReference : MonoBehaviour
     {
         [Tooltip("Шаг-ассет, общий источник состояния для ввода и вью на этом объекте")]
-        [SerializeField] private SequenceStep step;
+        [SerializeField] private AbstractSequenceStep step;
 
-        /// <summary> Шаг (значение/завершённость для ввода, разблокировка для вью) </summary>
-        public SequenceStep Step => step;
+        /// <summary> Шаг (завершённость/разблокировка как источник для ввода и вью) </summary>
+        public AbstractSequenceStep Step => step;
+
+        private void Awake()
+        {
+            if (step == null) ServiceDebug.LogError($"Шаг {step} не назначен для компонента {name}!");
+        }
     }
 }

@@ -1,4 +1,3 @@
-using Extensions.ScriptableValues;
 using UnityEditor;
 using UnityEngine;
 
@@ -61,12 +60,13 @@ namespace DioramaEnigma.Sequences.Editor
 
         #region Helpers
 
-        private static string ValueString(BoolValue value) => value != null ? value.Value.ToString() : string.Empty;
+        private static string ValueString(AbstractSequenceStep step) =>
+            step != null ? (step.IsCompleted ? "✓" : "…") : string.Empty;
 
-        private static string BuildLabel(string icon, BaseScriptableValue stateRef, string valueStr)
+        private static string BuildLabel(string icon, AbstractSequenceStep stateRef, string valueStr)
         {
-            string name = stateRef is ISequenceStep ps && !string.IsNullOrEmpty(ps.StepLabel)
-                ? ps.StepLabel
+            string name = !string.IsNullOrEmpty(stateRef.StepLabel)
+                ? stateRef.StepLabel
                 : stateRef.name;
 
             return Application.isPlaying

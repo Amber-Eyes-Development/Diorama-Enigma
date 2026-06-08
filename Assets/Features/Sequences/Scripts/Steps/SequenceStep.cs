@@ -1,82 +1,108 @@
-using System;
-using Extensions.ScriptableValues;
+using Extensions.Data;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Шаг последовательности
+    /// Булев шаг: завершается, когда его значение совпадает с целевым.
+    /// Сам хранит значение и (опционально) сохраняет его между сессиями.
     /// </summary>
     [CreateAssetMenu(menuName = "Sequences/Steps/Step", fileName = nameof(SequenceStep))]
-    public sealed class SequenceStep : BoolValue, ISequenceStep
+    public sealed class SequenceStep : AbstractSequenceStep
     {
+        /// <summary> Текущее значение </summary>
+        public bool Value
+        {
+            get
+            {
+                LoadIfNeeded();
+                return runtimeValue;
+            }
+        }
+        /// <summary> Значение по умолчанию </summary>
+        public bool DefaultValue => defaultValue;
+        /// <summary> Глобальный профиль сохранения, иначе — отдельно для активного профиля </summary>
+        public bool IsGlobal => isGlobal;
+
         /// <inheritdoc/>
-        public event Action<bool> onCompletionChanged
-        {
-            add => tracker.onCompletionChanged += value;
-            remove => tracker.onCompletionChanged -= value;
-        }
-        /// <summary> Изменение разблокированности (можно ли менять состояние прямо сейчас) </summary>
-        public event Action<bool> onUnlockChanged
-        {
-            add => tracker.onUnlockChanged += value;
-            remove => tracker.onUnlockChanged -= value;
-        }
+        public override bool IsCompleted => Value == completionState;
 
-        /// <summary> Метка шага </summary>
-        public string StepLabel => stepLabel;
-        /// <summary> Завершён ли шаг </summary>
-        public bool IsCompleted => Value == completionState;
-        /// <summary> Можно ли менять состояние шага прямо сейчас (группа доступна, гейт открыт, не залочен) </summary>
-        public bool IsUnlocked => tracker.IsUnlocked;
-
-        [Header("Шаг"), Space]
-        [SerializeField] private string stepLabel;
-        [SerializeField] private StepCompletionTracker tracker = new();
+        [Header("Значение"), Space]
+        [Tooltip("Сохранять ли значение между сессиями")]
+        [SerializeField] private bool isSaveable;
+        [Tooltip("Глобальный профиль сохранения, иначе состояние отдельно для каждого активного профиля")]
+        [SerializeField] private bool isGlobal;
+        [Tooltip("Дефолтное значение, используемое если нет сохранения или оно отключено")]
+        [SerializeField] private bool defaultValue;
 
         [Header("Завершение"), Space]
         [Tooltip("Значение, при котором шаг считается завершённым")]
         [FormerlySerializedAs("completedWhen")]
         [SerializeField] private bool completionState = true;
-        [Tooltip("Необратимый: после завершения состояние нельзя изменить обратно. " +
-                 "Выкл — состояние можно менять в обе стороны")]
-        [SerializeField] private bool irreversible;
+
+        private const string GLOBAL_PROFILE = "global values";
+
+        [System.NonSerialized] private bool runtimeValue;
+        private bool isLoaded;
+
+        private string SaveProfile => isGlobal ? GLOBAL_PROFILE : null;
+
+        /// <summary> Установить значение (если шаг разблокирован) </summary>
+        public void SetValue(bool newValue)
+        {
+            if (!IsUnlocked) return;
+
+            LoadIfNeeded();
+            if (runtimeValue == newValue) return;
+
+            ApplyValue(newValue);
+        }
+
+        /// <inheritdoc/>
+        public override void ResetState()
+        {
+            LoadIfNeeded();
+            if (runtimeValue != defaultValue)
+                ApplyValue(defaultValue);
+            else
+                NotifyCompletionChanged();
+        }
 
         protected override void OnEnable()
         {
+            isLoaded = false;
+            runtimeValue = defaultValue;
             base.OnEnable();
-            tracker.Initialize(DefaultValue == completionState, irreversible);
         }
+
+        #region Internal
+
+        private void ApplyValue(bool newValue)
+        {
+            runtimeValue = newValue;
+
+            if (Application.isPlaying && isSaveable)
+                JsonSaveLoad.Save(runtimeValue, Id, SaveProfile);
+
+            NotifyCompletionChanged();
+        }
+
+        private void LoadIfNeeded()
+        {
+            if (!Application.isPlaying || isLoaded) return;
+            isLoaded = true;
+
+            runtimeValue = isSaveable
+                ? JsonSaveLoad.Load(Id, defaultValue, SaveProfile)
+                : defaultValue;
+        }
+
+        #endregion
 
 #if UNITY_EDITOR
         /// <summary> Новый шаг по умолчанию сохраняется между сессиями </summary>
         private void Reset() => isSaveable = true;
-
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-            tracker.EditorValidate(this);
-        }
 #endif
-
-        /// <inheritdoc/>
-        public override void SetValue(bool newValue)
-        {
-            if (!tracker.IsUnlocked) return;
-
-            base.SetValue(newValue);
-            tracker.NotifyIfChanged(IsCompleted);
-        }
-
-        /// <inheritdoc/>
-        public void SetActive(bool active) => tracker.SetActive(active);
-
-        /// <inheritdoc/>
-        public void ResetState()
-        {
-            base.SetValue(DefaultValue);
-            tracker.NotifyIfChanged(IsCompleted);
-        }
     }
 }

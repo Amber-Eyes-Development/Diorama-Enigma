@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using Extensions.ScriptableValues;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Ввод: перетаскивание и дроп в зону выставляет значение-состояние в true
+    /// Ввод: перетаскивание и дроп в зону выставляет значение булева шага в true
     /// </summary>
     [RequireComponent(typeof(StepReference))]
     public sealed class DraggableInteractable : InteractableInput, IBeginDragHandler, IDragHandler, IEndDragHandler
@@ -15,13 +14,13 @@ namespace DioramaEnigma.Sequences
         [Tooltip("Целевая зона. Пусто — принимается любая DropZoneObject")]
         [SerializeField] private DropZoneObject targetZone;
 
-        private BoolValue state;
+        private SequenceStep state;
         private Camera mainCamera;
         private float dragDepth;
 
         private void Awake()
         {
-            state = GetComponent<StepReference>().Step;
+            state = GetComponent<StepReference>().Step as SequenceStep;
             mainCamera = Camera.main;
         }
 

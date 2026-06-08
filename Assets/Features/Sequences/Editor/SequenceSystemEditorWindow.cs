@@ -238,7 +238,7 @@ namespace DioramaEnigma.Sequences.Editor
         private static string BuildStepLabel(ScriptableObject stepAsset)
         {
             string typeName = stepAsset.GetType().Name.Replace("Sequence", "");
-            string stepLabel = stepAsset is ISequenceStep step && !string.IsNullOrEmpty(step.StepLabel)
+            string stepLabel = stepAsset is AbstractSequenceStep step && !string.IsNullOrEmpty(step.StepLabel)
                 ? step.StepLabel
                 : stepAsset.name;
 

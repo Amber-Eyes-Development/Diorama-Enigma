@@ -5,10 +5,10 @@ namespace DioramaEnigma.Sequences
     /// </summary>
     public enum TriggerKind
     {
-        /// <summary> Значение стало true (вкл): например пар при кручении вентиля </summary>
-        StateOn = 0,
-        /// <summary> Значение стало false (выкл) </summary>
-        StateOff = 1,
+        /// <summary> Шаг завершён: например пар при докрученном вентиле </summary>
+        Completed = 0,
+        /// <summary> Шаг не завершён </summary>
+        NotCompleted = 1,
         /// <summary> Шаг стал доступен для изменения: открыть кожух над кнопкой </summary>
         Unlocked = 2,
         /// <summary> Шаг стал недоступен для изменения </summary>

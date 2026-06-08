@@ -39,6 +39,11 @@ MonoBehaviour:
     availability: 0
     activationEffects: []
     completionEffects: []
+  - step: {fileID: 11400000, guid: 18dfa52e1e7d86b48b9123c7e275b826, type: 2}
+    groupIndex: 0
+    availability: 0
+    activationEffects: []
+    completionEffects: []
   references:
     version: 2
     RefIds: []

@@ -237,7 +237,7 @@ namespace DioramaEnigma.Sequences.Editor
 
             if (stepProp.objectReferenceValue is ScriptableObject stepAsset)
             {
-                if (stepAsset is ISequenceStep sequenceStep)
+                if (stepAsset is AbstractSequenceStep sequenceStep)
                 {
                     string label = string.IsNullOrEmpty(sequenceStep.StepLabel)
                         ? "(без метки)"
@@ -248,7 +248,7 @@ namespace DioramaEnigma.Sequences.Editor
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox($"{stepAsset.GetType().Name} не реализует ISequenceStep", MessageType.Warning);
+                    EditorGUILayout.HelpBox($"{stepAsset.GetType().Name} не является шагом ({nameof(AbstractSequenceStep)})", MessageType.Warning);
                 }
 
                 DrawStepWarnings(stepAsset.GetInstanceID());

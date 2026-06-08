@@ -14,10 +14,10 @@ namespace DioramaEnigma.Sequences
         {
             if (StateSource == null) return;
 
-            StateSource.onValueChanged += OnStateChanged;
+            StateSource.onCompletionChanged += OnCompletionChanged;
             StateSource.onUnlockChanged += OnUnlockChanged;
 
-            TryReact(StateKind(StateSource.Value), silent: true);
+            TryReact(CompletionKind(StateSource.IsCompleted), silent: true);
             TryReact(UnlockKind(StateSource.IsUnlocked), silent: true);
         }
 
@@ -25,7 +25,7 @@ namespace DioramaEnigma.Sequences
         {
             if (StateSource == null) return;
 
-            StateSource.onValueChanged -= OnStateChanged;
+            StateSource.onCompletionChanged -= OnCompletionChanged;
             StateSource.onUnlockChanged -= OnUnlockChanged;
         }
 
@@ -35,7 +35,7 @@ namespace DioramaEnigma.Sequences
 
         #region Internal
 
-        private void OnStateChanged(bool state) => TryReact(StateKind(state), silent: false);
+        private void OnCompletionChanged(bool completed) => TryReact(CompletionKind(completed), silent: false);
 
         private void OnUnlockChanged(bool unlocked) => TryReact(UnlockKind(unlocked), silent: false);
 
@@ -44,7 +44,7 @@ namespace DioramaEnigma.Sequences
             if (trigger == fired) React(silent);
         }
 
-        private static TriggerKind StateKind(bool state) => state ? TriggerKind.StateOn : TriggerKind.StateOff;
+        private static TriggerKind CompletionKind(bool completed) => completed ? TriggerKind.Completed : TriggerKind.NotCompleted;
         private static TriggerKind UnlockKind(bool unlocked) => unlocked ? TriggerKind.Unlocked : TriggerKind.Locked;
 
         #endregion

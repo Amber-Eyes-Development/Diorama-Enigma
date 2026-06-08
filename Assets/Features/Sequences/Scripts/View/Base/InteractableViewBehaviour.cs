@@ -3,15 +3,15 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// База визуальной реакции: источник — шаг (значение/завершённость и разблокировка)
+    /// База визуальной реакции: источник — шаг (завершённость и разблокировка)
     /// </summary>
     [RequireComponent(typeof(StepReference))]
     public abstract class InteractableViewBehaviour : MonoBehaviour
     {
-        /// <summary> Источник состояния (шаг): значение/завершённость и разблокировка </summary>
-        protected SequenceStep StateSource => stateSource;
+        /// <summary> Источник состояния (любой шаг): завершённость и разблокировка </summary>
+        protected AbstractSequenceStep StateSource => stateSource;
 
-        private SequenceStep stateSource;
+        private AbstractSequenceStep stateSource;
 
         protected virtual void Awake() => stateSource = GetComponent<StepReference>().Step;
 

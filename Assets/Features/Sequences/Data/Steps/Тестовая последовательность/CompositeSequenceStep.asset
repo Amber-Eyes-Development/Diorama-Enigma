@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f171439c1f7fd5749bbdc9e1acdf4442, type: 3}
+  m_Name: CompositeSequenceStep
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.CompositeSequenceStep
+  id: a3a12f6967f14bd2aa4f3d079826c330
+  stepLabel: 
+  irreversible: 0
+  tracker:
+    gate:
+      rid: -2
+  children:
+  - {fileID: 11400000, guid: 984b36345b3a15243bbe8d59df09df29, type: 2}
+  - {fileID: 11400000, guid: 93ca65cc6ce7adf46b67a3a97dbf0c06, type: 2}
+  mode: 0
+  atLeast: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
