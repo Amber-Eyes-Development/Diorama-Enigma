@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: 97902423fcf944078ef906d07202c9ae
   irreversible: 0
-  tracker:
-    gate:
-      rid: 7045590434272510018
+  gates:
+  - rid: 7045590442800578624
   isSaveable: 1
   isGlobal: 0
   defaultValue: 1
@@ -24,7 +23,7 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 7045590434272510018
+    - rid: 7045590442800578624
       type: {class: RequireStepsCompletedGate, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
       data:
         trigger: 1
