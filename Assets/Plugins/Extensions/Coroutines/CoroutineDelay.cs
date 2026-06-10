@@ -8,6 +8,9 @@ namespace Extensions.Coroutines
     /// <summary>
     /// Stateless-утилита для отложенного выполнения действия через корутину
     /// </summary>
+    /// <remarks>
+    /// С возможностью отмены запланированного выполнения
+    /// </remarks>
     public static class CoroutineDelay
     {
         /// <summary>
@@ -22,7 +25,7 @@ namespace Extensions.Coroutines
                 return;
 
             if (delay < 0f) delay = 0f;
-            
+
             if (action == null)
             {
                 ServiceDebug.LogError("Действие не определено, задержка не выполнена");
@@ -31,7 +34,7 @@ namespace Extensions.Coroutines
 
             owner.StartCoroutine(Routine(owner, delay, action));
         }
-        
+
         /// <summary>
         /// Запуск действия с задержкой в кадрах перед исполнением
         /// </summary>
@@ -44,7 +47,7 @@ namespace Extensions.Coroutines
                 return;
 
             if (frames < 0) frames = 0;
-            
+
             if (action == null)
             {
                 ServiceDebug.LogError("Действие не определено, задержка не выполнена");
@@ -53,7 +56,7 @@ namespace Extensions.Coroutines
 
             owner.StartCoroutine(Routine(owner, frames, action));
         }
-        
+
         /// <summary>
         /// Запуск действия с задержкой в 1 кадр перед исполнением
         /// </summary>
@@ -70,7 +73,7 @@ namespace Extensions.Coroutines
 
             action?.Invoke();
         }
-        
+
         private static IEnumerator Routine(MonoBehaviour owner, int frames, Action action)
         {
             for (int i = 0; i < frames; i++)
