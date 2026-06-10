@@ -7353,6 +7353,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d181cf3725ce674a98b4730b9d0d7ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DropZoneObject
+  anchor: {fileID: 0}
+  snapRotation: 1
 --- !u!135 &1109792960
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -7889,8 +7891,8 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 47.2
-  orthographic: 0
-  orthographic size: 5
+  orthographic: 1
+  orthographic size: 2.91
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -9163,6 +9165,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DraggableInteractable
   targetZone: {fileID: 1109792959}
+  dragDistance: 5
+  projectionRange: 50
+  surfaceMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  zoneMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  releaseMode: 0
+  commitMode: 0
 --- !u!114 &2052244855
 MonoBehaviour:
   m_ObjectHideFlags: 0

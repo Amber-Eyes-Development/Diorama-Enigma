@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Extensions.Log;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -65,17 +66,19 @@ namespace DioramaEnigma.Sequences
 
             if (total == 0) return false;
 
-            return mode switch
+            switch (mode)
             {
-                CompletionMode.All => done == total,
-                CompletionMode.Any => done > 0,
-                CompletionMode.AtLeast => done >= n,
-                CompletionMode.AtMost => done <= n,
-                CompletionMode.Exactly => done == n,
-                CompletionMode.None => done == 0,
-                CompletionMode.NotAll => done < total,
-                _ => false,
-            };
+                case CompletionMode.All: return done == total;
+                case CompletionMode.Any: return done > 0;
+                case CompletionMode.AtLeast: return done >= n;
+                case CompletionMode.AtMost: return done <= n;
+                case CompletionMode.Exactly: return done == n;
+                case CompletionMode.None: return done == 0;
+                case CompletionMode.NotAll: return done < total;
+                default:
+                    ServiceDebug.LogError(this, $"Необработанный {nameof(CompletionMode)}: {mode}");
+                    return false;
+            }
         }
 
         private IEnumerable<AbstractSequenceStep> Children()

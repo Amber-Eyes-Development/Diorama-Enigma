@@ -9,7 +9,11 @@ namespace DioramaEnigma.Sequences
     {
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (State == null) return;
+            if (!CanInteract)
+            {
+                ReportRejectedInteraction();
+                return;
+            }
 
             State.SetValue(!State.Value);
         }

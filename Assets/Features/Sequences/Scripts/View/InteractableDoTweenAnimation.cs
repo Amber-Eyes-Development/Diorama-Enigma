@@ -1,4 +1,5 @@
 using DG.Tweening;
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -18,13 +19,25 @@ namespace DioramaEnigma.Sequences
 
             if (reverse)
             {
-                if (action.ReverseMode == AnimationReverseMode.Backwards) Backwards(animation, silent);
-                else StopAt(animation, silent);
+                switch (action.ReverseMode)
+                {
+                    case AnimationReverseMode.Backwards: Backwards(animation, silent); break;
+                    case AnimationReverseMode.Stop: StopAt(animation, silent); break;
+                    default:
+                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationReverseMode)}: {action.ReverseMode}");
+                        break;
+                }
             }
             else
             {
-                if (action.Command == AnimationCommand.Play) PlayForward(animation, silent);
-                else StopAt(animation, silent);
+                switch (action.Command)
+                {
+                    case AnimationCommand.Play: PlayForward(animation, silent); break;
+                    case AnimationCommand.Stop: StopAt(animation, silent); break;
+                    default:
+                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationCommand)}: {action.Command}");
+                        break;
+                }
             }
         }
 

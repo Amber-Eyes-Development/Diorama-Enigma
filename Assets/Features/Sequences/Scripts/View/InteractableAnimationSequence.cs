@@ -1,4 +1,5 @@
 using Extensions.AnimationSequencer;
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -16,13 +17,25 @@ namespace DioramaEnigma.Sequences
 
             if (reverse)
             {
-                if (action.ReverseMode == AnimationReverseMode.Backwards) Backwards(sequencer, silent);
-                else StopAt(sequencer, silent);
+                switch (action.ReverseMode)
+                {
+                    case AnimationReverseMode.Backwards: Backwards(sequencer, silent); break;
+                    case AnimationReverseMode.Stop: StopAt(sequencer, silent); break;
+                    default:
+                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationReverseMode)}: {action.ReverseMode}");
+                        break;
+                }
             }
             else
             {
-                if (action.Command == AnimationCommand.Play) PlayForward(sequencer, silent);
-                else StopAt(sequencer, silent);
+                switch (action.Command)
+                {
+                    case AnimationCommand.Play: PlayForward(sequencer, silent); break;
+                    case AnimationCommand.Stop: StopAt(sequencer, silent); break;
+                    default:
+                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationCommand)}: {action.Command}");
+                        break;
+                }
             }
         }
 

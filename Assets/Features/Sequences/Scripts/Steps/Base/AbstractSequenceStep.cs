@@ -23,11 +23,15 @@ namespace DioramaEnigma.Sequences
             add => tracker.onUnlockChanged += value;
             remove => tracker.onUnlockChanged -= value;
         }
+        /// <summary> Отклонённая попытка изменить состояние шага (шаг недоступен: залочен или уже завершён) </summary>
+        public event Action onInteractionRejected;
 
         /// <summary> Завершён ли шаг </summary>
         public abstract bool IsCompleted { get; }
         /// <summary> Можно ли менять состояние шага прямо сейчас (активен, гейт открыт, не залочен) </summary>
         public bool IsUnlocked => tracker.IsUnlocked;
+        /// <summary> Является ли шаг необратимым </summary>
+        public bool Irreversible => irreversible;
 
         [Header("Шаг"), Space]
         [Tooltip("Необратимый: после завершения состояние нельзя изменить обратно")]
@@ -43,6 +47,9 @@ namespace DioramaEnigma.Sequences
             if (tracker.SetActive(active))
                 OnActiveChanged(active);
         }
+
+        /// <summary> Сообщить об отклонённой попытке изменить состояние (вызывает ввод при недоступном шаге) </summary>
+        public void NotifyInteractionRejected() => onInteractionRejected?.Invoke();
 
         /// <summary> Сбросить состояние шага к исходному </summary>
         public abstract void ResetState();

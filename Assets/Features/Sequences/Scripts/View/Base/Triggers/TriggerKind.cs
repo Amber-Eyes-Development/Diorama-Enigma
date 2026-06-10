@@ -17,5 +17,7 @@ namespace DioramaEnigma.Sequences
         CompletionStateChange = 4,
         /// <summary> Разблокированность изменилась на любое значение </summary>
         LockStateChange = 5,
+        /// <summary> Попытка взаимодействия с недоступным шагом (залочен или уже завершён) — импульс без стационарного состояния </summary>
+        InteractionRejected = 6,
     }
 }

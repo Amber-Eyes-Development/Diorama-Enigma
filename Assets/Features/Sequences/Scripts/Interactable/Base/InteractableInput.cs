@@ -11,6 +11,12 @@ namespace DioramaEnigma.Sequences
     {
         protected SequenceStep State { get; private set; }
 
+        /// <summary> Доступно ли взаимодействие прямо сейчас: шаг есть, разблокирован и (если необратим) ещё не завершён </summary>
+        protected bool CanInteract => State != null && State.IsUnlocked && (!State.Irreversible || !State.IsCompleted);
+
         protected virtual void Awake() => State = GetComponent<StepReference>().Step as SequenceStep;
+
+        /// <summary> Сообщить шагу об отклонённой попытке изменить его состояние — для фидбэка вьюшек </summary>
+        protected void ReportRejectedInteraction() => State?.NotifyInteractionRejected();
     }
 }

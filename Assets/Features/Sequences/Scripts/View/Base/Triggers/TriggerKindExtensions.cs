@@ -1,8 +1,13 @@
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Хелперы сопоставления триггеров с событиями шага
+    /// Хелперы сопоставления триггеров с событиями шага.
     /// </summary>
+    /// <remarks>
+    /// <see cref="TriggerKind.InteractionRejected"/> — импульс без стационарного состояния и без
+    /// противоположности: <see cref="Responds"/> срабатывает по равенству, <see cref="Opposite"/>
+    /// возвращает сам себя, <see cref="IsSatisfiedBy"/> — false. Спец-веток не требует (дефолты подходят).
+    /// </remarks>
     public static class TriggerKindExtensions
     {
         /// <summary> Триггер «на любое изменение» (без конкретного состояния) </summary>

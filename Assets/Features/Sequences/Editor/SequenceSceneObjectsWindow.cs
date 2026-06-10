@@ -223,7 +223,7 @@ namespace DioramaEnigma.Sequences.Editor
         private static string StepStateInfo(AbstractSequenceStep step)
         {
             if (step is not SequenceStep valueStep) return string.Empty;
-            return $"{SEP}цель: {Bool(valueStep.CompletionState)}{SEP}тек: {Bool(valueStep.Value)}";
+            return $"{SEP}доступ: {Bool(step.IsUnlocked)}{SEP}цель: {Bool(valueStep.CompletionState)}{SEP}тек: {Bool(valueStep.Value)}";
         }
 
         private static string PlayInfo(AbstractSequenceStep step) =>

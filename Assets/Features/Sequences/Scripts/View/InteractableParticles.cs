@@ -1,3 +1,4 @@
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -13,7 +14,16 @@ namespace DioramaEnigma.Sequences
             var particles = action.Target;
             if (particles == null) return;
 
-            bool play = action.Command == ParticleSystemCommand.Play;
+            bool play;
+            switch (action.Command)
+            {
+                case ParticleSystemCommand.Play: play = true; break;
+                case ParticleSystemCommand.Stop: play = false; break;
+                default:
+                    ServiceDebug.LogError(this, $"Необработанный {nameof(ParticleSystemCommand)}: {action.Command}");
+                    return;
+            }
+
             if (reverse) play = !play;
 
             if (play) Play(particles, silent);

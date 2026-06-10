@@ -33,7 +33,7 @@ namespace Extensions.Types
                     return value != compareTo;
 
                 default:
-                    ServiceDebug.LogError<Comparator>($"Необработанный {nameof(ComparisonType)}: {comparisonType}");
+                    ServiceDebug.LogError($"Необработанный {nameof(ComparisonType)}: {comparisonType}");
                     return false;
             }
         }
@@ -64,7 +64,7 @@ namespace Extensions.Types
                     return value != compareTo;
 
                 default:
-                    ServiceDebug.LogError<Comparator>($"Необработанный {nameof(ComparisonType)}: {comparisonType}");
+                    ServiceDebug.LogError($"Необработанный {nameof(ComparisonType)}: {comparisonType}");
                     return false;
             }
         }

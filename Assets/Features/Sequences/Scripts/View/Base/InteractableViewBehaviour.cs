@@ -8,7 +8,7 @@ namespace DioramaEnigma.Sequences
     [RequireComponent(typeof(StepReference))]
     public abstract class InteractableViewBehaviour : MonoBehaviour
     {
-        /// <summary> Источник состояния (любой шаг): завершённость и разблокировка </summary>
+        /// <summary> Источник состояния (любой шаг): завершённость, разблокировка, отклонённая попытка </summary>
         protected AbstractSequenceStep StateSource => stateSource;
 
         private AbstractSequenceStep stateSource;

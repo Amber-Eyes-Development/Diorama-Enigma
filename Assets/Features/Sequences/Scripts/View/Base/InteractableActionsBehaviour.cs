@@ -43,6 +43,7 @@ namespace DioramaEnigma.Sequences
 
             StateSource.onCompletionChanged += OnCompletionChanged;
             StateSource.onUnlockChanged += OnUnlockChanged;
+            StateSource.onInteractionRejected += OnInteractionRejected;
 
             ApplyInitial();
         }
@@ -55,6 +56,7 @@ namespace DioramaEnigma.Sequences
 
             StateSource.onCompletionChanged -= OnCompletionChanged;
             StateSource.onUnlockChanged -= OnUnlockChanged;
+            StateSource.onInteractionRejected -= OnInteractionRejected;
         }
 
         /// <summary> Выполнить действие </summary>
@@ -70,6 +72,9 @@ namespace DioramaEnigma.Sequences
 
         private void OnUnlockChanged(bool unlocked) =>
             Dispatch(unlocked ? TriggerKind.Unlocked : TriggerKind.Locked, silent: false);
+
+        private void OnInteractionRejected() =>
+            Dispatch(TriggerKind.InteractionRejected, silent: false);
 
         private void Dispatch(TriggerKind fired, bool silent)
         {
