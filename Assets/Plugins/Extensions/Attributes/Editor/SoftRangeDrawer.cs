@@ -50,12 +50,12 @@ namespace Extensions.Attributes.Editor
             EditorGUI.BeginChangeCheck();
             float slider = GUI.HorizontalSlider(sliderRect, Mathf.Min(value, attr.Max), attr.Min, attr.Max);
             if (EditorGUI.EndChangeCheck())
-                value = slider;
+                value = Round(slider, attr.Precision);
 
             EditorGUI.BeginChangeCheck();
-            float field = EditorGUI.FloatField(fieldRect, value);
+            float field = EditorGUI.FloatField(fieldRect, Round(value, attr.Precision));
             if (EditorGUI.EndChangeCheck())
-                value = Mathf.Max(field, attr.Min);
+                value = Round(Mathf.Max(field, attr.Min), attr.Precision);
 
             property.floatValue = value;
         }
@@ -77,6 +77,14 @@ namespace Extensions.Attributes.Editor
                 value = Mathf.Max(field, min);
 
             property.intValue = value;
+        }
+
+        private static float Round(float value, int precision)
+        {
+            if (precision < 0)
+                return value;
+
+            return (float)System.Math.Round(value, precision, System.MidpointRounding.AwayFromZero);
         }
     }
 }
