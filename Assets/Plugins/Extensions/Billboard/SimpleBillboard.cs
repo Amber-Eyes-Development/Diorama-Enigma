@@ -90,6 +90,10 @@ namespace Extensions.Billboard
                 case BillboardMode.YAxisOnly:
                     ApplyYAxisRotation(directionToCamera);
                     break;
+
+                default:
+                    ServiceDebug.LogError($"Необработанный {nameof(BillboardMode)}: {mode}");
+                    break;
             }
         }
 

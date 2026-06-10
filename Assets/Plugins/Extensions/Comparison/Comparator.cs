@@ -1,3 +1,5 @@
+using Extensions.Log;
+
 namespace Extensions.Types
 {
     /// <summary>
@@ -29,9 +31,11 @@ namespace Extensions.Types
                 
                 case ComparisonType.NotEqual:
                     return value != compareTo;
-            }
 
-            return false;
+                default:
+                    ServiceDebug.LogError<Comparator>($"Необработанный {nameof(ComparisonType)}: {comparisonType}");
+                    return false;
+            }
         }
 
         /// <summary>
@@ -58,9 +62,11 @@ namespace Extensions.Types
 
                 case ComparisonType.NotEqual:
                     return value != compareTo;
-            }
 
-            return false;
+                default:
+                    ServiceDebug.LogError<Comparator>($"Необработанный {nameof(ComparisonType)}: {comparisonType}");
+                    return false;
+            }
         }
     }
 }

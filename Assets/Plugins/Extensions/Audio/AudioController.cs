@@ -396,6 +396,9 @@ namespace Extensions.Audio
                 case AudioModel.UI:
                     preset = uiDefaults.spatialPreset;
                     break;
+                default:
+                    ServiceDebug.LogError($"Необработанный {nameof(AudioModel)}: {model}");
+                    break;
             }
             return preset;
         }
