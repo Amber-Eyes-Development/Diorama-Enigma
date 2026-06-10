@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DioramaEnigma.Sequences
 {
@@ -17,9 +18,10 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private AbstractSequenceStep[] children;
         [Tooltip("Условие завершения по дочерним шагам")]
         [SerializeField] private CompletionMode mode = CompletionMode.All;
-        [Tooltip("Минимум завершённых (только для AtLeast)")]
-        [Min(1)]
-        [SerializeField] private int atLeast = 1;
+        [Tooltip("Число N (для AtLeast, AtMost и Exactly)")]
+        [Min(0)]
+        [FormerlySerializedAs("atLeast")]
+        [SerializeField] private int n = 1;
 
         /// <inheritdoc/>
         public override void ResetState()
@@ -67,7 +69,11 @@ namespace DioramaEnigma.Sequences
             {
                 CompletionMode.All => done == total,
                 CompletionMode.Any => done > 0,
-                CompletionMode.AtLeast => done >= atLeast,
+                CompletionMode.AtLeast => done >= n,
+                CompletionMode.AtMost => done <= n,
+                CompletionMode.Exactly => done == n,
+                CompletionMode.None => done == 0,
+                CompletionMode.NotAll => done < total,
                 _ => false,
             };
         }
