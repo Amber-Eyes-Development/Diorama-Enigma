@@ -7,35 +7,29 @@ namespace DioramaEnigma.Sequences
     /// <summary>
     /// Ввод: перетаскивание и дроп в зону выставляет значение булева шага в true
     /// </summary>
-    [RequireComponent(typeof(StepReference))]
     public sealed class DraggableInteractable : InteractableInput, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [Header("Перетаскивание"), Space]
         [Tooltip("Целевая зона. Пусто — принимается любая DropZoneObject")]
         [SerializeField] private DropZoneObject targetZone;
 
-        private SequenceStep state;
         private Camera mainCamera;
         private float dragDepth;
 
-        private void Awake()
+        protected override void Awake()
         {
-            state = GetComponent<StepReference>().Step as SequenceStep;
+            base.Awake();
             mainCamera = Camera.main;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (IsBusy) return;
-
             if (mainCamera == null) mainCamera = Camera.main;
             dragDepth = mainCamera.WorldToScreenPoint(transform.position).z;
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (IsBusy) return;
-
             if (mainCamera == null) mainCamera = Camera.main;
 
             Vector3 screenPos = new Vector3(eventData.position.x, eventData.position.y, dragDepth);
@@ -44,7 +38,7 @@ namespace DioramaEnigma.Sequences
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            if (IsBusy || state == null) return;
+            if (State == null) return;
 
             var results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(eventData, results);
@@ -55,7 +49,7 @@ namespace DioramaEnigma.Sequences
                 if (zone == null) continue;
                 if (targetZone != null && zone != targetZone) continue;
 
-                Apply(() => state.SetValue(true));
+                State.SetValue(true);
                 return;
             }
         }

@@ -1,4 +1,5 @@
 using System;
+using Extensions.Attributes;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -11,6 +12,8 @@ namespace DioramaEnigma.Sequences
     {
         /// <summary> Событие шага, на которое срабатывает действие </summary>
         public TriggerKind Trigger => trigger;
+        /// <summary> Задержка применения действия от срабатывания триггера, сек </summary>
+        public float Delay => delay;
         /// <summary> Откатывать действие при переходе шага в противоположное триггеру состояние </summary>
         public bool Reversible => reversible;
 
@@ -22,6 +25,9 @@ namespace DioramaEnigma.Sequences
 
         [Tooltip("Событие шага, на которое срабатывает действие")]
         [SerializeField] private TriggerKind trigger;
+        [Tooltip("Задержка применения действия от срабатывания триггера, сек")]
+        [SoftRange(0f, 3f, 1)]
+        [SerializeField] private float delay = 0f;
         [Tooltip("Откатывать действие при переходе шага в противоположное триггеру состояние")]
         [SerializeField] private bool reversible = true;
     }

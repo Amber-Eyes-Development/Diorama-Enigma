@@ -427,6 +427,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 263367973}
     command: 0
@@ -551,7 +552,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abb3a30a772788546b740e90858146f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.ClickInteractable
-  delay: 0
 --- !u!114 &263367975
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -566,6 +566,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
     model: 3
@@ -583,6 +584,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 1759786993}
     active: 1
@@ -670,7 +672,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abb3a30a772788546b740e90858146f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.ClickInteractable
-  delay: 0
 --- !u!114 &297188359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -884,6 +885,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 297188364}
     command: 0
@@ -902,6 +904,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 2052244852}
     active: 1
@@ -919,6 +922,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
     model: 3
@@ -7294,6 +7298,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableAnimationSequence
   actions:
   - trigger: 2
+    delay: 0
     reversible: 1
     target: {fileID: 1025917355}
     command: 0
@@ -7440,6 +7445,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
   actions:
   - trigger: 2
+    delay: 0
     reversible: 1
     target: {fileID: 1109792965}
     command: 0
@@ -8117,6 +8123,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 655034625}
     active: 1
@@ -8366,7 +8373,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abb3a30a772788546b740e90858146f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.ClickInteractable
-  delay: 0.5
 --- !u!114 &1671937403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8472,6 +8478,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 1671937408}
     command: 0
@@ -8598,6 +8605,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
     model: 3
@@ -8615,6 +8623,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 749553919}
     active: 1
@@ -8798,7 +8807,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abb3a30a772788546b740e90858146f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.ClickInteractable
-  delay: 0
 --- !u!114 &1896822502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8904,6 +8912,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableParticles
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 349000148}
     command: 0
@@ -8921,6 +8930,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
   actions:
   - trigger: 0
+    delay: 0.8466256
     reversible: 1
     target: {fileID: 1896822508}
     command: 0
@@ -9047,6 +9057,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
     model: 3
@@ -9064,6 +9075,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 551900199}
     active: 1
@@ -9150,7 +9162,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a6a0da1da47ccc42bc5beacf3e2d723, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DraggableInteractable
-  delay: 0
   targetZone: {fileID: 1109792959}
 --- !u!114 &2052244855
 MonoBehaviour:
@@ -9333,6 +9344,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
+    delay: 0
     reversible: 1
     target: {fileID: 1526125030}
     active: 1
@@ -9363,6 +9375,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableSounds
   actions:
   - trigger: 0
+    delay: 0
     reversible: 0
     sound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
     model: 3

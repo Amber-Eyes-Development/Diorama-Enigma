@@ -1,46 +1,16 @@
-using System;
-using Extensions.Coroutines;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// База компонента ввода: применяет изменение значения с опциональной задержкой,
-    /// блокируя повторный ввод на её время
+    /// База компонента ввода: общий источник состояния (шаг <see cref="SequenceStep"/>)
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(StepReference))]
     public abstract class InteractableInput : MonoBehaviour
     {
-        [Header("Задержка"), Space]
-        [Tooltip("Задержка применения изменения, сек. Во время задержки ввод игнорируется")]
-        [Min(0f)]
-        [SerializeField] private float delay;
+        protected SequenceStep State { get; private set; }
 
-        private bool busy;
-
-        /// <summary> Занят ли компонент задержкой (ввод игнорируется) </summary>
-        protected bool IsBusy => busy;
-
-        protected virtual void OnEnable() => busy = false;
-
-        /// <summary> Применить изменение с учётом задержки и блокировки ввода на её время </summary>
-        /// <param name="change">Изменение состояния</param>
-        protected void Apply(Action change)
-        {
-            if (busy || change == null) return;
-
-            if (delay <= 0f)
-            {
-                change();
-                return;
-            }
-
-            busy = true;
-            CoroutineDelay.Run(this, delay, () =>
-            {
-                busy = false;
-                change();
-            });
-        }
+        protected virtual void Awake() => State = GetComponent<StepReference>().Step as SequenceStep;
     }
 }
