@@ -7002,9 +7002,9 @@ MonoBehaviour:
   loopType: 0
   loops: 1
   id: 
-  isRelative: 0
+  isRelative: 1
   isFrom: 0
-  isIndependentUpdate: 0
+  isIndependentUpdate: 1
   autoKill: 0
   autoGenerate: 1
   isActive: 1
@@ -7090,10 +7090,10 @@ MonoBehaviour:
   onRewind:
     m_PersistentCalls:
       m_Calls: []
-  targetIsSelf: 0
-  targetGO: {fileID: 1507794369}
+  targetIsSelf: 1
+  targetGO: {fileID: 0}
   tweenTargetIsTargetGO: 1
-  delay: 0
+  delay: 1
   duration: 0.5
   easeType: 6
   easeCurve:
@@ -7125,19 +7125,19 @@ MonoBehaviour:
   id: 
   isRelative: 1
   isFrom: 0
-  isIndependentUpdate: 0
+  isIndependentUpdate: 1
   autoKill: 0
   autoGenerate: 1
   isActive: 1
   isValid: 1
-  target: {fileID: 1507794370}
+  target: {fileID: 1025917349}
   animationType: 3
   targetType: 11
   forcedTargetType: 0
   autoPlay: 1
   useTargetAsV3: 0
   endValueFloat: 0
-  endValueV3: {x: 0, y: 0, z: 360}
+  endValueV3: {x: 180, y: 0, z: 0}
   endValueV2: {x: 0, y: 0}
   endValueColor: {r: 1, g: 1, b: 1, a: 1}
   endValueString: 
@@ -7198,8 +7198,8 @@ MonoBehaviour:
   onRewind:
     m_PersistentCalls:
       m_Calls: []
-  targetIsSelf: 0
-  targetGO: {fileID: 1507794369}
+  targetIsSelf: 1
+  targetGO: {fileID: 0}
   tweenTargetIsTargetGO: 1
   delay: 0
   duration: 0.25
@@ -7233,18 +7233,18 @@ MonoBehaviour:
   id: 
   isRelative: 1
   isFrom: 0
-  isIndependentUpdate: 0
+  isIndependentUpdate: 1
   autoKill: 0
   autoGenerate: 1
   isActive: 1
   isValid: 1
-  target: {fileID: 1507794370}
+  target: {fileID: 1025917349}
   animationType: 5
   targetType: 11
   forcedTargetType: 0
   autoPlay: 1
   useTargetAsV3: 0
-  endValueFloat: 0.05
+  endValueFloat: 0.1
   endValueV3: {x: 0, y: 0, z: 0}
   endValueV2: {x: 0, y: 0}
   endValueColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7283,7 +7283,7 @@ MonoBehaviour:
   - animation: {fileID: 1025917350}
     joinWithPrevious: 0
   - animation: {fileID: 1025917353}
-    joinWithPrevious: 1
+    joinWithPrevious: 0
 --- !u!114 &1025917356
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8930,7 +8930,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
   actions:
   - trigger: 0
-    delay: 0.8466256
+    delay: 0
     reversible: 1
     target: {fileID: 1896822508}
     command: 0
