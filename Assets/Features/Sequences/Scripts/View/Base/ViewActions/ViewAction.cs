@@ -14,6 +14,12 @@ namespace DioramaEnigma.Sequences
         /// <summary> Откатывать действие при переходе шага в противоположное триггеру состояние </summary>
         public bool Reversible => reversible;
 
+        /// <summary> При необходимости создать на хосте вьюшки целевой компонент и привязать его </summary>
+        public virtual void EnsureTarget(GameObject host) { }
+
+        /// <summary> Рантайм: подготовить целевой компонент к управлению вьюшкой (напр. снять авто-старт) </summary>
+        public virtual void PrepareTarget() { }
+
         [Tooltip("Событие шага, на которое срабатывает действие")]
         [SerializeField] private TriggerKind trigger;
         [Tooltip("Откатывать действие при переходе шага в противоположное триггеру состояние")]

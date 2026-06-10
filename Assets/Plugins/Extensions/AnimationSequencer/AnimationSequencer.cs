@@ -8,6 +8,8 @@ namespace Extensions.AnimationSequencer
     /// <summary>
     /// Контроллер очерёдности анимаций DOTweenAnimation
     /// </summary>
+    // Раньше DOTweenAnimation (порядок по умолчанию 0): успеть снять autoPlay до того, как тот создаст твин в своём Awake
+    [DefaultExecutionOrder(-100)]
     public sealed class AnimationSequencer : MonoBehaviour
     {
         [Header("Настройки"), Space]
@@ -21,6 +23,20 @@ namespace Extensions.AnimationSequencer
         private List<List<SequenceEntry>> groups;
 
         #region Unity Lifecycle
+
+        private void Awake()
+        {
+            // Проигрыванием управляет секвенсор (см. DefaultExecutionOrder — успеваем до Awake самих анимаций).
+            // autoPlay=false — иначе анимация играет при включении сама.
+            // autoKill=false — иначе твин убивается по DOComplete, и обратное проигрывание/перемотка перестают работать
+            foreach (var entry in entries)
+            {
+                if (entry.Animation == null) continue;
+
+                entry.Animation.autoPlay = false;
+                entry.Animation.autoKill = false;
+            }
+        }
 
         private void Start()
         {
@@ -67,10 +83,11 @@ namespace Extensions.AnimationSequencer
             pendingCall?.Kill();
             pendingCall = null;
 
+            // Не убиваем твины (autoKill=false): ставим на паузу, чтобы их можно было снова гонять вперёд/назад
             foreach (var entry in entries)
             {
                 if (entry.Animation != null)
-                    entry.Animation.DOKill();
+                    entry.Animation.DOPause();
             }
         }
 
@@ -85,7 +102,10 @@ namespace Extensions.AnimationSequencer
             var group = groups[index];
 
             foreach (var entry in group)
-                entry.Animation.RecreateTweenAndPlay();
+            {
+                EnsureTween(entry.Animation);
+                entry.Animation.DORestart();
+            }
 
             bool hasNext = index < groups.Count - 1;
             if (!hasNext) return;
@@ -102,9 +122,8 @@ namespace Extensions.AnimationSequencer
 
             foreach (var entry in group)
             {
-                // Создать твин, прыгнуть в конец и проиграть назад
-                entry.Animation.RecreateTweenAndPlay();
-                entry.Animation.DOComplete();
+                // Реверс постоянного твина от текущей позиции (после forward он в конце → играет конец→начало)
+                EnsureTween(entry.Animation);
                 entry.Animation.DOPlayBackwards();
             }
 
@@ -122,11 +141,17 @@ namespace Extensions.AnimationSequencer
             {
                 if (entry.Animation == null) continue;
 
-                entry.Animation.RecreateTweenAndPlay();
-                if (toEnd) entry.Animation.DOComplete();
-                else entry.Animation.DORewind();
+                // Снимок без проигрыша: DOComplete инициализирует твин и ставит в конец, затем при необходимости — перемотка в начало
+                // (DORewind пропускает неинициализированный твин, поэтому Complete перед ним обязателен)
+                EnsureTween(entry.Animation);
+                entry.Animation.DOComplete();
+                if (!toEnd) entry.Animation.DORewind();
             }
         }
+
+        /// <summary> Гарантировать существование постоянного (на паузе) твина, не пересоздавая уже имеющийся </summary>
+        private static void EnsureTween(DOTweenAnimation animation) =>
+            animation.CreateTween(regenerateIfExists: false, andPlay: false);
 
         private static float GetGroupDuration(List<SequenceEntry> group)
         {

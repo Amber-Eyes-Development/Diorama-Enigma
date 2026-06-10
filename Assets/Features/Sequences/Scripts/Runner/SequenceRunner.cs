@@ -11,6 +11,7 @@ namespace DioramaEnigma.Sequences
     /// <remarks>
     /// Наблюдает завершённость шагов и управляет порядком групп и эффектами.=
     /// </remarks>
+    [DisallowMultipleComponent]
     public sealed class SequenceRunner : MonoBehaviour
     {
         /// <summary> Последовательность завершена </summary>

@@ -8,6 +8,7 @@ namespace DioramaEnigma.Sequences
     /// База компонента ввода: применяет изменение значения с опциональной задержкой,
     /// блокируя повторный ввод на её время
     /// </summary>
+    [DisallowMultipleComponent]
     public abstract class InteractableInput : MonoBehaviour
     {
         [Header("Задержка"), Space]

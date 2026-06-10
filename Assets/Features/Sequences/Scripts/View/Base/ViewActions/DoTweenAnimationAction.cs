@@ -17,6 +17,22 @@ namespace DioramaEnigma.Sequences
         /// <summary> Действие на откате (если включён reversible) </summary>
         public AnimationReverseMode ReverseMode => reverseMode;
 
+        public override void EnsureTarget(GameObject host)
+        {
+            if (target == null)
+                target = host.GetComponent<DOTweenAnimation>() ?? host.AddComponent<DOTweenAnimation>();
+        }
+
+        public override void PrepareTarget()
+        {
+            if (target == null) return;
+
+            // Проигрыванием управляет вьюшка. autoPlay=false — иначе анимация играет при включении сама.
+            // autoKill=false — иначе твин убивается по достижении конца, и откат/повторный запуск перестают работать
+            target.autoPlay = false;
+            target.autoKill = false;
+        }
+
         [Tooltip("Целевая DOTweenAnimation")]
         [SerializeField] private DOTweenAnimation target;
         [Tooltip("Действие при срабатывании триггера")]

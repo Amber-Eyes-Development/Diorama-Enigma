@@ -14,6 +14,12 @@ namespace DioramaEnigma.Sequences
         /// <summary> Команда при срабатывании триггера </summary>
         public ParticleSystemCommand Command => command;
 
+        public override void EnsureTarget(GameObject host)
+        {
+            if (target == null)
+                target = host.GetComponent<ParticleSystem>() ?? host.AddComponent<ParticleSystem>();
+        }
+
         [Tooltip("Целевая система частиц")]
         [SerializeField] private ParticleSystem target;
         [Tooltip("Команда при срабатывании триггера")]

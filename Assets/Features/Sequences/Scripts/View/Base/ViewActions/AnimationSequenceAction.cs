@@ -17,6 +17,12 @@ namespace DioramaEnigma.Sequences
         /// <summary> Действие на откате (если включён reversible) </summary>
         public AnimationReverseMode ReverseMode => reverseMode;
 
+        public override void EnsureTarget(GameObject host)
+        {
+            if (target == null)
+                target = host.GetComponent<AnimationSequencer>() ?? host.AddComponent<AnimationSequencer>();
+        }
+
         [Tooltip("Целевой AnimationSequencer")]
         [SerializeField] private AnimationSequencer target;
         [Tooltip("Действие при срабатывании триггера")]

@@ -1,10 +1,12 @@
 using Extensions.Audio;
+using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
     /// 3D one-shot звуки на события шага (через <see cref="AudioController"/>)
     /// </summary>
+    [DisallowMultipleComponent]
     public sealed class InteractableSounds : InteractableActionsBehaviour<SoundAction>
     {
         protected override void Apply(SoundAction action, bool reverse, bool silent)

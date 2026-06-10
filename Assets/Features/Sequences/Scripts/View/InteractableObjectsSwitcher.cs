@@ -1,8 +1,11 @@
+using UnityEngine;
+
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
     /// Переключение активности объектов на события шага
     /// </summary>
+    [DisallowMultipleComponent]
     public sealed class InteractableObjectsSwitcher : InteractableActionsBehaviour<GameObjectActivationAction>
     {
         protected override void Apply(GameObjectActivationAction action, bool reverse, bool silent)

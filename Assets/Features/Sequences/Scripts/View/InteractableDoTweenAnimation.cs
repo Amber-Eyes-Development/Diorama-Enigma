@@ -1,10 +1,14 @@
 using DG.Tweening;
+using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
     /// Проигрывание DOTweenAnimation на события шага (прямое — Command, откат — ReverseMode)
     /// </summary>
+    // Раньше DOTweenAnimation (порядок по умолчанию 0): успеть снять autoPlay до того, как тот создаст твин в своём Awake
+    [DefaultExecutionOrder(-100)]
+    [DisallowMultipleComponent]
     public sealed class InteractableDoTweenAnimation : InteractableActionsBehaviour<DoTweenAnimationAction>
     {
         protected override void Apply(DoTweenAnimationAction action, bool reverse, bool silent)

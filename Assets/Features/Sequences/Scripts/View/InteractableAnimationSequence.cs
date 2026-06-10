@@ -1,10 +1,12 @@
 using Extensions.AnimationSequencer;
+using UnityEngine;
 
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
     /// Проигрывание AnimationSequencer на события шага (прямое — Command, откат — ReverseMode)
     /// </summary>
+    [DisallowMultipleComponent]
     public sealed class InteractableAnimationSequence : InteractableActionsBehaviour<AnimationSequenceAction>
     {
         protected override void Apply(AnimationSequenceAction action, bool reverse, bool silent)

@@ -7,9 +7,30 @@ namespace DioramaEnigma.Sequences
     /// Подписывается на шаг, диспатчит действия по событию и приводит их к текущему состоянию при старте.
     /// </summary>
     public abstract class InteractableActionsBehaviour<TAction> : InteractableViewBehaviour
-        where TAction : ViewAction
+        where TAction : ViewAction, new()
     {
         [SerializeField] private TAction[] actions;
+
+#if UNITY_EDITOR
+        protected virtual void Reset()
+        {
+            if (actions is { Length: > 0 }) return;
+
+            var action = new TAction();
+            action.EnsureTarget(gameObject);
+            actions = new[] { action };
+        }
+#endif
+
+        protected override void Awake()
+        {
+            base.Awake();
+            if (actions == null) return;
+
+            // Вьюшка — единоличный распорядитель проигрывания: гасим авто-старт целей (до их собственного Awake, см. порядок выполнения)
+            foreach (var action in actions)
+                action?.PrepareTarget();
+        }
 
         protected sealed override void Subscribe()
         {
@@ -67,7 +88,6 @@ namespace DioramaEnigma.Sequences
             {
                 if (action == null) continue;
 
-                // У триггеров «на изменение» нет стационарного состояния — нечего восстанавливать
                 if (action.Trigger.IsChange()) continue;
 
                 if (action.Trigger.IsSatisfiedBy(StateSource.IsCompleted, StateSource.IsUnlocked))

@@ -5,6 +5,7 @@ namespace DioramaEnigma.Sequences
     /// <summary>
     /// Команды системам частиц на события шага (откат = противоположная команда)
     /// </summary>
+    [DisallowMultipleComponent]
     public sealed class InteractableParticles : InteractableActionsBehaviour<ParticlesAction>
     {
         protected override void Apply(ParticlesAction action, bool reverse, bool silent)
