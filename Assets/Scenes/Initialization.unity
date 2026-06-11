@@ -360,6 +360,8 @@ MonoBehaviour:
     <SceneName>k__BackingField: Main Menu
   - <Id>k__BackingField: {fileID: 11400000, guid: 25da7a03082983346b25a1f816786aea, type: 2}
     <SceneName>k__BackingField: Game
+  - <Id>k__BackingField: {fileID: 11400000, guid: bac0fb5923d9f34488a5a20f0e7247c0, type: 2}
+    <SceneName>k__BackingField: Testing Zone
 --- !u!4 &1089915601
 Transform:
   m_ObjectHideFlags: 0

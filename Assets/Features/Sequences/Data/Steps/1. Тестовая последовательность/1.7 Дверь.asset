@@ -10,15 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
-  m_Name: "1.5 \u041F\u0440\u0435\u0434\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C"
+  m_Name: "1.7 \u0414\u0432\u0435\u0440\u044C"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
-  id: d798958a3ac0406eb10061434c95a4ca
-  irreversible: 0
-  gates: []
+  id: 68a26b6485af4f55aea913b6af0e32d0
+  irreversible: 1
+  gates:
+  - rid: 7045590491607334985
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7045590491607334985
+      type: {class: RequireResourceGate, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      data:
+        resource: {fileID: 11400000, guid: e76b53e5854b30b4fb6f2868b70caee5, type: 2}
+        valueToRemove: 1
