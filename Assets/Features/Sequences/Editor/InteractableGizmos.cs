@@ -45,19 +45,23 @@ namespace DioramaEnigma.Sequences.Editor
 
             Handles.Label(drag.transform.position + Vector3.up * LabelOffsetY, text, DragStyle);
 
-            // Пунктирная линия к целевой зоне / точке фиксации (только при выделении)
-            var zone = drag.Editor_TargetZone;
-            if (zone != null && inSelection)
-            {
-                Vector3 target = zone.Anchor != null ? zone.Anchor.position : zone.transform.position;
+            // Пунктирные линии к зонам с тем же шагом / их точкам фиксации (только при выделении)
+            if (stateRef == null || !inSelection) return;
 
-                var prevColor = Handles.color;
-                Handles.color = new Color(1f, 0.9f, 0.35f, 0.55f);
+            var prevColor = Handles.color;
+            Handles.color = new Color(1f, 0.9f, 0.35f, 0.55f);
+
+            foreach (var zone in Object.FindObjectsByType<InteractableDropZone>(FindObjectsSortMode.None))
+            {
+                if (zone.Step != stateRef) continue;
+
+                Vector3 target = zone.Anchor != null ? zone.Anchor.position : zone.transform.position;
                 Handles.DrawDottedLine(drag.transform.position, target, 4f);
                 if (zone.Anchor != null)
                     Handles.SphereHandleCap(0, target, Quaternion.identity, 0.08f, EventType.Repaint);
-                Handles.color = prevColor;
             }
+
+            Handles.color = prevColor;
         }
 
         #endregion

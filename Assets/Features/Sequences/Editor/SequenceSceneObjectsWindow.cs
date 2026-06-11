@@ -216,7 +216,7 @@ namespace DioramaEnigma.Sequences.Editor
         private static string DragLabel(DragEntry entry)
         {
             string stateName = entry.StateRef != null ? entry.StateRef.name : "(не назначено)";
-            string zoneName = string.IsNullOrEmpty(entry.TargetZoneName) ? "любая" : entry.TargetZoneName;
+            string zoneName = string.IsNullOrEmpty(entry.TargetZoneName) ? "(нет зоны)" : entry.TargetZoneName;
             return $"⬡ {entry.Component.gameObject.name}{SEP}state: {stateName}{SEP}zone: {zoneName}{StepStateInfo(entry.StateRef)}{PlayInfo(entry.StateRef)}";
         }
 
@@ -261,31 +261,34 @@ namespace DioramaEnigma.Sequences.Editor
                 });
             }
 
+            var stepToZoneName = new Dictionary<AbstractSequenceStep, string>();
+            foreach (var zone in FindObjectsByType<InteractableDropZone>(FindObjectsSortMode.None))
+            {
+                var captured = zone;
+                if (zone.Step != null) stepToZoneName.TryAdd(zone.Step, zone.gameObject.name);
+
+                orphanObjects.Add(new ObjectEntry
+                {
+                    Go = captured.gameObject,
+                    Color = EditorToolsConstraints.COLOR_LIGHT_GREEN,
+                    Label = () => $"◈ {captured.gameObject.name}",
+                });
+            }
+
             foreach (var drag in FindObjectsByType<DraggableInteractable>(FindObjectsSortMode.None))
             {
-                var zone = drag.Editor_TargetZone;
+                var step = drag.GetComponent<StepReference>()?.Step;
                 var entry = new DragEntry
                 {
                     Component = drag,
-                    StateRef = drag.GetComponent<StepReference>()?.Step,
-                    TargetZoneName = zone != null ? zone.gameObject.name : string.Empty,
+                    StateRef = step,
+                    TargetZoneName = step != null && stepToZoneName.TryGetValue(step, out var zoneName) ? zoneName : string.Empty,
                 };
                 Add(SequenceOf(entry.StateRef, stepToSequence), new ObjectEntry
                 {
                     Go = drag.gameObject,
                     Color = EditorToolsConstraints.COLOR_YELLOW,
                     Label = () => DragLabel(entry),
-                });
-            }
-
-            foreach (var zone in FindObjectsByType<DropZoneObject>(FindObjectsSortMode.None))
-            {
-                var captured = zone;
-                orphanObjects.Add(new ObjectEntry
-                {
-                    Go = captured.gameObject,
-                    Color = EditorToolsConstraints.COLOR_LIGHT_GREEN,
-                    Label = () => $"◈ {captured.gameObject.name}",
                 });
             }
 

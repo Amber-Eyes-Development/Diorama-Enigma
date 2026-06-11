@@ -7,31 +7,31 @@ namespace DioramaEnigma.Sequences
     /// <summary>
     /// Ввод: перетаскивание объёмного объекта под ортокамерой с посадкой коллайдера на сцену
     /// </summary>
-    /// <remarks>
-    /// Объект поднимается на свободную плоскость перед диорамой, ведётся под курсором и проецируется
-    /// вдоль луча камеры до первой поверхности. Попадание в <see cref="DropZoneObject"/> завершает шаг.
-    /// Недоступный шаг не перетаскивается — фейрит <see cref="TriggerKind.InteractionRejected"/>.
-    /// </remarks>
     public sealed class DraggableInteractable : InteractableInput, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
-        [Tooltip("Целевая зона. Пусто — принимается любая DropZoneObject")]
-        [SerializeField] private DropZoneObject targetZone;
+        [Tooltip("Группа совместимости: в какие зоны объект можно вставлять по совпадению группы (завершение шага — по совпадению шага зоны)")]
+        [SerializeField] private DragGroup group;
         [Tooltip("Расстояние от камеры до плоскости драга — свободного пространства перед диорамой")]
         [SerializeField] private float dragDistance = 5f;
         [Tooltip("Длина проекции коллайдера вдоль луча камеры при установке на сцену")]
         [SerializeField] private float projectionRange = 50f;
-        
+        [Tooltip("Плавность подхвата и ведения по экранной плоскости, сек (0 — мгновенно). По оси взгляда — всегда мгновенно")]
+        [SerializeField] private float followSmoothTime = 0.08f;
+
         [Header("Слои взаимодействия"), Space]
         [Tooltip("Слои поверхностей сцены, на которые садится объект (свои коллайдеры игнорируются автоматически)")]
         [SerializeField] private LayerMask surfaceMask = ~0;
         [Tooltip("Слои зон дропа")]
         [SerializeField] private LayerMask zoneMask = ~0;
-            
+
         [Header("Параметры drop (завершения drag)"), Space]
         [Tooltip("Реакция на отпускание вне зоны дропа")]
         [SerializeField] private DragReleaseMode releaseMode = DragReleaseMode.PlaceOnScene;
         [Tooltip("Когда завершать шаг при попадании в зону дропа")]
         [SerializeField] private DropCommitMode commitMode = DropCommitMode.OnRelease;
+
+        /// <summary> Как зона принимает этот объект </summary>
+        private enum ZoneAcceptance { Reject, Snap, Complete }
 
         private Camera mainCamera;
         private Collider cachedCollider;
@@ -43,12 +43,16 @@ namespace DioramaEnigma.Sequences
         private Vector3 startPosition;
         private Quaternion startRotation;
 
+        private Vector2 pointerScreen;
+        private Vector3 followVelocity;
+
         protected override void Awake()
         {
             base.Awake();
             mainCamera = Camera.main;
             cachedCollider = GetComponent<Collider>() ?? GetComponentInChildren<Collider>();
             body = GetComponent<Rigidbody>();
+            wasKinematic = body.isKinematic;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -67,86 +71,120 @@ namespace DioramaEnigma.Sequences
 
             if (body != null)
             {
-                wasKinematic = body.isKinematic;
                 body.isKinematic = true;
             }
 
             dragging = true;
             finished = false;
+            pointerScreen = eventData.position;
+            followVelocity = Vector3.zero;
 
-            MoveToDragPlane(eventData.position);
+            LiftDepthToDragPlane();
         }
 
         public void OnDrag(PointerEventData eventData)
         {
             if (!dragging || finished) return;
 
-            MoveToDragPlane(eventData.position);
+            pointerScreen = eventData.position;
 
             if (commitMode != DropCommitMode.OnEnter) return;
 
-            // Моментальное завершение, как только объект «над» подходящей зоной (мышь ещё зажата)
-            var zone = FindZoneUnderPointer(eventData.position);
-            if (zone != null) CommitToZone(zone, eventData.position);
+            if (TryFindZone(pointerScreen, out var zone, out var acceptance))
+                CommitToZone(zone, acceptance);
         }
 
         public void OnEndDrag(PointerEventData eventData)
         {
             if (!dragging || finished) return;
             dragging = false;
+            pointerScreen = eventData.position;
 
-            var zone = FindZoneUnderPointer(eventData.position);
-            if (zone != null)
-            {
-                CommitToZone(zone, eventData.position);
-                return;
-            }
+            if (TryFindZone(pointerScreen, out var zone, out var acceptance))
+                CommitToZone(zone, acceptance);
+            else
+                ReleaseFree();
+        }
 
-            ReleaseFree(eventData.position);
+        private void Update()
+        {
+            if (!dragging || finished) return;
+
+            FollowPointer();
         }
 
         #region Internal
 
-        private void MoveToDragPlane(Vector2 screenPos) =>
-            transform.position = DragProjection.PointerOnDragPlane(mainCamera, screenPos, dragDistance);
+        /// <summary> Плавно вести объект под курсором по экранной плоскости, держа глубину на плоскости драга </summary>
+        private void FollowPointer()
+        {
+            Vector3 target = DragProjection.PointerOnDragPlane(mainCamera, pointerScreen, dragDistance);
+            Vector3 smoothed = Vector3.SmoothDamp(transform.position, target, ref followVelocity, followSmoothTime);
 
-        private DropZoneObject FindZoneUnderPointer(Vector2 screenPos)
+            Vector3 fwd = mainCamera.transform.forward;
+            smoothed += fwd * Vector3.Dot(target - smoothed, fwd);
+
+            transform.position = smoothed;
+        }
+
+        /// <summary> Поднять объект на глубину плоскости драга, не меняя экранную позицию </summary>
+        private void LiftDepthToDragPlane()
+        {
+            Vector3 fwd = mainCamera.transform.forward;
+            Vector3 planePoint = mainCamera.transform.position + fwd * dragDistance;
+            Vector3 pos = transform.position;
+
+            pos += fwd * Vector3.Dot(planePoint - pos, fwd);
+            transform.position = pos;
+        }
+
+        private bool TryFindZone(Vector2 screenPos, out InteractableDropZone zone, out ZoneAcceptance acceptance)
         {
             Ray ray = mainCamera.ScreenPointToRay(screenPos);
             var hits = Physics.RaycastAll(ray, projectionRange, zoneMask, QueryTriggerInteraction.Collide);
 
             foreach (var hit in hits)
             {
-                var zone = hit.collider.GetComponentInParent<DropZoneObject>();
-                if (zone == null) continue;
-                if (targetZone != null && zone != targetZone) continue;
-                return zone;
+                var candidate = hit.collider.GetComponentInParent<InteractableDropZone>();
+                if (candidate == null) continue;
+
+                var match = Classify(candidate);
+                if (match == ZoneAcceptance.Reject) continue;
+
+                zone = candidate;
+                acceptance = match;
+                return true;
             }
 
-            return null;
+            zone = null;
+            acceptance = ZoneAcceptance.Reject;
+            return false;
         }
 
-        private void CommitToZone(DropZoneObject zone, Vector2 screenPos)
+        /// <summary> Тот же шаг → завершает; иначе совместимая группа и приём чужих → только снап </summary>
+        private ZoneAcceptance Classify(InteractableDropZone zone)
+        {
+            if (State != null && zone.Step == State) return ZoneAcceptance.Complete;
+            if (zone.AcceptsForeignGroup(group)) return ZoneAcceptance.Snap;
+            return ZoneAcceptance.Reject;
+        }
+
+        private void CommitToZone(InteractableDropZone zone, ZoneAcceptance acceptance)
         {
             finished = true;
             dragging = false;
 
-            zone.Place(transform, ProjectLanding(screenPos));
+            zone.Place(transform, ProjectLanding());
 
-            // С точкой фиксации объект остаётся «примонтированным» (кинематичным); иначе — обычная физика
             if (zone.Anchor != null)
-            {
                 if (body != null) body.isKinematic = true;
-            }
             else
-            {
                 RestoreBody();
-            }
 
-            if (State != null) State.SetValue(true);
+            ApplyCompletion(acceptance == ZoneAcceptance.Complete);
         }
 
-        private void ReleaseFree(Vector2 screenPos)
+        private void ReleaseFree()
         {
             finished = true;
 
@@ -156,7 +194,7 @@ namespace DioramaEnigma.Sequences
                     transform.SetPositionAndRotation(startPosition, startRotation);
                     break;
                 case DragReleaseMode.PlaceOnScene:
-                    transform.position = ProjectLanding(screenPos);
+                    transform.position = ProjectLanding();
                     break;
                 default:
                     ServiceDebug.LogError(this, $"Необработанный {nameof(DragReleaseMode)}: {releaseMode}");
@@ -164,11 +202,21 @@ namespace DioramaEnigma.Sequences
             }
 
             RestoreBody();
+
+            ApplyCompletion(false);
         }
 
-        private Vector3 ProjectLanding(Vector2 screenPos)
+        /// <summary> Привести шаг к завершённому/незавершённому (по целевому значению шага) </summary>
+        private void ApplyCompletion(bool completed)
         {
-            Ray ray = mainCamera.ScreenPointToRay(screenPos);
+            if (State == null) return;
+
+            State.SetValue(completed ? State.CompletionState : !State.CompletionState);
+        }
+
+        private Vector3 ProjectLanding()
+        {
+            Ray ray = mainCamera.ScreenPointToRay(pointerScreen);
             return DragProjection.ProjectToSurface(transform, cachedCollider, ray.direction, projectionRange, surfaceMask);
         }
 
@@ -178,9 +226,5 @@ namespace DioramaEnigma.Sequences
         }
 
         #endregion
-
-#if UNITY_EDITOR
-        public DropZoneObject Editor_TargetZone => targetZone;
-#endif
     }
 }
