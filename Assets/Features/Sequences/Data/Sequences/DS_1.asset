@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6232c38334e0094419e7c05032c59f73, type: 3}
+  m_Name: DS_1
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.Sequence
+  steps:
+  - step: {fileID: 11400000, guid: 76b937ef739ca5b4cb1febd49b5ba058, type: 2}
+    groupIndex: 1
+    availability: 1
+    interactableAfterCompletion: 0
+    effects: []
+  - step: {fileID: 11400000, guid: 1e8ff02680b5d0945a256d16a1a51b5e, type: 2}
+    groupIndex: 1
+    availability: 1
+    interactableAfterCompletion: 0
+    effects: []
+  - step: {fileID: 11400000, guid: a4f6acf000e9d5e4a9070c2bb5bec57b, type: 2}
+    groupIndex: 2
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+  - step: {fileID: 11400000, guid: f5ed04b18ce32064ca44c50d1816eda6, type: 2}
+    groupIndex: 3
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+  - step: {fileID: 11400000, guid: a27fe861c11e33e46848fcafab41e32a, type: 2}
+    groupIndex: 3
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+  - step: {fileID: 11400000, guid: 3dc02710e9e06554a91cb34e792f8d01, type: 2}
+    groupIndex: 3
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+  - step: {fileID: 11400000, guid: 86d6468f64616004eb63efeacab2a50c, type: 2}
+    groupIndex: 3
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+  references:
+    version: 2
+    RefIds: []
