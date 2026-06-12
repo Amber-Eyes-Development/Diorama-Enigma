@@ -14,53 +14,70 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.Sequence
   steps:
   - step: {fileID: 11400000, guid: 984b36345b3a15243bbe8d59df09df29, type: 2}
-    groupIndex: 0
-    availability: 0
-    interactableAfterCompletion: 0
-    effects: []
-  - step: {fileID: 11400000, guid: 93ca65cc6ce7adf46b67a3a97dbf0c06, type: 2}
-    groupIndex: 0
-    availability: 0
-    interactableAfterCompletion: 0
-    effects: []
-  - step: {fileID: 11400000, guid: 5372599f1083c1341b459597a0959f7b, type: 2}
-    groupIndex: 0
-    availability: 0
-    interactableAfterCompletion: 0
-    effects: []
-  - step: {fileID: 11400000, guid: 41cfd3efb68f1ee4ca8011005424ef86, type: 2}
-    groupIndex: 2
-    availability: 0
-    interactableAfterCompletion: 1
-    effects: []
-  - step: {fileID: 11400000, guid: e0181793b28a06c469edcc05d44c95ef, type: 2}
     groupIndex: 1
     availability: 0
     interactableAfterCompletion: 0
     effects: []
-  - step: {fileID: 11400000, guid: 18dfa52e1e7d86b48b9123c7e275b826, type: 2}
-    groupIndex: 0
+    gates: []
+  - step: {fileID: 11400000, guid: 93ca65cc6ce7adf46b67a3a97dbf0c06, type: 2}
+    groupIndex: 1
     availability: 0
     interactableAfterCompletion: 0
     effects: []
-  - step: {fileID: 11400000, guid: 14357136cc610234d9afc8cc9b46bf24, type: 2}
+    gates: []
+  - step: {fileID: 11400000, guid: 5372599f1083c1341b459597a0959f7b, type: 2}
+    groupIndex: 1
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+    gates:
+    - rid: 7045590526002200638
+  - step: {fileID: 11400000, guid: 41cfd3efb68f1ee4ca8011005424ef86, type: 2}
     groupIndex: 4
+    availability: 0
+    interactableAfterCompletion: 1
+    effects: []
+    gates: []
+  - step: {fileID: 11400000, guid: e0181793b28a06c469edcc05d44c95ef, type: 2}
+    groupIndex: 2
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+    gates: []
+  - step: {fileID: 11400000, guid: 18dfa52e1e7d86b48b9123c7e275b826, type: 2}
+    groupIndex: 1
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+    gates: []
+  - step: {fileID: 11400000, guid: 14357136cc610234d9afc8cc9b46bf24, type: 2}
+    groupIndex: 0
     availability: 1
     interactableAfterCompletion: 0
     effects:
     - trigger: 0
       effect:
         rid: 7045590491607334986
+    gates: []
   - step: {fileID: 11400000, guid: 0c4e685450b0fa94698ea03aae969c63, type: 2}
     groupIndex: 5
     availability: 0
     interactableAfterCompletion: 0
     effects: []
+    gates:
+    - rid: 7045590526002200639
   - step: {fileID: 11400000, guid: 4673f2238ed163641a10450502ea3e46, type: 2}
-    groupIndex: 6
+    groupIndex: 0
     availability: 1
     interactableAfterCompletion: 0
     effects: []
+    gates: []
+  - step: {fileID: 11400000, guid: 255e2d16b6f870942b5d44bde53fc16b, type: 2}
+    groupIndex: 0
+    availability: 1
+    interactableAfterCompletion: 0
+    effects: []
+    gates: []
   references:
     version: 2
     RefIds:
@@ -69,3 +86,14 @@ MonoBehaviour:
       data:
         resource: {fileID: 11400000, guid: e76b53e5854b30b4fb6f2868b70caee5, type: 2}
         valueToAdd: 1
+    - rid: 7045590526002200638
+      type: {class: RequireStepsCompletedGate, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      data:
+        trigger: 1
+        requiredSteps:
+        - {fileID: 11400000, guid: 984b36345b3a15243bbe8d59df09df29, type: 2}
+    - rid: 7045590526002200639
+      type: {class: RequireResourceGate, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      data:
+        resource: {fileID: 11400000, guid: e76b53e5854b30b4fb6f2868b70caee5, type: 2}
+        valueToRemove: 1

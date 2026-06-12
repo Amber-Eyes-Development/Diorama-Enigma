@@ -14,11 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: eb83bf9cf9a549918d099bc6929a46aa
   irreversible: 0
-  gates: []
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
-  references:
-    version: 2
-    RefIds: []
+  toggleCooldown: 0

@@ -1018,6 +1018,7 @@ MonoBehaviour:
   snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
+  acceptPhysicsDrop: 0
 --- !u!135 &272187888
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1033,7 +1034,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -11121,6 +11122,7 @@ GameObject:
   - component: {fileID: 419426292}
   - component: {fileID: 419426294}
   - component: {fileID: 419426298}
+  - component: {fileID: 419426299}
   m_Layer: 0
   m_Name: "\u0424\u0430\u043B\u044C\u0448\u0438\u0432\u0430\u044F \u0437\u043E\u043D\u0430
     (\u0432\u0430\u0440\u0438\u0430\u043D\u0442)"
@@ -11175,6 +11177,7 @@ MonoBehaviour:
   snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
+  acceptPhysicsDrop: 1
 --- !u!135 &419426295
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -11190,7 +11193,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -11271,6 +11274,29 @@ MonoBehaviour:
     reversible: 1
     target: {fileID: 274896059}
     command: 0
+  - trigger: 0
+    delay: 0.5
+    reversible: 0
+    target: {fileID: 274896059}
+    command: 1
+--- !u!114 &419426299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 419426289}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
+  actions:
+  - trigger: 0
+    delay: 0
+    reversible: 1
+    target: {fileID: 1190576871}
+    active: 1
 --- !u!1 &494120019
 GameObject:
   m_ObjectHideFlags: 0
@@ -17907,6 +17933,7 @@ MonoBehaviour:
   snapSmoothTime: 0.08
   acceptForeign: 0
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
+  acceptPhysicsDrop: 0
 --- !u!135 &1109792960
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -17922,7 +17949,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -18112,6 +18139,9 @@ GameObject:
   - component: {fileID: 1190576875}
   - component: {fileID: 1190576874}
   - component: {fileID: 1190576873}
+  - component: {fileID: 1190576881}
+  - component: {fileID: 1190576883}
+  - component: {fileID: 1190576882}
   m_Layer: 0
   m_Name: "\u041A\u043B\u044E\u0447\u0438\u043A \u0434\u043B\u044F \u0434\u0440\u0443\u0433\u043E\u0439
     \u0434\u0438\u043E\u0440\u0430\u043C\u044B"
@@ -18129,7 +18159,7 @@ Transform:
   m_GameObject: {fileID: 1190576871}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.42261827, z: 0, w: 0.9063079}
-  m_LocalPosition: {x: -0.043, y: -1.677, z: 0.223}
+  m_LocalPosition: {x: 2.6, y: 4.4, z: -0.99}
   m_LocalScale: {x: 0.1, y: 0.05, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -18320,7 +18350,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -18383,6 +18413,72 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1190576871}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1190576881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1190576871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
+  actions:
+  - trigger: 0
+    delay: 0.5
+    reversible: 0
+    target: {fileID: 1190576871}
+    active: 0
+--- !u!54 &1190576882
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1190576871}
+  serializedVersion: 5
+  m_Mass: 0.5
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 1
+--- !u!65 &1190576883
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1190576871}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.0000004, y: 1, z: 1.0000001}
+  m_Center: {x: 0.00000047683716, y: 0, z: 0}
 --- !u!1 &1324611077
 GameObject:
   m_ObjectHideFlags: 0
@@ -18558,6 +18654,7 @@ MonoBehaviour:
   snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
+  acceptPhysicsDrop: 0
 --- !u!135 &1324611082
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -18573,7 +18670,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -19134,7 +19231,7 @@ Transform:
   m_GameObject: {fileID: 1493535814}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: 4.656613e-10, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.2, z: -0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -19163,7 +19260,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   releaseMode: 0
-  commitMode: 0
+  commitMode: 1
 --- !u!114 &1493535817
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19192,14 +19289,14 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.4
-  m_Height: 1.9
+  m_Radius: 0.5
+  m_Height: 2
   m_Direction: 1
-  m_Center: {x: 0, y: 0, z: -0.00000011920929}
+  m_Center: {x: 0, y: 0.2, z: -0.00000011920929}
 --- !u!33 &1493535819
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -25436,11 +25533,6 @@ MonoBehaviour:
     reversible: 1
     target: {fileID: 349000148}
     command: 0
-  - trigger: 0
-    delay: 1
-    reversible: 1
-    target: {fileID: 349000148}
-    command: 1
 --- !u!114 &1896822507
 MonoBehaviour:
   m_ObjectHideFlags: 0
