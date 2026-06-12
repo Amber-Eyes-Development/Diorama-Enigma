@@ -18288,7 +18288,7 @@ MonoBehaviour:
   actions:
   - trigger: 0
     delay: 0
-    reversible: 1
+    reversible: 0
     target: {fileID: 1190576873}
     command: 0
     reverseMode: 0

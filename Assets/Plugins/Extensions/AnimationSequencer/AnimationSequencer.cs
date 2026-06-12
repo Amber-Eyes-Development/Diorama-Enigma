@@ -68,6 +68,9 @@ namespace Extensions.AnimationSequencer
             PlayGroupBackwardsAt(groups.Count - 1);
         }
 
+        /// <summary> Отключить авто-запуск при старте (для внешнего распорядителя проигрывания) </summary>
+        public void DisableAutoPlay() => playOnStart = false;
+
         /// <summary> Мгновенно установить последовательность в конечное состояние (без проигрыша) </summary>
         public void SetAtEnd() => SetAll(toEnd: true);
 

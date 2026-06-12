@@ -23,6 +23,9 @@ namespace DioramaEnigma.Sequences
                 target = host.GetComponent<AnimationSequencer>() ?? host.AddComponent<AnimationSequencer>();
         }
 
+        /// <summary> Снять авто-старт секвенсера: проигрышем управляет вьюшка (иначе playOnStart перебьёт восстановление) </summary>
+        public override void PrepareTarget() => target?.DisableAutoPlay();
+
         [Tooltip("Целевой AnimationSequencer")]
         [SerializeField] private AnimationSequencer target;
         [Tooltip("Действие при срабатывании триггера")]

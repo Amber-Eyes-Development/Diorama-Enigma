@@ -27,8 +27,7 @@ namespace DioramaEnigma.Sequences
         {
             if (target == null) return;
 
-            // Проигрыванием управляет вьюшка. autoPlay=false — иначе анимация играет при включении сама.
-            // autoKill=false — иначе твин убивается по достижении конца, и откат/повторный запуск перестают работать
+            target.autoGenerate = false;
             target.autoPlay = false;
             target.autoKill = false;
         }

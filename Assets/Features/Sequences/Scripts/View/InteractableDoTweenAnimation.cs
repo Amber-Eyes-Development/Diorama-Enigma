@@ -7,7 +7,6 @@ namespace DioramaEnigma.Sequences
     /// <summary>
     /// Проигрывание DOTweenAnimation на события шага (прямое — Command, откат — ReverseMode)
     /// </summary>
-    // Раньше DOTweenAnimation (порядок по умолчанию 0): успеть снять autoPlay до того, как тот создаст твин в своём Awake
     [DefaultExecutionOrder(-100)]
     [DisallowMultipleComponent]
     public sealed class InteractableDoTweenAnimation : InteractableActionsBehaviour<DoTweenAnimationAction>
@@ -19,6 +18,8 @@ namespace DioramaEnigma.Sequences
         {
             var animation = action.Target;
             if (animation == null) return;
+
+            EnsureTween(animation);
 
             if (reverse)
             {
@@ -68,5 +69,11 @@ namespace DioramaEnigma.Sequences
         }
 
         private static void StopAt(DOTweenAnimation animation, bool silent) => animation.DORewind();
+
+        /// <summary> Создать твин, если его ещё нет (вью владеет жизненным циклом — autoGenerate отключён) </summary>
+        private static void EnsureTween(DOTweenAnimation animation)
+        {
+            if (animation.tween == null) animation.CreateTween(regenerateIfExists: false, andPlay: false);
+        }
     }
 }
