@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 3c6a4cb08102416c9073242431b5acf8
   irreversible: 1
   gates: []
-  isSaveable: 0
+  isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1

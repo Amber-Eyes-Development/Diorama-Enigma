@@ -1015,6 +1015,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DropZoneObject
   anchor: {fileID: 272187884}
   snapRotation: 1
+  snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
 --- !u!135 &272187888
@@ -11171,6 +11172,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DropZoneObject
   anchor: {fileID: 419426290}
   snapRotation: 1
+  snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
 --- !u!135 &419426295
@@ -17902,6 +17904,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DropZoneObject
   anchor: {fileID: 1109792958}
   snapRotation: 1
+  snapSmoothTime: 0.08
   acceptForeign: 0
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
 --- !u!135 &1109792960
@@ -18552,6 +18555,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DropZoneObject
   anchor: {fileID: 1324611078}
   snapRotation: 1
+  snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
 --- !u!135 &1324611082
@@ -25432,6 +25436,11 @@ MonoBehaviour:
     reversible: 1
     target: {fileID: 349000148}
     command: 0
+  - trigger: 0
+    delay: 1
+    reversible: 1
+    target: {fileID: 349000148}
+    command: 1
 --- !u!114 &1896822507
 MonoBehaviour:
   m_ObjectHideFlags: 0
