@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -16,7 +17,10 @@ namespace Extensions.EditorTools.Viewpoints
         [SerializeField]
         private ViewpointsDataBase dataBaseBase;
 
+        [NonSerialized]
         private GUIStyle _labelHeader;
+
+        [NonSerialized]
         private GUIStyle _rowButton;
 
         private string _newViewName = "Viewpoint";
@@ -118,10 +122,11 @@ namespace Extensions.EditorTools.Viewpoints
                 if (GUILayout.Button(vp.Name, _rowButton))
                     GoToViewpoint(vp);
 
-                GUI.backgroundColor = Color.red;
-                if (GUILayout.Button("✕", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                    remove = true;
-                GUI.backgroundColor = Color.white;
+                using (new GUIBackgroundColorScope(Color.red))
+                {
+                    if (GUILayout.Button("✕", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                        remove = true;
+                }
             }
 
             return remove;

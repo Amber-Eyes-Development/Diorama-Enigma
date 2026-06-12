@@ -25,6 +25,7 @@ namespace DioramaEnigma.Sequences.Editor
         private const string EFFECTS_PROP = "effects";
         private const string EFFECT_TRIGGER_PROP = "trigger";
         private const string EFFECT_REF_PROP = "effect";
+        private const string GATES_PROP = "gates";
 
         private SerializedProperty stepsProp;
 
@@ -35,8 +36,6 @@ namespace DioramaEnigma.Sequences.Editor
         private readonly HashSet<int> disconnectedSteps = new();
         private readonly Dictionary<int, List<string>> sharedSteps = new();
         private bool warningsBuilt;
-
-        private readonly Dictionary<int, SerializedObject> stepSOCache = new();
 
         private static readonly Color SeparatorColor = new(0.45f, 0.65f, 0.95f, 1f);
 
@@ -56,11 +55,6 @@ namespace DioramaEnigma.Sequences.Editor
         {
             stepsProp = serializedObject.FindProperty(STEPS_PROP);
             RefreshWarnings();
-        }
-
-        private void OnDisable()
-        {
-            stepSOCache.Clear();
         }
 
         private GUIStyle StepBlockStyle
@@ -257,9 +251,9 @@ namespace DioramaEnigma.Sequences.Editor
                 }
 
                 DrawStepWarnings(stepAsset.GetInstanceID());
-                DrawStepGate(stepAsset);
             }
 
+            DrawStepGate(entry.FindPropertyRelative(GATES_PROP));
             DrawEffects(entry.FindPropertyRelative(EFFECTS_PROP));
 
             EditorGUILayout.EndVertical();
@@ -267,16 +261,11 @@ namespace DioramaEnigma.Sequences.Editor
 
         #endregion
 
-        #region Gate (nested SO editor)
+        #region Gate
 
-        private void DrawStepGate(ScriptableObject stepAsset)
+        /// <summary> Условия доступа шага: единый список на записи шага (как эффекты), у каждого — тип гейта </summary>
+        private void DrawStepGate(SerializedProperty gatesProp)
         {
-            var so = GetStepSO(stepAsset);
-            so.Update();
-
-            var gatesProp = so.FindProperty("gates");
-            if (gatesProp == null) return;
-
             EditorGUILayout.Space(2);
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("УСЛОВИЯ ДОСТУПА", EditorStyles.boldLabel);
@@ -312,65 +301,51 @@ namespace DioramaEnigma.Sequences.Editor
                 gatesProp.DeleteArrayElementAtIndex(removeIndex);
 
             if (add)
-                AddGateEntry(so, gatesProp.propertyPath);
-
-            so.ApplyModifiedProperties();
+                AddGateEntry(gatesProp.propertyPath);
         }
 
         /// <summary> Добавить пустую запись гейта (тип выбирается отдельно) </summary>
-        private static void AddGateEntry(SerializedObject so, string arrayPath)
+        private void AddGateEntry(string arrayPath)
         {
-            so.Update();
-            var arr = so.FindProperty(arrayPath);
+            serializedObject.Update();
+            var arr = serializedObject.FindProperty(arrayPath);
             int idx = arr.arraySize;
             arr.arraySize++;
 
             // arraySize++ копирует ссылку предыдущего элемента (SerializeReference) — обнуляем
             arr.GetArrayElementAtIndex(idx).managedReferenceValue = null;
 
-            so.ApplyModifiedProperties();
+            serializedObject.ApplyModifiedProperties();
         }
 
         /// <summary> Меню выбора типа гейта (любой наследник StepGate) </summary>
-        private static void ShowGateTypeMenu(SerializedProperty gateProp)
+        private void ShowGateTypeMenu(SerializedProperty gateProp)
         {
-            var so = gateProp.serializedObject;
             var path = gateProp.propertyPath;
             bool isNull = string.IsNullOrEmpty(gateProp.managedReferenceFullTypename);
 
             var menu = new GenericMenu();
-            menu.AddItem(new GUIContent("Нет"), isNull, () => AssignGate(so, path, null));
+            menu.AddItem(new GUIContent("Нет"), isNull, () => AssignGate(path, null));
 
             foreach (var type in TypeCache.GetTypesDerivedFrom<StepGate>())
             {
                 if (type.IsAbstract || type.IsGenericType || type.GetConstructor(Type.EmptyTypes) == null) continue;
 
                 Type captured = type;
-                menu.AddItem(new GUIContent(captured.Name), false, () => AssignGate(so, path, captured));
+                menu.AddItem(new GUIContent(captured.Name), false, () => AssignGate(path, captured));
             }
 
             menu.ShowAsContext();
         }
 
-        private static void AssignGate(SerializedObject so, string path, Type type)
+        private void AssignGate(string path, Type type)
         {
-            so.Update();
-            var prop = so.FindProperty(path);
+            serializedObject.Update();
+            var prop = serializedObject.FindProperty(path);
             if (prop == null) return;
 
             prop.managedReferenceValue = type == null ? null : Activator.CreateInstance(type);
-            so.ApplyModifiedProperties();
-        }
-
-        private SerializedObject GetStepSO(ScriptableObject stepAsset)
-        {
-            int id = stepAsset.GetInstanceID();
-            if (!stepSOCache.TryGetValue(id, out var so) || so == null || !so.targetObject)
-            {
-                so = new SerializedObject(stepAsset);
-                stepSOCache[id] = so;
-            }
-            return so;
+            serializedObject.ApplyModifiedProperties();
         }
 
         #endregion

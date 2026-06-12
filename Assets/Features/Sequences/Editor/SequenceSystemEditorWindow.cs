@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using Extensions.EditorTools;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DioramaEnigma.Sequences.Editor
 {
@@ -29,8 +31,13 @@ namespace DioramaEnigma.Sequences.Editor
 
         private Vector2 scroll;
 
+        [NonSerialized]
         private GUIStyle styleMainButton;
+
+        [NonSerialized]
         private GUIStyle styleGroupHeader;
+
+        [NonSerialized]
         private GUIStyle styleSmall;
 
         [MenuItem("Diorama Enigma/" + WINDOW_NAME, priority = 100)]
@@ -111,10 +118,11 @@ namespace DioramaEnigma.Sequences.Editor
             string label = info.Asset.name;
             string indicator = inspectorOpen ? "▼" : "▶";
 
-            SetBG(EditorToolsConstraints.COLOR_ACCENT);
-            if (GUILayout.Button($"  {indicator}  {label}   ({info.Asset.Steps.Count} шагов)", styleMainButton, GUILayout.Height(SQUARE)))
-                ToggleInspector(id);
-            ResetBG();
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_ACCENT))
+            {
+                if (GUILayout.Button($"  {indicator}  {label}   ({info.Asset.Steps.Count} шагов)", styleMainButton, GUILayout.Height(SQUARE)))
+                    ToggleInspector(id);
+            }
 
             DrawOpenButton(info.Asset);
             DrawPingButton(info.Asset);
@@ -179,20 +187,22 @@ namespace DioramaEnigma.Sequences.Editor
 
         private void DrawOpenButton(Object asset)
         {
-            SetBG(COLOR_OPEN);
-            var content = EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_INSPECT);
-            content.tooltip = "Открыть в инспекторе";
-            if (GUILayout.Button(content, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
-                OpenInInspector(asset);
-            ResetBG();
+            using (new GUIBackgroundColorScope(COLOR_OPEN))
+            {
+                var content = EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_INSPECT);
+                content.tooltip = "Открыть в инспекторе";
+                if (GUILayout.Button(content, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+                    OpenInInspector(asset);
+            }
         }
 
         private void DrawPingButton(Object asset)
         {
-            SetBG(EditorToolsConstraints.COLOR_CYAN);
-            if (GUILayout.Button(EditorToolsConstraints.SYMBOL_PING, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
-                EditorGUIUtility.PingObject(asset);
-            ResetBG();
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_CYAN))
+            {
+                if (GUILayout.Button(EditorToolsConstraints.SYMBOL_PING, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+                    EditorGUIUtility.PingObject(asset);
+            }
         }
 
         /// <summary> Выделить ассет и открыть вкладку инспектора </summary>
@@ -265,9 +275,6 @@ namespace DioramaEnigma.Sequences.Editor
 
             styleSmall ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
         }
-
-        private static void SetBG(Color color) => GUI.backgroundColor = color;
-        private static void ResetBG() => GUI.backgroundColor = Color.white;
 
         private void ToggleInspector(int instanceId)
         {

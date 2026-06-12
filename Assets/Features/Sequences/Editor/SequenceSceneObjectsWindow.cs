@@ -45,8 +45,13 @@ namespace DioramaEnigma.Sequences.Editor
         private Vector2 scroll;
         private double lastRefreshTime;
 
+        [NonSerialized]
         private GUIStyle styleSmall;
+
+        [NonSerialized]
         private GUIStyle styleRunnerButton;
+
+        [NonSerialized]
         private GUIStyle styleOrphanHeader;
 
         [MenuItem("Diorama Enigma/Step Objects in Scene", priority = 101)]
@@ -139,12 +144,13 @@ namespace DioramaEnigma.Sequences.Editor
             EditorGUILayout.BeginHorizontal();
 
             string indicator = expanded ? "▾" : "▸";
-            GUI.backgroundColor = EditorToolsConstraints.COLOR_ACCENT;
-            if (GUILayout.Button($"  {indicator}  ▶ {runner.gameObject.name}   ({sequenceName})", styleRunnerButton, GUILayout.Height(SQUARE)))
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_ACCENT))
             {
-                if (!expandedRunners.Remove(id)) expandedRunners.Add(id);
+                if (GUILayout.Button($"  {indicator}  ▶ {runner.gameObject.name}   ({sequenceName})", styleRunnerButton, GUILayout.Height(SQUARE)))
+                {
+                    if (!expandedRunners.Remove(id)) expandedRunners.Add(id);
+                }
             }
-            GUI.backgroundColor = Color.white;
 
             DrawPingButton(runner.gameObject);
 
@@ -194,13 +200,14 @@ namespace DioramaEnigma.Sequences.Editor
 
         private static void DrawPingButton(GameObject go)
         {
-            GUI.backgroundColor = EditorToolsConstraints.COLOR_CYAN;
-            if (GUILayout.Button(EditorToolsConstraints.SYMBOL_PING, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_CYAN))
             {
-                Selection.activeGameObject = go;
-                EditorGUIUtility.PingObject(go);
+                if (GUILayout.Button(EditorToolsConstraints.SYMBOL_PING, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+                {
+                    Selection.activeGameObject = go;
+                    EditorGUIUtility.PingObject(go);
+                }
             }
-            GUI.backgroundColor = Color.white;
         }
 
         #endregion

@@ -72,59 +72,63 @@ namespace Extensions.EditorTools
 
         private void DrawEditModeControls()
         {
-            SetBG(EditorToolsConstraints.COLOR_GREEN);
-            if (DrawIconButton("SceneAsset Icon", "Active"))
-                PlayCurrentScene();
-
-            SetBG(EditorToolsConstraints.COLOR_GREEN);
-            if (DrawIconButton("PlayButton", "Project"))
-                PlayProject();
-
-            SetBG(EditorToolsConstraints.COLOR_PURPLE);
-            if (DrawIconButton("PlayButton", "Clean Project"))
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_GREEN))
             {
-                PlayerPrefs.DeleteAll();
-                PlayerPrefs.Save();
+                if (DrawIconButton("SceneAsset Icon", "Active"))
+                    PlayCurrentScene();
 
-                JsonSaveLoad.DeleteAllAsync().ContinueWith(PlayProject).Forget();
+                if (DrawIconButton("PlayButton", "Project"))
+                    PlayProject();
             }
 
-            SetBG(EditorToolsConstraints.COLOR_PURPLE);
-            var clearSavesContent = EditorGUIUtility.IconContent("TreeEditor.Trash");
-            clearSavesContent.tooltip = "Удалить сохранения";
-            if (GUILayout.Button(clearSavesContent, 
-                    GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
-                    GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_PURPLE))
             {
-                PlayerPrefs.DeleteAll();
-                PlayerPrefs.Save();
+                if (DrawIconButton("PlayButton", "Clean Project"))
+                {
+                    PlayerPrefs.DeleteAll();
+                    PlayerPrefs.Save();
 
-                JsonSaveLoad.DeleteAllAsync().Forget();
+                    JsonSaveLoad.DeleteAllAsync().ContinueWith(PlayProject).Forget();
+                }
+
+                var clearSavesContent = EditorGUIUtility.IconContent("TreeEditor.Trash");
+                clearSavesContent.tooltip = "Удалить сохранения";
+                if (GUILayout.Button(clearSavesContent,
+                        GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT),
+                        GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                {
+                    PlayerPrefs.DeleteAll();
+                    PlayerPrefs.Save();
+
+                    JsonSaveLoad.DeleteAllAsync().Forget();
+                }
             }
-
-            ResetBG();
         }
 
         private void DrawPlayModeControls()
         {
             if (EditorApplication.isPaused)
             {
-                SetBG(EditorToolsConstraints.COLOR_GREEN);
-                if (DrawIconButton("PlayButton", "Resume"))
-                    EditorApplication.isPaused = false;
+                using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_GREEN))
+                {
+                    if (DrawIconButton("PlayButton", "Resume"))
+                        EditorApplication.isPaused = false;
+                }
             }
             else
             {
-                SetBG(EditorToolsConstraints.COLOR_YELLOW);
-                if (DrawIconButton("PauseButton", "Pause"))
-                    EditorApplication.isPaused = true;
+                using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_YELLOW))
+                {
+                    if (DrawIconButton("PauseButton", "Pause"))
+                        EditorApplication.isPaused = true;
+                }
             }
 
-            SetBG(EditorToolsConstraints.COLOR_RED);
-            if (DrawIconButton("PreMatQuad", "Stop"))
-                EditorApplication.isPlaying = false;
-
-            ResetBG();
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_RED))
+            {
+                if (DrawIconButton("PreMatQuad", "Stop"))
+                    EditorApplication.isPlaying = false;
+            }
         }
 
         private void DrawScenesList()
@@ -154,16 +158,13 @@ namespace Extensions.EditorTools
             bool isActive = activePath == path;
             bool isOpened = IsSceneOpened(path);
 
-            SetBG(isActive ? EditorToolsConstraints.COLOR_LIGHT_GREEN : Color.white);
-
+            using (new GUIBackgroundColorScope(isActive ? EditorToolsConstraints.COLOR_LIGHT_GREEN : Color.white))
             using (new EditorGUILayout.HorizontalScope())
             {
                 DrawSceneMainButton(path, name, isActive);
                 DrawSceneAdditiveButtons(path, isOpened, isActive, activePath);
                 DrawScenePingButton(path);
             }
-
-            ResetBG();
         }
 
         private void DrawSceneMainButton(string path, string name, bool isActive)
@@ -189,33 +190,36 @@ namespace Extensions.EditorTools
 
             if (canOpenAdditive)
             {
-                SetBG(EditorToolsConstraints.COLOR_LIGHT_GREEN);
-                if (GUILayout.Button("+", 
-                        GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
-                        GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                    ToggleAdditiveScene(path, false);
+                using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_LIGHT_GREEN))
+                {
+                    if (GUILayout.Button("+",
+                            GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT),
+                            GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                        ToggleAdditiveScene(path, false);
+                }
             }
 
             if (canCloseAdditive)
             {
-                SetBG(EditorToolsConstraints.COLOR_LIGHT_RED);
-                if (GUILayout.Button("−", 
-                        GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
-                        GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                    ToggleAdditiveScene(path, true);
+                using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_LIGHT_RED))
+                {
+                    if (GUILayout.Button("−",
+                            GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT),
+                            GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                        ToggleAdditiveScene(path, true);
+                }
             }
-
-            ResetBG();
         }
 
         private void DrawScenePingButton(string path)
         {
-            SetBG(EditorToolsConstraints.COLOR_CYAN);
-            if (GUILayout.Button("●", 
-                    GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
-                    GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
-                PingScene(path);
-            ResetBG();
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_CYAN))
+            {
+                if (GUILayout.Button("●",
+                        GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT),
+                        GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                    PingScene(path);
+            }
         }
 
         #endregion
@@ -350,9 +354,6 @@ namespace Extensions.EditorTools
 
             return clicked;
         }
-
-        private static void SetBG(Color color) => GUI.backgroundColor = color;
-        private static void ResetBG() => GUI.backgroundColor = Color.white;
 
         #endregion
     }

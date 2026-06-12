@@ -23,7 +23,10 @@ namespace Extensions.EditorTools
         [SerializeField]
         private BookmarksDataBase dataBase;
 
+        [NonSerialized]
         private GUIStyle bookmarkStyle;
+
+        [NonSerialized]
         private GUIStyle selectedBookmarkStyle;
         private Vector2 scroll = Vector2.zero;
         
@@ -77,14 +80,14 @@ namespace Extensions.EditorTools
         private void DrawAddButton()
         {
             Object selected = Selection.activeObject;
-            GUI.enabled = selected != null;
 
-            if (GUILayout.Button("+ Добавить выбранный объект +", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            using (new EditorGUI.DisabledScope(selected == null))
             {
-                AddBookmark(selected);
+                if (GUILayout.Button("+ Добавить выбранный объект +", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                {
+                    AddBookmark(selected);
+                }
             }
-
-            GUI.enabled = true;
         }
 
         #endregion
@@ -174,22 +177,18 @@ namespace Extensions.EditorTools
         {
             Object resolved = ResolveUnityObject(data);
 
-            Color prevColor = GUI.backgroundColor;
-            GUI.backgroundColor = GetRowColor(data, resolved);
+            using (new GUIBackgroundColorScope(GetRowColor(data, resolved)))
+            using (new EditorGUILayout.HorizontalScope(GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            {
+                DrawIcon(resolved);
 
-            EditorGUILayout.BeginHorizontal(GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
+                bool isSelected = resolved != null && resolved == selected;
 
-            DrawIcon(resolved);
-
-            bool isSelected = resolved != null && resolved == selected;
-
-            DrawNameButton(data, resolved, isSelected);
-            DrawOpenFolderButtonIfNeeded(resolved);
-            DrawSceneActionIfNeeded(data);
-            DrawRemoveButton(data);
-
-            EditorGUILayout.EndHorizontal();
-            GUI.backgroundColor = prevColor;
+                DrawNameButton(data, resolved, isSelected);
+                DrawOpenFolderButtonIfNeeded(resolved);
+                DrawSceneActionIfNeeded(data);
+                DrawRemoveButton(data);
+            }
         }
 
         private void DrawIcon(Object resolved)
@@ -203,15 +202,14 @@ namespace Extensions.EditorTools
 
         private void DrawNameButton(BookmarkData data, Object resolved, bool isSelected)
         {
-            GUI.enabled = resolved != null;
-
-            if (GUILayout.Button(data.Name, isSelected ? selectedBookmarkStyle : bookmarkStyle))
+            using (new EditorGUI.DisabledScope(resolved == null))
             {
-                Selection.activeObject = resolved;
-                EditorGUIUtility.PingObject(resolved);
+                if (GUILayout.Button(data.Name, isSelected ? selectedBookmarkStyle : bookmarkStyle))
+                {
+                    Selection.activeObject = resolved;
+                    EditorGUIUtility.PingObject(resolved);
+                }
             }
-
-            GUI.enabled = true;
         }
 
         private void DrawOpenFolderButtonIfNeeded(Object resolved)
@@ -226,17 +224,15 @@ namespace Extensions.EditorTools
                 return;
             }
 
-            Color prevColor = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(1f, 0.52f, 0.05f);
-
-            GUIContent content = EditorGUIUtility.IconContent("FolderOpened Icon");
-
-            if (GUILayout.Button(content, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            using (new GUIBackgroundColorScope(new Color(1f, 0.52f, 0.05f)))
             {
-                OpenProjectFolder(assetPath);
-            }
+                GUIContent content = EditorGUIUtility.IconContent("FolderOpened Icon");
 
-            GUI.backgroundColor = prevColor;
+                if (GUILayout.Button(content, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                {
+                    OpenProjectFolder(assetPath);
+                }
+            }
         }
 
         private void DrawSceneActionIfNeeded(BookmarkData data)
@@ -249,30 +245,28 @@ namespace Extensions.EditorTools
 
             if (!IsSceneLoaded(data.ScenePath))
             {
-                GUI.backgroundColor = EditorToolsConstraints.COLOR_YELLOW;
-
-                if (GUILayout.Button("Открыть сцену", GUILayout.Width(110), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_YELLOW))
                 {
-                    if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                    if (GUILayout.Button("Открыть сцену", GUILayout.Width(110), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
                     {
-                        EditorSceneManager.OpenScene(data.ScenePath);
+                        if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                        {
+                            EditorSceneManager.OpenScene(data.ScenePath);
+                        }
                     }
                 }
-
-                GUI.backgroundColor = Color.white;
             }
         }
 
         private void DrawRemoveButton(BookmarkData data)
         {
-            GUI.backgroundColor = EditorToolsConstraints.COLOR_RED;
-
-            if (GUILayout.Button("✕", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_RED))
             {
-                dataBase.Remove(data);
+                if (GUILayout.Button("✕", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                {
+                    dataBase.Remove(data);
+                }
             }
-
-            GUI.backgroundColor = Color.white;
         }
 
         #endregion
