@@ -38,7 +38,10 @@ namespace DioramaEnigma.Sequences
             public Action<bool> UnlockHandler;
         }
 
+        /// <summary> Шаги текущей линейной группы (гейтят прогресс) </summary>
         private readonly List<ActiveStep> activeSteps = new();
+        /// <summary> Always-доступные шаги: живут весь прогон, их эффекты срабатывают при завершении в любой момент, прогресс не гейтят </summary>
+        private readonly List<ActiveStep> ambientSteps = new();
 
         #region MonoBehaviour
 
@@ -112,7 +115,7 @@ namespace DioramaEnigma.Sequences
             if (!resuming)
                 ResetAllSteps();
 
-            ActivateAlwaysAvailableGroups();
+            ActivateAmbientSteps();
 
             currentGroupIndex = -1;
             isCompleted = false;
@@ -123,6 +126,7 @@ namespace DioramaEnigma.Sequences
         public void StopSequence()
         {
             DeactivateActiveSteps();
+            DeactivateAmbientSteps();
 
             if (sequence == null) return;
             foreach (var entry in sequence.Steps)
@@ -154,7 +158,7 @@ namespace DioramaEnigma.Sequences
             StopSequence();
             ResetAllSteps();
 
-            ActivateAlwaysAvailableGroups();
+            ActivateAmbientSteps();
 
             currentGroupIndex = -1;
             isCompleted = false;
@@ -168,33 +172,64 @@ namespace DioramaEnigma.Sequences
 
             StopSequence();
             isCompleted = false;
-            ActivateAlwaysAvailableGroups();
+            ActivateAmbientSteps();
             ResetGroupSteps(currentGroupIndex);
             ActivateGroup(currentGroupIndex);
         }
 
         #region Internal
 
-        private void ActivateAlwaysAvailableGroups()
+        /// <summary>
+        /// Активировать Always-доступные шаги как «фоновые»
+        /// </summary>
+        private void ActivateAmbientSteps()
         {
             foreach (var entry in sequence.Steps)
             {
                 if (entry?.Step == null) continue;
+                if (!IsAmbientGroup(entry.GroupIndex)) continue;
 
-                if (sequence.AvailabilityOf(entry.GroupIndex) == GroupAvailability.Always)
-                    entry.Step.SetActive(true);
+                var active = new ActiveStep { Entry = entry };
+                active.CompletionHandler = completed => OnAmbientCompletionChanged(active, completed);
+                active.UnlockHandler = unlocked => OnAmbientUnlockChanged(active, unlocked);
+                ambientSteps.Add(active);
+
+                entry.Step.onCompletionChanged += active.CompletionHandler;
+                entry.Step.onUnlockChanged += active.UnlockHandler;
+                entry.Step.SetActive(true, entry.Gates);
             }
         }
+
+        private void OnAmbientCompletionChanged(ActiveStep active, bool completed) =>
+            RunMatchingEffects(active.Entry, completed ? TriggerKind.Completed : TriggerKind.NotCompleted);
+
+        private void OnAmbientUnlockChanged(ActiveStep active, bool unlocked) =>
+            RunMatchingEffects(active.Entry, unlocked ? TriggerKind.Unlocked : TriggerKind.Locked);
+
+        private void DeactivateAmbientSteps()
+        {
+            foreach (var active in ambientSteps)
+            {
+                Unsubscribe(active);
+                active.Entry?.Step?.SetActive(false);
+            }
+
+            ambientSteps.Clear();
+        }
+
+        private bool IsAmbientGroup(int groupIndex) =>
+            sequence.AvailabilityOf(groupIndex) == GroupAvailability.Always;
 
         private void AdvanceToNextGroup()
         {
             int maxGroup = GetMaxGroupIndex();
 
+            // Пропускаем пустые и Always-группы (последние живут фоном, вне линейного порядка)
             do
             {
                 currentGroupIndex++;
             }
-            while (currentGroupIndex <= maxGroup && !GroupHasSteps(currentGroupIndex));
+            while (currentGroupIndex <= maxGroup && (!GroupHasSteps(currentGroupIndex) || IsAmbientGroup(currentGroupIndex)));
 
             if (currentGroupIndex > maxGroup)
             {
@@ -231,7 +266,7 @@ namespace DioramaEnigma.Sequences
 
                 entry.Step.onCompletionChanged += active.CompletionHandler;
                 entry.Step.onUnlockChanged += active.UnlockHandler;
-                entry.Step.SetActive(true);
+                entry.Step.SetActive(true, entry.Gates);
             }
 
             CheckGroupCompletion();
@@ -285,7 +320,7 @@ namespace DioramaEnigma.Sequences
                 RunMatchingEffects(entry, TriggerKind.Completed);
 
                 if (interactable)
-                    entry.Step.SetActive(true);
+                    entry.Step.SetActive(true, entry.Gates);
             }
         }
 
