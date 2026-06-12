@@ -16,6 +16,12 @@ namespace DioramaEnigma.Sequences
     {
         /// <summary> Точка фиксации (опционально): объект снапается сюда при попадании в зону </summary>
         public Transform Anchor => anchor;
+        /// <summary> Снапить и поворот объекта к точке фиксации </summary>
+        public bool SnapRotation => snapRotation;
+        /// <summary> Плавность присоединения, сек (0 — мгновенно) </summary>
+        public float SnapSmoothTime => snapSmoothTime;
+        /// <summary> Засчитывать ли физический контакт объекта с зоной как дроп (объект сам закатился) </summary>
+        public bool AcceptsPhysicsDrop => acceptPhysicsDrop;
         /// <summary> Шаг, который завершается объектом с тем же шагом (из <see cref="StepReference"/> зоны; null — зона без завершения) </summary>
         public AbstractSequenceStep Step => StepRef != null ? StepRef.Step : null;
 
@@ -23,14 +29,16 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private Transform anchor;
         [Tooltip("Снапить и поворот объекта к точке фиксации")]
         [SerializeField] private bool snapRotation = true;
-        [Tooltip("Плавность присоединения")]
+        [Tooltip("Плавность присоединения, сек (0 — мгновенно)")]
         [SerializeField] private float snapSmoothTime = 0.08f;
-        
+
         [Header("Совместимость"), Space]
         [Tooltip("Принимать «чужие» объекты (с другим шагом) для снапа без завершения шага — если их группа совпадает с группой зоны")]
-        [SerializeField] private bool acceptForeign;
+        [SerializeField] private bool acceptForeign = false;
         [Tooltip("Группа зоны: какие объекты сюда подходят (кабели↔розетки, цветы↔горшки). Совместимы при равенстве группы")]
         [SerializeField] private DragGroup group;
+        [Tooltip("Засчитывать дроп при физическом касании объекта с зоной (требуется триггер-коллайдер)")]
+        [SerializeField] private bool acceptPhysicsDrop = false;
 
         private StepReference stepRefCache;
         private bool stepRefResolved;
@@ -51,21 +59,38 @@ namespace DioramaEnigma.Sequences
         /// <summary> Принимает ли зона «чужой» объект указанной группы (для снапа без завершения) </summary>
         public bool AcceptsForeignGroup(DragGroup other) => acceptForeign && group != null && group == other;
 
-        /// <summary>
-        /// Разместить объект в зоне: снап к точке фиксации, иначе — в <paramref name="fallbackPosition"/>
-        /// </summary>
+        /// <summary> Целевая поза размещения: точка фиксации, иначе — <paramref name="fallbackPosition"/> </summary>
+        public void GetSnapTarget(Vector3 fallbackPosition, out Vector3 position, out Quaternion rotation, out bool applyRotation)
+        {
+            if (anchor != null)
+            {
+                position = anchor.position;
+                rotation = anchor.rotation;
+                applyRotation = snapRotation;
+            }
+            else
+            {
+                position = fallbackPosition;
+                rotation = Quaternion.identity;
+                applyRotation = false;
+            }
+        }
+
+        /// <summary> Мгновенно разместить объект в зоне (для восстановления из сейва) </summary>
         public void Place(Transform dragged, Vector3 fallbackPosition)
         {
-            if (anchor == null)
-            {
-                dragged.position = fallbackPosition;
-                return;
-            }
+            GetSnapTarget(fallbackPosition, out var position, out var rotation, out bool applyRotation);
 
-            if (snapRotation) 
-                dragged.SetPositionAndRotation(anchor.position, anchor.rotation);
-            else 
-                dragged.position = anchor.position;
+            if (applyRotation) dragged.SetPositionAndRotation(position, rotation);
+            else dragged.position = position;
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            if (!acceptPhysicsDrop) return;
+
+            var draggable = other.GetComponentInParent<DraggableInteractable>();
+            if (draggable != null) draggable.TryPhysicsCommit(this);
         }
     }
 }

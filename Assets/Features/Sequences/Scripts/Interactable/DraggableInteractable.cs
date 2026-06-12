@@ -33,6 +33,9 @@ namespace DioramaEnigma.Sequences
         /// <summary> Как зона принимает этот объект </summary>
         private enum ZoneAcceptance { Reject, Snap, Complete }
 
+        private const float SnapPositionEpsilonSqr = 1e-6f;
+        private const float SnapAngleEpsilon = 0.1f;
+
         private Camera mainCamera;
         private Collider cachedCollider;
         private Rigidbody body;
@@ -46,14 +49,23 @@ namespace DioramaEnigma.Sequences
         private Vector2 pointerScreen;
         private Vector3 followVelocity;
 
+        private bool snapping;
+        private Vector3 snapTargetPos;
+        private Quaternion snapTargetRot;
+        private bool snapApplyRot;
+        private float snapTime;
+        private Vector3 snapVelocity;
+
         protected override void Awake()
         {
             base.Awake();
             mainCamera = Camera.main;
             cachedCollider = GetComponent<Collider>() ?? GetComponentInChildren<Collider>();
             body = GetComponent<Rigidbody>();
-            wasKinematic = body.isKinematic;
+            if (body != null) wasKinematic = body.isKinematic;
         }
+
+        private void Start() => RestoreIfCommitted();
 
         public void OnBeginDrag(PointerEventData eventData)
         {
@@ -69,13 +81,11 @@ namespace DioramaEnigma.Sequences
             startPosition = transform.position;
             startRotation = transform.rotation;
 
-            if (body != null)
-            {
-                body.isKinematic = true;
-            }
+            if (body != null) body.isKinematic = true;
 
             dragging = true;
             finished = false;
+            snapping = false;
             pointerScreen = eventData.position;
             followVelocity = Vector3.zero;
 
@@ -91,7 +101,7 @@ namespace DioramaEnigma.Sequences
             if (commitMode != DropCommitMode.OnEnter) return;
 
             if (TryFindZone(pointerScreen, out var zone, out var acceptance))
-                CommitToZone(zone, acceptance);
+                CommitToZone(zone, acceptance, ProjectLanding());
         }
 
         public void OnEndDrag(PointerEventData eventData)
@@ -101,16 +111,26 @@ namespace DioramaEnigma.Sequences
             pointerScreen = eventData.position;
 
             if (TryFindZone(pointerScreen, out var zone, out var acceptance))
-                CommitToZone(zone, acceptance);
+                CommitToZone(zone, acceptance, ProjectLanding());
             else
                 ReleaseFree();
         }
 
+        /// <summary> Дроп по физическому контакту: объект сам закатился в зону (вызывает зона) </summary>
+        public void TryPhysicsCommit(InteractableDropZone zone)
+        {
+            if (dragging || snapping) return;
+
+            var acceptance = Classify(zone);
+            if (acceptance == ZoneAcceptance.Reject) return;
+
+            CommitToZone(zone, acceptance, transform.position);
+        }
+
         private void Update()
         {
-            if (!dragging || finished) return;
-
-            FollowPointer();
+            if (dragging && !finished) FollowPointer();
+            else if (snapping) SnapStep();
         }
 
         #region Internal
@@ -125,6 +145,26 @@ namespace DioramaEnigma.Sequences
             smoothed += fwd * Vector3.Dot(target - smoothed, fwd);
 
             transform.position = smoothed;
+        }
+
+        /// <summary> Плавно довести объект до точки фиксации (как подхват), затем завершить снап </summary>
+        private void SnapStep()
+        {
+            transform.position = Vector3.SmoothDamp(transform.position, snapTargetPos, ref snapVelocity, snapTime);
+
+            if (snapApplyRot)
+            {
+                float t = snapTime <= 0f ? 1f : 1f - Mathf.Exp(-Time.deltaTime / snapTime);
+                transform.rotation = Quaternion.Slerp(transform.rotation, snapTargetRot, t);
+            }
+
+            bool posDone = (transform.position - snapTargetPos).sqrMagnitude < SnapPositionEpsilonSqr;
+            bool rotDone = !snapApplyRot || Quaternion.Angle(transform.rotation, snapTargetRot) < SnapAngleEpsilon;
+            if (!posDone || !rotDone) return;
+
+            transform.position = snapTargetPos;
+            if (snapApplyRot) transform.rotation = snapTargetRot;
+            snapping = false;
         }
 
         /// <summary> Поднять объект на глубину плоскости драга, не меняя экранную позицию </summary>
@@ -169,24 +209,38 @@ namespace DioramaEnigma.Sequences
             return ZoneAcceptance.Reject;
         }
 
-        private void CommitToZone(InteractableDropZone zone, ZoneAcceptance acceptance)
+        private void CommitToZone(InteractableDropZone zone, ZoneAcceptance acceptance, Vector3 fallback)
         {
             finished = true;
             dragging = false;
 
-            zone.Place(transform, ProjectLanding());
-
             if (zone.Anchor != null)
+            {
                 if (body != null) body.isKinematic = true;
+                StartSnap(zone);
+            }
             else
+            {
+                snapping = false;
+                zone.Place(transform, fallback);
                 RestoreBody();
+            }
 
             ApplyCompletion(acceptance == ZoneAcceptance.Complete);
+        }
+
+        private void StartSnap(InteractableDropZone zone)
+        {
+            zone.GetSnapTarget(transform.position, out snapTargetPos, out snapTargetRot, out snapApplyRot);
+            snapTime = zone.SnapSmoothTime;
+            snapVelocity = Vector3.zero;
+            snapping = true;
         }
 
         private void ReleaseFree()
         {
             finished = true;
+            snapping = false;
 
             switch (releaseMode)
             {
@@ -204,6 +258,27 @@ namespace DioramaEnigma.Sequences
             RestoreBody();
 
             ApplyCompletion(false);
+        }
+
+        /// <summary> Восстановить «вставленное» состояние из сейва: если шаг завершён — мгновенно усадить в его зону </summary>
+        private void RestoreIfCommitted()
+        {
+            if (State == null || !State.IsCompleted) return;
+
+            var zone = FindZoneForStep();
+            if (zone == null || zone.Anchor == null) return; // без точки фиксации позицию не восстановить
+
+            if (body != null) body.isKinematic = true;
+            zone.Place(transform, transform.position);
+            finished = true;
+        }
+
+        private InteractableDropZone FindZoneForStep()
+        {
+            foreach (var zone in FindObjectsByType<InteractableDropZone>(FindObjectsSortMode.None))
+                if (zone.Step == State) return zone;
+
+            return null;
         }
 
         /// <summary> Привести шаг к завершённому/незавершённому (по целевому значению шага) </summary>
