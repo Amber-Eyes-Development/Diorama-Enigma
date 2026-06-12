@@ -22,6 +22,8 @@ namespace DioramaEnigma.Sequences
         public bool InteractableAfterCompletion => interactableAfterCompletion;
         /// <summary> Эффекты шага: каждый со своим триггером (событием шага) </summary>
         public IReadOnlyList<EffectEntry> Effects => effects;
+        /// <summary> Условия доступа к изменению состояния шага (помимо порядка групп): все должны быть выполнены </summary>
+        public StepGate[] Gates => gates;
 
         [SerializeField] private AbstractSequenceStep step;
         [Tooltip("Шаги с одинаковым GroupIndex активируются одновременно. " +
@@ -34,5 +36,7 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private bool interactableAfterCompletion;
         [Tooltip("Эффекты шага: каждый со своим триггером (событием шага)")]
         [SerializeField] private EffectEntry[] effects = Array.Empty<EffectEntry>();
+        [Tooltip("Условия доступа к изменению состояния шага (помимо порядка групп): все должны быть выполнены")]
+        [SerializeReference] private StepGate[] gates = Array.Empty<StepGate>();
     }
 }

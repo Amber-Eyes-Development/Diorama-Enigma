@@ -1,3 +1,4 @@
+using Extensions.Attributes;
 using Extensions.Data;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -26,6 +27,8 @@ namespace DioramaEnigma.Sequences
         public bool CompletionState => completionState;
         /// <summary> Глобальный профиль сохранения, иначе — отдельно для активного профиля </summary>
         public bool IsGlobal => isGlobal;
+        /// <summary> Идёт ли кулдаун переключения прямо сейчас (значение менять нельзя) </summary>
+        public bool IsOnCooldown => Application.isPlaying && Time.time - lastChangeTime < toggleCooldown;
 
         /// <inheritdoc/>
         public override bool IsCompleted => Value == completionState;
@@ -43,22 +46,31 @@ namespace DioramaEnigma.Sequences
         [FormerlySerializedAs("completedWhen")]
         [SerializeField] private bool completionState = true;
 
+        [Header("Переключение"), Space]
+        [Tooltip("Защита от дребезга: сколько секунд после смены значения нельзя менять его снова")]
+        [SoftRange(0f, 1f, 1)]
+        [SerializeField] private float toggleCooldown = 0.5f;
+
         private const string GLOBAL_PROFILE = "global values";
 
         [System.NonSerialized] private bool runtimeValue;
+        [System.NonSerialized] private float lastChangeTime;
         private bool isLoaded;
 
         private string SaveProfile => isGlobal ? GLOBAL_PROFILE : null;
 
-        /// <summary> Установить значение (если шаг разблокирован) </summary>
-        public void SetValue(bool newValue)
+        /// <summary> Установить значение (если шаг разблокирован и прошёл кулдаун переключения) </summary>
+        /// <param name="bypassCooldown">Пропустить кулдаун (для физических событий — не пользовательского дребезга)</param>
+        public void SetValue(bool newValue, bool bypassCooldown = false)
         {
             if (!IsUnlocked) return;
+            if (!bypassCooldown && IsOnCooldown) return;
 
             LoadIfNeeded();
             if (runtimeValue == newValue) return;
 
             ApplyValue(newValue);
+            if (!bypassCooldown) lastChangeTime = Application.isPlaying ? Time.time : 0f;
         }
 
         /// <summary> Принудительно установить значение, минуя проверку разблокировки (для оркестрации/эффектов) </summary>
@@ -84,6 +96,7 @@ namespace DioramaEnigma.Sequences
         {
             isLoaded = false;
             runtimeValue = defaultValue;
+            lastChangeTime = float.NegativeInfinity;
             base.OnEnable();
         }
 

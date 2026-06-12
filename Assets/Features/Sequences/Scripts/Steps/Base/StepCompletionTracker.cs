@@ -27,24 +27,37 @@ namespace DioramaEnigma.Sequences
         private bool lastCompleted;
         private bool lastUnlocked;
 
-        /// <summary> Инициализировать исходную завершённость/необратимость и гейты (вызывать в OnEnable шага) </summary>
-        public void Initialize(bool completed, bool irreversible, StepGate[] gates)
+        /// <summary> Инициализировать исходную завершённость/необратимость (вызывать в OnEnable шага). Гейты приходят при активации </summary>
+        public void Initialize(bool completed, bool irreversible)
         {
-            this.gates = gates;
+            gates = null;
             isActive = false;
             this.irreversible = irreversible;
             lastCompleted = completed;
             lastUnlocked = IsUnlocked;
         }
 
-        /// <summary> Активировать/деактивировать изменение состояния. Возвращает true, если активность изменилась </summary>
-        public bool SetActive(bool active)
+        /// <summary>
+        /// Активировать/деактивировать изменение состояния. При активации принимает гейты записи шага
+        /// (наблюдение начинается/прекращается здесь). Возвращает true, если активность изменилась.
+        /// </summary>
+        public bool SetActive(bool active, StepGate[] gates)
         {
             bool changed = isActive != active;
             if (changed)
             {
-                isActive = active;
-                ObserveGate(active);
+                if (active)
+                {
+                    this.gates = gates;
+                    isActive = true;
+                    ObserveGate(true);
+                }
+                else
+                {
+                    ObserveGate(false);
+                    isActive = false;
+                    this.gates = null;
+                }
             }
 
             NotifyUnlockIfChanged();

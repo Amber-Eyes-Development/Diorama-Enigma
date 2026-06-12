@@ -32,7 +32,6 @@ namespace DioramaEnigma.Sequences
             base.Awake();
             if (actions == null) return;
 
-            // Вьюшка — единоличный распорядитель проигрывания: гасим авто-старт целей (до их собственного Awake, см. порядок выполнения)
             foreach (var action in actions)
                 action?.PrepareTarget();
         }

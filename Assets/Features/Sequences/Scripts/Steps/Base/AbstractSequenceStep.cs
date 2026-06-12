@@ -36,15 +36,16 @@ namespace DioramaEnigma.Sequences
         [Header("Шаг"), Space]
         [Tooltip("Необратимый: после завершения состояние нельзя изменить обратно")]
         [SerializeField] private bool irreversible;
-        [Tooltip("Условия доступа к изменению состояния (помимо порядка групп): все должны быть выполнены. Опционально")]
-        [SerializeReference] private StepGate[] gates = Array.Empty<StepGate>();
 
         private readonly StepCompletionTracker tracker = new();
 
-        /// <summary> Активировать/деактивировать шаг (раннер открывает изменение состояния) </summary>
-        public void SetActive(bool active)
+        /// <summary>
+        /// Активировать/деактивировать шаг (раннер открывает изменение состояния). Гейты доступа
+        /// хранятся на записи шага (<see cref="StepEntry"/>) и передаются раннером при активации.
+        /// </summary>
+        public void SetActive(bool active, StepGate[] gates = null)
         {
-            if (tracker.SetActive(active))
+            if (tracker.SetActive(active, gates))
                 OnActiveChanged(active);
         }
 
@@ -54,7 +55,7 @@ namespace DioramaEnigma.Sequences
         /// <summary> Сбросить состояние шага к исходному </summary>
         public abstract void ResetState();
 
-        protected virtual void OnEnable() => tracker.Initialize(IsCompleted, irreversible, gates);
+        protected virtual void OnEnable() => tracker.Initialize(IsCompleted, irreversible);
 
         /// <summary> Хук смены активности для наследников (напр. композит активирует детей) </summary>
         protected virtual void OnActiveChanged(bool active) { }
