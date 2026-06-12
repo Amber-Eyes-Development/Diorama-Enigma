@@ -3,6 +3,7 @@ using UnityEditor.SceneManagement;
 using System.IO;
 using Cysharp.Threading.Tasks;
 using Extensions.Data;
+using Extensions.Log;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -72,20 +73,33 @@ namespace Extensions.EditorTools
         private void DrawEditModeControls()
         {
             SetBG(EditorToolsConstraints.COLOR_GREEN);
-            if (GUILayout.Button("▶ Active", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            if (DrawIconButton("SceneAsset Icon", "Active"))
                 PlayCurrentScene();
 
             SetBG(EditorToolsConstraints.COLOR_GREEN);
-            if (GUILayout.Button("▶ Project", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            if (DrawIconButton("PlayButton", "Project"))
                 PlayProject();
 
             SetBG(EditorToolsConstraints.COLOR_PURPLE);
-            if (GUILayout.Button("▶ Clean Project", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            if (DrawIconButton("PlayButton", "Clean Project"))
             {
                 PlayerPrefs.DeleteAll();
                 PlayerPrefs.Save();
 
                 JsonSaveLoad.DeleteAllAsync().ContinueWith(PlayProject).Forget();
+            }
+
+            SetBG(EditorToolsConstraints.COLOR_PURPLE);
+            var clearSavesContent = EditorGUIUtility.IconContent("TreeEditor.Trash");
+            clearSavesContent.tooltip = "Удалить сохранения";
+            if (GUILayout.Button(clearSavesContent, 
+                    GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
+                    GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            {
+                PlayerPrefs.DeleteAll();
+                PlayerPrefs.Save();
+
+                JsonSaveLoad.DeleteAllAsync().Forget();
             }
 
             ResetBG();
@@ -96,18 +110,18 @@ namespace Extensions.EditorTools
             if (EditorApplication.isPaused)
             {
                 SetBG(EditorToolsConstraints.COLOR_GREEN);
-                if (GUILayout.Button("▶ Resume", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                if (DrawIconButton("PlayButton", "Resume"))
                     EditorApplication.isPaused = false;
             }
             else
             {
                 SetBG(EditorToolsConstraints.COLOR_YELLOW);
-                if (GUILayout.Button("⏸ Pause", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                if (DrawIconButton("PauseButton", "Pause"))
                     EditorApplication.isPaused = true;
             }
 
             SetBG(EditorToolsConstraints.COLOR_RED);
-            if (GUILayout.Button("■ Stop", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            if (DrawIconButton("PreMatQuad", "Stop"))
                 EditorApplication.isPlaying = false;
 
             ResetBG();
@@ -176,14 +190,18 @@ namespace Extensions.EditorTools
             if (canOpenAdditive)
             {
                 SetBG(EditorToolsConstraints.COLOR_LIGHT_GREEN);
-                if (GUILayout.Button("+", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                if (GUILayout.Button("+", 
+                        GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
+                        GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
                     ToggleAdditiveScene(path, false);
             }
 
             if (canCloseAdditive)
             {
                 SetBG(EditorToolsConstraints.COLOR_LIGHT_RED);
-                if (GUILayout.Button("−", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                if (GUILayout.Button("−", 
+                        GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
+                        GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
                     ToggleAdditiveScene(path, true);
             }
 
@@ -193,7 +211,9 @@ namespace Extensions.EditorTools
         private void DrawScenePingButton(string path)
         {
             SetBG(EditorToolsConstraints.COLOR_CYAN);
-            if (GUILayout.Button("●", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+            if (GUILayout.Button("●", 
+                    GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), 
+                    GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
                 PingScene(path);
             ResetBG();
         }
@@ -239,7 +259,7 @@ namespace Extensions.EditorTools
 
             if (!activeScene.IsValid() || string.IsNullOrEmpty(activeScene.path))
             {
-                Debug.LogError("Current scene is not valid or not saved! Save it before playing.");
+                ServiceDebug.LogError("Current scene is not valid or not saved! Save it before playing.");
                 return;
             }
 
@@ -258,7 +278,7 @@ namespace Extensions.EditorTools
                 // Нельзя закрыть последнюю сцену или активную сцену
                 if (SceneManager.sceneCount <= 1 || scene == SceneManager.GetActiveScene())
                 {
-                    Debug.LogWarning("Cannot close active or last open scene!");
+                    ServiceDebug.LogWarning("Cannot close active or last open scene!");
                     return;
                 }
 
@@ -314,6 +334,21 @@ namespace Extensions.EditorTools
             var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
             if (sceneAsset != null)
                 EditorGUIUtility.PingObject(sceneAsset);
+        }
+
+        private static bool DrawIconButton(string iconName, string text)
+        {
+            var content = new GUIContent("  " + text);
+            var rect = GUILayoutUtility.GetRect(content, GUI.skin.button, GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
+            bool clicked = GUI.Button(rect, content);
+
+            float iconSize = EditorToolsConstraints.BASE_ELEMENT_HEIGHT - 8;
+            var iconRect = new Rect(rect.x + 4, rect.y + (rect.height - iconSize) / 2, iconSize, iconSize);
+            var icon = EditorGUIUtility.IconContent(iconName).image;
+            if (icon != null)
+                GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
+
+            return clicked;
         }
 
         private static void SetBG(Color color) => GUI.backgroundColor = color;
