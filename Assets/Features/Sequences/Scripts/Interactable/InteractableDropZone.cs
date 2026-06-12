@@ -92,5 +92,13 @@ namespace DioramaEnigma.Sequences
             var draggable = other.GetComponentInParent<DraggableInteractable>();
             if (draggable != null) draggable.TryPhysicsCommit(this);
         }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (!acceptPhysicsDrop) return;
+
+            var draggable = other.GetComponentInParent<DraggableInteractable>();
+            if (draggable != null) draggable.OnPhysicsExitedZone(this);
+        }
     }
 }
