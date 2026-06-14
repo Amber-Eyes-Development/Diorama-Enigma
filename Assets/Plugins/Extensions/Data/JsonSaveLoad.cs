@@ -17,6 +17,8 @@ namespace Extensions.Data
     /// <remarks>
     /// Для хранения игровых данных и структур настроек
     /// Поддерживает как синхронный API (через кэш), так и асинхронный
+    /// Save копит изменения и пишет их на диск батчем (AutoFlushInterval); FlushAsync дописывает всё немедленно
+    /// Все публичные методы должны вызываться с главного потока Unity
     /// </remarks>
     /// </summary>
     public static class JsonSaveLoad
@@ -61,9 +63,14 @@ namespace Extensions.Data
         /// Событие ошибки процесса загрузки
         /// </summary>
         public static event Action<string, Exception> onLoadError;
-        
+
+        /// <summary>
+        /// Событие смены состояния процесса сохранения (true — есть несохранённые данные или идёт запись)
+        /// </summary>
+        public static event Action<bool> onSavingStateChanged;
+
         #endregion
-        
+
         private static readonly JsonSerializerSettings serializerSettings = new JsonSerializerSettings
         {
             ReferenceLoopHandling = ReferenceLoopHandling.Error,
@@ -71,18 +78,53 @@ namespace Extensions.Data
             TypeNameHandling = TypeNameHandling.None,
             ContractResolver = new DefaultContractResolver()
         };
-        
+
         private static int savingCount;
         private static readonly Dictionary<string, SemaphoreSlim> fileLocks = new Dictionary<string, SemaphoreSlim>();
-        
+
         // Кэш загруженных данных для синхронного API
         private static readonly Dictionary<string, object> dataCache = new Dictionary<string, object>();
         private static readonly Dictionary<string, UniTask> loadingTasks = new Dictionary<string, UniTask>();
 
+        // Контейнеры профилей, уже поднятые с диска: флаш мержит в них и пишет их же, не перечитывая файл
+        private static readonly Dictionary<string, MultiSaveContainer> containerCache = new Dictionary<string, MultiSaveContainer>();
+
+        // Изменённые ключи, ожидающие записи на диск (профиль → ключ → запись)
+        private static readonly Dictionary<string, Dictionary<string, DirtyRecord>> dirtyByProfile =
+            new Dictionary<string, Dictionary<string, DirtyRecord>>();
+
+        private static bool isAutoFlushScheduled;
+        private static bool lastSavingState;
+        private static bool isQuitFlushStarted;
+
         /// <summary>
-        /// Состояние процесса сохранения
+        /// Состояние процесса сохранения: есть несохранённые изменения или идёт запись на диск
         /// </summary>
-        public static bool IsSaving => savingCount > 0;
+        public static bool IsSaving => savingCount > 0 || HasPendingSaves;
+
+        /// <summary>
+        /// Есть ли изменения, ожидающие записи на диск
+        /// </summary>
+        public static bool HasPendingSaves
+        {
+            get
+            {
+                foreach (Dictionary<string, DirtyRecord> records in dirtyByProfile.Values)
+                {
+                    if (records.Count > 0) return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Интервал автозаписи изменений на диск, в секундах
+        /// <remarks>
+        /// Частые Save в пределах интервала склеиваются в одну запись файла. Значение 0 и меньше — запись на следующем кадре
+        /// </remarks>
+        /// </summary>
+        public static float AutoFlushInterval { get; set; } = 1f;
         
         /// <summary>
         /// Активный профиль сохранения
@@ -116,13 +158,20 @@ namespace Extensions.Data
             public string DataJson;
         }
 
+        private class DirtyRecord
+        {
+            public string Key;
+            public object Data;
+            public string DataTypeName;
+        }
+
         static JsonSaveLoad()
         {
             serializerSettings.Converters.Add(new Vector2Converter());
             serializerSettings.Converters.Add(new Vector3Converter());
             serializerSettings.Converters.Add(new QuaternionConverter());
             serializerSettings.Converters.Add(new ColorConverter());
-            
+
             if (!Directory.Exists(SaveDirectory))
             {
                 Directory.CreateDirectory(SaveDirectory);
@@ -130,10 +179,77 @@ namespace Extensions.Data
             }
         }
 
+        #region Runtime Hooks
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        private static void InitializeRuntimeHooks()
+        {
+            Application.wantsToQuit -= HandleWantsToQuit;
+            Application.wantsToQuit += HandleWantsToQuit;
+            Application.focusChanged -= HandleFocusChanged;
+            Application.focusChanged += HandleFocusChanged;
+            isQuitFlushStarted = false;
+        }
+
+        private static bool HandleWantsToQuit()
+        {
+            if (isQuitFlushStarted || !IsSaving) return true;
+
+            isQuitFlushStarted = true;
+            FlushBeforeQuitAsync().Forget();
+            return false;
+        }
+
+        private static async UniTask FlushBeforeQuitAsync()
+        {
+            try
+            {
+                await FlushAsync();
+            }
+            catch (Exception ex)
+            {
+                ServiceDebug.LogError($"Ошибка записи сохранений при выходе из игры: {ex}");
+            }
+
+            Application.Quit();
+        }
+
+        private static void HandleFocusChanged(bool hasFocus)
+        {
+            // Лучший момент дописать данные на мобильных платформах: после потери фокуса процесс могут убить
+            if (!hasFocus && HasPendingSaves)
+            {
+                FlushAsync().Forget();
+            }
+        }
+
+#if UNITY_EDITOR
+        // wantsToQuit не срабатывает при остановке Play Mode — дописываем хвост батча при выходе из плея
+        [UnityEditor.InitializeOnLoadMethod]
+        private static void InitializeEditorHooks()
+        {
+            UnityEditor.EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+        }
+
+        private static void HandlePlayModeStateChanged(UnityEditor.PlayModeStateChange state)
+        {
+            if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode && HasPendingSaves)
+            {
+                FlushAsync().Forget();
+            }
+        }
+#endif
+
+        #endregion
+
         #region Sync API
 
         /// <summary>
         /// Сохранить данные в запись по ключу сохранения (синхронно, через кэш)
+        /// <remarks>
+        /// Данные сразу доступны через Load, а на диск уходят батчем не позже чем через AutoFlushInterval
+        /// </remarks>
         /// </summary>
         /// <param name="data">Сохраняемые данные</param>
         /// <param name="key">Название ключа сохранения</param>
@@ -146,11 +262,13 @@ namespace Extensions.Data
                 return false;
             }
 
-            string cacheKey = GetCacheKey(key, profile);
+            string resolvedProfile = ResolveProfile(profile);
+            string cacheKey = GetCacheKey(key, resolvedProfile);
             dataCache[cacheKey] = data;
 
-            SaveAsync(data, key, profile).Forget();
-            
+            MarkDirty(resolvedProfile, key, data, typeof(T).AssemblyQualifiedName);
+            ScheduleAutoFlush();
+
             return true;
         }
 
@@ -199,15 +317,8 @@ namespace Extensions.Data
 
             try
             {
-                MultiSaveContainer container = TryLoadMultiContainerSync(profile);
+                MultiSaveContainer container = GetCachedContainerOrResolveSync(profile);
                 if (container == null) return false;
-
-                if (!ValidateMultiHash(container))
-                {
-                    container = TryLoadMultiBackupContainerSync(profile);
-                    if (container == null) return false;
-                    if (!ValidateMultiHash(container)) return false;
-                }
 
                 MultiSaveEntry entry = GetEntry(container, key);
                 return entry != null;
@@ -234,10 +345,12 @@ namespace Extensions.Data
 
         /// <summary>
         /// Очистить кэш
+        /// <remarks>Несохранённые изменения не сбрасываются — они уйдут на диск при следующем флаше</remarks>
         /// </summary>
         public static void ClearCache()
         {
             dataCache.Clear();
+            containerCache.Clear();
             ServiceDebug.Log("Кэш JsonSaveLoad очищен");
         }
 
@@ -273,12 +386,39 @@ namespace Extensions.Data
             return $"{resolvedProfile}:{key}";
         }
 
+        private static string GetSaveFilePath(string profile = null)
+        {
+            return Path.Combine(GetProfileDirectory(profile), SAVE_FILE_NAME + FILE_EXTENSION);
+        }
+
+        private static string GetBackupFilePath(string profile = null)
+        {
+            return GetSaveFilePath(profile) + BACKUP_EXTENSION;
+        }
+
+        /// <summary>
+        /// Положить загруженное с диска значение в кэш, если ключа там ещё нет
+        /// <remarks>
+        /// Сохранение, выполненное во время загрузки, кладёт в кэш более свежие данные — их нельзя затирать значением с диска
+        /// </remarks>
+        /// </summary>
+        private static void CacheLoadedValue(string cacheKey, object value)
+        {
+            if (!dataCache.ContainsKey(cacheKey))
+            {
+                dataCache[cacheKey] = value;
+            }
+        }
+
         #endregion
 
         #region Async API
 
         /// <summary>
         /// Сохранить данные в файл сохранения (асинхронно)
+        /// <remarks>
+        /// Дожидается фактической записи на диск; вместе с ключом на диск уходят и все накопленные изменения профиля
+        /// </remarks>
         /// </summary>
         /// <param name="data">Сохраняемые данные</param>
         /// <param name="key">Название файла сохранения</param>
@@ -291,77 +431,171 @@ namespace Extensions.Data
                 return false;
             }
 
-            savingCount++;
-            SemaphoreSlim fileLock = GetFileLock(profile);
-            await fileLock.WaitAsync();
-            
+            string resolvedProfile = ResolveProfile(profile);
+            string cacheKey = GetCacheKey(key, resolvedProfile);
+            dataCache[cacheKey] = data;
+
+            MarkDirty(resolvedProfile, key, data, typeof(T).AssemblyQualifiedName);
+
+            return await FlushProfileAsync(resolvedProfile);
+        }
+
+        /// <summary>
+        /// Записать на диск все накопленные изменения всех профилей
+        /// </summary>
+        /// <returns>true, если все записи прошли без ошибок</returns>
+        public static async UniTask<bool> FlushAsync()
+        {
+            bool allSucceeded = true;
+
+            List<string> profiles = new List<string>(dirtyByProfile.Keys);
+            foreach (string resolvedProfile in profiles)
+            {
+                bool succeeded = await FlushProfileAsync(resolvedProfile);
+                allSucceeded = allSucceeded && succeeded;
+            }
+
+            return allSucceeded;
+        }
+
+        private static void MarkDirty(string resolvedProfile, string key, object data, string dataTypeName)
+        {
+            if (!dirtyByProfile.TryGetValue(resolvedProfile, out Dictionary<string, DirtyRecord> records))
+            {
+                records = new Dictionary<string, DirtyRecord>();
+                dirtyByProfile[resolvedProfile] = records;
+            }
+
+            records[key] = new DirtyRecord
+            {
+                Key = key,
+                Data = data,
+                DataTypeName = dataTypeName
+            };
+
+            RefreshSavingState();
+        }
+
+        private static void ScheduleAutoFlush()
+        {
+            if (isAutoFlushScheduled) return;
+
+            isAutoFlushScheduled = true;
+            AutoFlushAsync().Forget();
+        }
+
+        private static async UniTask AutoFlushAsync()
+        {
             try
             {
-                string resolvedProfile = ResolveProfile(profile);
-                onBeforeSave?.Invoke(key);
-
-                string cacheKey = GetCacheKey(key, resolvedProfile);
-                dataCache[cacheKey] = data;
-
-                MultiSaveContainer container = await TryLoadMultiContainerAsync(resolvedProfile) ?? new MultiSaveContainer
+                if (AutoFlushInterval > 0f)
                 {
-                    Version = CURRENT_VERSION,
-                    Profile = resolvedProfile,
-                    TimestampUtc = DateTime.UtcNow.ToString("o"),
-                    Entries = Array.Empty<MultiSaveEntry>()
-                };
-
-                MultiSaveEntry entry = new MultiSaveEntry
+                    await UniTask.Delay(TimeSpan.FromSeconds(AutoFlushInterval), DelayType.Realtime);
+                }
+                else
                 {
-                    Key = key,
-                    DataType = typeof(T).AssemblyQualifiedName,
-                    DataJson = JsonConvert.SerializeObject(data, Formatting.None, serializerSettings)
-                };
+                    await UniTask.Yield();
+                }
+            }
+            finally
+            {
+                // Флаг снимается до флаша: Save во время записи запланирует следующий цикл
+                isAutoFlushScheduled = false;
+            }
 
-                UpsertEntry(container, entry);
-                container.Version = CURRENT_VERSION;
-                container.Profile = resolvedProfile;
-                container.TimestampUtc = DateTime.UtcNow.ToString("o");
+            await FlushAsync();
+        }
 
-                string hashPayload = ComputeMultiPayloadHash(container);
-                container.Hash = hashPayload;
+        private static async UniTask<bool> FlushProfileAsync(string resolvedProfile)
+        {
+            if (!dirtyByProfile.TryGetValue(resolvedProfile, out Dictionary<string, DirtyRecord> dirtyRecords)) return true;
+            if (dirtyRecords.Count == 0) return true;
 
-                string json = JsonConvert.SerializeObject(container, Formatting.Indented, serializerSettings);
-                string encrypted = DataEncryptor.Encrypt(json, DataEncryptor.EncryptionMode);
+            SemaphoreSlim fileLock = GetFileLock(resolvedProfile);
+            await fileLock.WaitAsync();
 
-                string filePath = Path.Combine(GetProfileDirectory(resolvedProfile), SAVE_FILE_NAME + FILE_EXTENSION);
-                string backupPath = filePath + BACKUP_EXTENSION;
-                string tempPath = filePath + TEMP_EXTENSION;
+            savingCount++;
+            RefreshSavingState();
+
+            try
+            {
+                // Снапшот после захвата семафора: пока ждали, могли накопиться новые ключи — заберём и их
+                if (dirtyRecords.Count == 0) return true;
+
+                List<DirtyRecord> snapshot = new List<DirtyRecord>(dirtyRecords.Values);
+                dirtyRecords.Clear();
+                RefreshSavingState();
+
+                List<MultiSaveEntry> entries = new List<MultiSaveEntry>(snapshot.Count);
+                List<string> savedKeys = new List<string>(snapshot.Count);
+
+                // Сериализация данных — на главном потоке: объекты живые, геймплей может мутировать их параллельно с пулом потоков
+                foreach (DirtyRecord record in snapshot)
+                {
+                    try
+                    {
+                        onBeforeSave?.Invoke(record.Key);
+
+                        entries.Add(new MultiSaveEntry
+                        {
+                            Key = record.Key,
+                            DataType = record.DataTypeName,
+                            DataJson = JsonConvert.SerializeObject(record.Data, Formatting.None, serializerSettings)
+                        });
+
+                        savedKeys.Add(record.Key);
+                    }
+                    catch (Exception ex)
+                    {
+                        ServiceDebug.LogError($"Ошибка сериализации данных (ключ «{record.Key}»): {ex}");
+                        onSaveError?.Invoke(record.Key, ex);
+                    }
+                }
+
+                if (entries.Count == 0) return false;
 
                 try
                 {
-                    await File.WriteAllTextAsync(tempPath, encrypted);
-
-                    if (File.Exists(filePath))
+                    MultiSaveContainer container = await GetCachedContainerOrResolveAsync(resolvedProfile) ?? new MultiSaveContainer
                     {
-                        File.Copy(filePath, backupPath, true);
-                        File.Delete(filePath);
+                        Version = CURRENT_VERSION,
+                        Profile = resolvedProfile,
+                        TimestampUtc = DateTime.UtcNow.ToString("o"),
+                        Entries = Array.Empty<MultiSaveEntry>()
+                    };
+                    containerCache[resolvedProfile] = container;
+
+                    foreach (MultiSaveEntry entry in entries)
+                    {
+                        UpsertEntry(container, entry);
                     }
 
-                    File.Move(tempPath, filePath);
-
-                    onAfterSave?.Invoke(key);
+                    await WriteContainerToDiskAsync(resolvedProfile, container);
                 }
                 catch (Exception ex)
                 {
                     ServiceDebug.LogError($"Ошибка сохранения файла «{SAVE_FILE_NAME}»: {ex}");
 
-                    if (File.Exists(tempPath))
+                    // Возвращаем ключи в очередь на повторную запись, не затирая более свежие изменения
+                    foreach (DirtyRecord record in snapshot)
                     {
-                        try { File.Delete(tempPath); }
-                        catch
+                        if (!dirtyRecords.ContainsKey(record.Key))
                         {
-                            // ignored
+                            dirtyRecords[record.Key] = record;
                         }
                     }
 
-                    onSaveError?.Invoke(key, ex);
+                    foreach (string key in savedKeys)
+                    {
+                        onSaveError?.Invoke(key, ex);
+                    }
+
                     return false;
+                }
+
+                foreach (string key in savedKeys)
+                {
+                    onAfterSave?.Invoke(key);
                 }
 
                 return true;
@@ -374,7 +608,18 @@ namespace Extensions.Data
                 {
                     savingCount = 0;
                 }
+
+                RefreshSavingState();
             }
+        }
+
+        private static void RefreshSavingState()
+        {
+            bool current = IsSaving;
+            if (current == lastSavingState) return;
+
+            lastSavingState = current;
+            onSavingStateChanged?.Invoke(current);
         }
 
         /// <summary>
@@ -400,9 +645,12 @@ namespace Extensions.Data
                 {
                     return (T)loadedData;
                 }
+
+                return defaultValue;
             }
 
-            UniTask loadTask = LoadInternalAsync(key, defaultValue, cacheKey, profile);
+            // Preserve обязателен: задачу из loadingTasks параллельно ждут другие вызовы, а UniTask нельзя await-ить дважды
+            UniTask loadTask = LoadInternalAsync(key, defaultValue, cacheKey, profile).Preserve();
             loadingTasks[cacheKey] = loadTask;
 
             try
@@ -421,15 +669,35 @@ namespace Extensions.Data
 
             return defaultValue;
         }
-        
+
         private static async UniTask LoadInternalAsync<T>(string key, T defaultValue, string cacheKey, string profile = null)
         {
             onBeforeLoad?.Invoke(key);
 
-            MultiSaveContainer container = await ResolveValidContainerAsync(profile);
+            SemaphoreSlim fileLock = GetFileLock(profile);
+            await fileLock.WaitAsync();
+
+            MultiSaveContainer container;
+
+            try
+            {
+                container = await GetCachedContainerOrResolveAsync(profile);
+            }
+            catch (Exception ex)
+            {
+                ServiceDebug.LogError($"Ошибка загрузки файла «{SAVE_FILE_NAME}» (ключ «{key}»): {ex}");
+                CacheLoadedValue(cacheKey, defaultValue);
+                onLoadError?.Invoke(key, ex);
+                return;
+            }
+            finally
+            {
+                fileLock.Release();
+            }
+
             if (container == null)
             {
-                dataCache[cacheKey] = defaultValue;
+                CacheLoadedValue(cacheKey, defaultValue);
                 onAfterLoad?.Invoke(key);
                 return;
             }
@@ -444,10 +712,28 @@ namespace Extensions.Data
         /// <returns></returns>
         public static async UniTask<bool> ExistsAsync(string key, string profile = null)
         {
-            MultiSaveContainer container = await TryLoadMultiContainerAsync(profile);
-            if (container == null)
+            if (string.IsNullOrEmpty(key)) return false;
+
+            string cacheKey = GetCacheKey(key, profile);
+            if (dataCache.ContainsKey(cacheKey)) return true;
+
+            SemaphoreSlim fileLock = GetFileLock(profile);
+            await fileLock.WaitAsync();
+
+            MultiSaveContainer container;
+
+            try
             {
+                container = await GetCachedContainerOrResolveAsync(profile);
+            }
+            catch (Exception ex)
+            {
+                ServiceDebug.LogError($"Ошибка проверки ExistsAsync для ключа «{key}»: {ex}");
                 return false;
+            }
+            finally
+            {
+                fileLock.Release();
             }
 
             MultiSaveEntry entry = GetEntry(container, key);
@@ -476,7 +762,13 @@ namespace Extensions.Data
                 string cacheKey = GetCacheKey(key, resolvedProfile);
                 dataCache.Remove(cacheKey);
 
-                MultiSaveContainer container = await TryLoadMultiContainerAsync(resolvedProfile);
+                if (dirtyByProfile.TryGetValue(resolvedProfile, out Dictionary<string, DirtyRecord> dirtyRecords))
+                {
+                    dirtyRecords.Remove(key);
+                    RefreshSavingState();
+                }
+
+                MultiSaveContainer container = await GetCachedContainerOrResolveAsync(resolvedProfile);
                 if (container == null)
                 {
                     ServiceDebug.LogWarning($"Файл «{SAVE_FILE_NAME}» не найден, удаление не выполнено");
@@ -489,52 +781,14 @@ namespace Extensions.Data
                     return false;
                 }
 
-                container.Version = CURRENT_VERSION;
-                container.Profile = resolvedProfile;
-                container.TimestampUtc = DateTime.UtcNow.ToString("o");
+                await WriteContainerToDiskAsync(resolvedProfile, container);
 
-                string hashPayload = ComputeMultiPayloadHash(container);
-                container.Hash = hashPayload;
-
-                string json = JsonConvert.SerializeObject(container, Formatting.Indented, serializerSettings);
-                string encrypted = DataEncryptor.Encrypt(json, DataEncryptor.EncryptionMode);
-
-                string filePath = Path.Combine(GetProfileDirectory(resolvedProfile), SAVE_FILE_NAME + FILE_EXTENSION);
-                string backupPath = filePath + BACKUP_EXTENSION;
-                string tempPath = filePath + TEMP_EXTENSION;
-
-                try
-                {
-                    await File.WriteAllTextAsync(tempPath, encrypted);
-
-                    if (File.Exists(filePath))
-                    {
-                        File.Copy(filePath, backupPath, true);
-                        File.Delete(filePath);
-                    }
-
-                    File.Move(tempPath, filePath);
-
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    ServiceDebug.LogError($"Ошибка удаления файла «{key}»: {ex}");
-
-                    if (File.Exists(tempPath))
-                    {
-                        try
-                        {
-                            File.Delete(tempPath);
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-                    }
-
-                    return false;
-                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ServiceDebug.LogError($"Ошибка удаления файла «{key}»: {ex}");
+                return false;
             }
             finally
             {
@@ -569,6 +823,10 @@ namespace Extensions.Data
                     dataCache.Remove(key);
                 }
 
+                dirtyByProfile.Remove(resolvedProfile);
+                containerCache.Remove(resolvedProfile);
+                RefreshSavingState();
+
                 string profileDir = GetProfileDirectory(resolvedProfile);
                 if (Directory.Exists(profileDir))
                 {
@@ -591,7 +849,25 @@ namespace Extensions.Data
         /// </summary>
         public static async UniTask<string[]> GetAllKeysAsync(string profile = null)
         {
-            MultiSaveContainer container = await TryLoadMultiContainerAsync(profile);
+            SemaphoreSlim fileLock = GetFileLock(profile);
+            await fileLock.WaitAsync();
+
+            MultiSaveContainer container;
+
+            try
+            {
+                container = await GetCachedContainerOrResolveAsync(profile);
+            }
+            catch (Exception ex)
+            {
+                ServiceDebug.LogError($"Ошибка чтения ключей файла «{SAVE_FILE_NAME}»: {ex}");
+                container = null;
+            }
+            finally
+            {
+                fileLock.Release();
+            }
+
             if (container == null || container.Entries == null)
             {
                 return Array.Empty<string>();
@@ -640,7 +916,7 @@ namespace Extensions.Data
             if (container == null)
             {
                 ServiceDebug.LogWarning($"Файл «{SAVE_FILE_NAME}» не найден, загружены значения по-умолчанию");
-                dataCache[cacheKey] = defaultValue;
+                CacheLoadedValue(cacheKey, defaultValue);
                 onAfterLoad?.Invoke(key);
                 return;
             }
@@ -651,7 +927,7 @@ namespace Extensions.Data
             if (entry == null)
             {
                 ServiceDebug.LogWarning($"Ключ «{key}» не найден в файле, загружены значения по-умолчанию");
-                dataCache[cacheKey] = defaultValue;
+                CacheLoadedValue(cacheKey, defaultValue);
                 onAfterLoad?.Invoke(key);
                 return;
             }
@@ -659,23 +935,125 @@ namespace Extensions.Data
             try
             {
                 T result = JsonConvert.DeserializeObject<T>(entry.DataJson, serializerSettings);
-                dataCache[cacheKey] = result;
+                CacheLoadedValue(cacheKey, result);
                 onAfterLoad?.Invoke(key);
             }
             catch (Exception ex)
             {
                 ServiceDebug.LogError($"Ошибка десериализации файла (ключ «{key}»): {ex}");
-                dataCache[cacheKey] = defaultValue;
+                CacheLoadedValue(cacheKey, defaultValue);
                 onLoadError?.Invoke(key, ex);
             }
         }
         
+        /// <summary>
+        /// Записать контейнер профиля на диск: тяжёлая часть (хэш, сериализация, шифрование, файловые операции) — на пуле потоков
+        /// <remarks>
+        /// Вызывать только под семафором профиля: пока идёт запись, контейнер никто не должен мутировать
+        /// </remarks>
+        /// </summary>
+        private static async UniTask WriteContainerToDiskAsync(string resolvedProfile, MultiSaveContainer container)
+        {
+            container.Version = CURRENT_VERSION;
+            container.Profile = resolvedProfile;
+            container.TimestampUtc = DateTime.UtcNow.ToString("o");
+
+            string filePath = GetSaveFilePath(resolvedProfile);
+            string backupPath = filePath + BACKUP_EXTENSION;
+            string tempPath = filePath + TEMP_EXTENSION;
+
+            try
+            {
+                await UniTask.RunOnThreadPool(() =>
+                {
+                    container.Hash = ComputeMultiPayloadHash(container);
+
+                    string json = JsonConvert.SerializeObject(container, Formatting.Indented, serializerSettings);
+                    string encrypted = DataEncryptor.Encrypt(json, DataEncryptor.EncryptionMode);
+
+                    File.WriteAllText(tempPath, encrypted);
+
+                    if (File.Exists(filePath))
+                    {
+                        File.Copy(filePath, backupPath, true);
+                        File.Delete(filePath);
+                    }
+
+                    File.Move(tempPath, filePath);
+                });
+            }
+            catch
+            {
+                if (File.Exists(tempPath))
+                {
+                    try
+                    {
+                        File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+
+                throw;
+            }
+        }
+
+        private static MultiSaveContainer GetCachedContainerOrResolveSync(string profile = null)
+        {
+            string resolvedProfile = ResolveProfile(profile);
+            if (containerCache.TryGetValue(resolvedProfile, out MultiSaveContainer cached)) return cached;
+
+            MultiSaveContainer container = ResolveValidContainerSync(resolvedProfile);
+            if (container != null)
+            {
+                containerCache[resolvedProfile] = container;
+            }
+
+            return container;
+        }
+
+        private static async UniTask<MultiSaveContainer> GetCachedContainerOrResolveAsync(string profile = null)
+        {
+            string resolvedProfile = ResolveProfile(profile);
+            if (containerCache.TryGetValue(resolvedProfile, out MultiSaveContainer cached)) return cached;
+
+            MultiSaveContainer container = await ResolveValidContainerAsync(resolvedProfile);
+            if (container != null)
+            {
+                containerCache[resolvedProfile] = container;
+            }
+
+            return container;
+        }
+
         private static MultiSaveContainer ResolveValidContainerSync(string profile = null)
         {
             MultiSaveContainer container = TryLoadMultiContainerSync(profile);
             if (container == null)
             {
-                return null;
+                // Основной файл отсутствует или не прочитан; если бэкапа тоже нет (первый запуск) — восстанавливать нечего
+                if (!File.Exists(GetBackupFilePath(profile)))
+                {
+                    return null;
+                }
+
+                ServiceDebug.LogWarning($"Файл «{SAVE_FILE_NAME}» не прочитан, попытка восстановления из бэкапа");
+
+                container = TryLoadMultiBackupContainerSync(profile);
+                if (container == null)
+                {
+                    return null;
+                }
+
+                if (!ValidateMultiHash(container))
+                {
+                    ServiceDebug.LogError($"Файл «{SAVE_FILE_NAME}» поврежден, восстановление из бэкапа не удалось (хэш не совпадает)");
+                    return null;
+                }
+
+                return container;
             }
 
             if (!ValidateMultiHash(container))
@@ -703,7 +1081,27 @@ namespace Extensions.Data
             MultiSaveContainer container = await TryLoadMultiContainerAsync(profile);
             if (container == null)
             {
-                return null;
+                // Основной файл отсутствует или не прочитан; если бэкапа тоже нет (первый запуск) — восстанавливать нечего
+                if (!File.Exists(GetBackupFilePath(profile)))
+                {
+                    return null;
+                }
+
+                ServiceDebug.LogWarning($"Файл «{SAVE_FILE_NAME}» не прочитан, попытка восстановления из бэкапа");
+
+                container = await TryLoadMultiBackupContainerAsync(profile);
+                if (container == null)
+                {
+                    return null;
+                }
+
+                if (!ValidateMultiHash(container))
+                {
+                    ServiceDebug.LogError($"Файл «{SAVE_FILE_NAME}» поврежден, восстановление из бэкапа не удалось (хэш не совпадает)");
+                    return null;
+                }
+
+                return container;
             }
 
             if (!ValidateMultiHash(container))
@@ -728,7 +1126,7 @@ namespace Extensions.Data
         
         private static async UniTask<MultiSaveContainer> TryLoadMultiContainerAsync(string profile = null)
         {
-            string filePath = Path.Combine(GetProfileDirectory(profile), SAVE_FILE_NAME + FILE_EXTENSION);
+            string filePath = GetSaveFilePath(profile);
             if (!File.Exists(filePath)) return null;
 
             string encrypted = await File.ReadAllTextAsync(filePath);
@@ -737,7 +1135,7 @@ namespace Extensions.Data
 
         private static async UniTask<MultiSaveContainer> TryLoadMultiBackupContainerAsync(string profile = null)
         {
-            string backupPath = Path.Combine(GetProfileDirectory(profile), SAVE_FILE_NAME + FILE_EXTENSION + BACKUP_EXTENSION);
+            string backupPath = GetBackupFilePath(profile);
 
             if (!File.Exists(backupPath))
             {
@@ -777,10 +1175,10 @@ namespace Extensions.Data
         {
             onBeforeLoad?.Invoke(key);
 
-            MultiSaveContainer container = ResolveValidContainerSync(profile);
+            MultiSaveContainer container = GetCachedContainerOrResolveSync(profile);
             if (container == null)
             {
-                dataCache[cacheKey] = defaultValue;
+                CacheLoadedValue(cacheKey, defaultValue);
                 onAfterLoad?.Invoke(key);
                 return;
             }
@@ -790,7 +1188,7 @@ namespace Extensions.Data
 
         private static MultiSaveContainer TryLoadMultiContainerSync(string profile = null)
         {
-            string filePath = Path.Combine(GetProfileDirectory(profile), SAVE_FILE_NAME + FILE_EXTENSION);
+            string filePath = GetSaveFilePath(profile);
             if (!File.Exists(filePath)) return null;
 
             string encrypted = File.ReadAllText(filePath);
@@ -800,7 +1198,7 @@ namespace Extensions.Data
 
         private static MultiSaveContainer TryLoadMultiBackupContainerSync(string profile = null)
         {
-            string backupPath = Path.Combine(GetProfileDirectory(profile), SAVE_FILE_NAME + FILE_EXTENSION + BACKUP_EXTENSION);
+            string backupPath = GetBackupFilePath(profile);
 
             if (!File.Exists(backupPath))
             {
