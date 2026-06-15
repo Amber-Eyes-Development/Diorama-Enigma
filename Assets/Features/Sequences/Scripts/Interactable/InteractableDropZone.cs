@@ -1,3 +1,4 @@
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -54,6 +55,15 @@ namespace DioramaEnigma.Sequences
                 }
                 return stepRefCache;
             }
+        }
+
+        private void Awake()
+        {
+            var zoneCollider = GetComponentInChildren<Collider>();
+            if (zoneCollider == null)
+                ServiceDebug.LogWarning(this, "Нет коллайдера — зона дропа не сможет принимать объекты");
+            else if (!zoneCollider.isTrigger)
+                ServiceDebug.LogWarning(this, "Коллайдер зоны дропа должен быть триггером (Is Trigger)");
         }
 
         /// <summary> Принимает ли зона «чужой» объект указанной группы (для снапа без завершения) </summary>

@@ -96,9 +96,10 @@ namespace DioramaEnigma.Sequences
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (!CanInteract)
+            if (State == null) return;
+            if (!State.CanChangeValue)
             {
-                ReportRejectedInteraction();
+                State.NotifyInteractionRejected();
                 return;
             }
 
@@ -365,7 +366,7 @@ namespace DioramaEnigma.Sequences
         {
             if (State == null) return;
 
-            State.SetValue(completed ? State.CompletionState : !State.CompletionState);
+            State.SetValue(completed ? State.CompletionState : !State.CompletionState, notify: false);
         }
 
         private Vector3 ProjectLanding()
