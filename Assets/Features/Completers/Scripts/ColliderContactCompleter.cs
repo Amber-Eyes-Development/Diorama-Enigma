@@ -28,7 +28,7 @@ namespace DioramaEnigma.Completers
             if (State == null) return;
             if (reference == null || reference.Step != State) return;
 
-            State.SetValue(state); // TODO учитывать irreversible
+            State.SetValue(state, notify: false);
         }
     }
 }
