@@ -72,8 +72,8 @@ namespace DioramaEnigma.Sequences
         private void OnUnlockChanged(bool unlocked) =>
             Dispatch(unlocked ? TriggerKind.Unlocked : TriggerKind.Locked, silent: false);
 
-        private void OnInteractionRejected() =>
-            Dispatch(TriggerKind.InteractionRejected, silent: false);
+        private void OnInteractionRejected(bool active) =>
+            Dispatch(active ? TriggerKind.UnlockedInteractionRejected : TriggerKind.LockedInteractionRejected, silent: false);
 
         private void Dispatch(TriggerKind fired, bool silent)
         {

@@ -38,7 +38,9 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private DragReleaseMode releaseMode = DragReleaseMode.PlaceOnScene;
         [Tooltip("Когда завершать шаг при попадании в зону дропа")]
         [SerializeField] private DropCommitMode commitMode = DropCommitMode.OnRelease;
-        
+        [Tooltip("Сохранять точную позицию объекта в зоне между сессиями (для любой зоны со снапом). Выкл — позиция не сохраняется")]
+        [SerializeField] private bool savePlacement;
+
         #endregion
         
         private enum ZoneAcceptance { Reject, Snap, Complete }
@@ -310,7 +312,7 @@ namespace DioramaEnigma.Sequences
         /// <summary> Системный откат завершённости (минуя кулдаун), если шаг разблокирован и обратим </summary>
         private void RevertCompletion()
         {
-            if (State == null || !State.IsUnlocked || State.Irreversible) return;
+            if (State == null || !State.IsActive || State.Irreversible) return;
 
             State.ForceValue(!State.CompletionState);
         }
@@ -318,7 +320,7 @@ namespace DioramaEnigma.Sequences
         /// <summary> Восстановить позу снапа из сейва (любая зона со снапом); фолбэк — усадить завершённый шаг в свою зону </summary>
         private void RestoreIfCommitted()
         {
-            if (PlacementKey != null)
+            if (savePlacement && PlacementKey != null)
             {
                 var placement = JsonSaveLoad.Load(PlacementKey, default(PlacementSave));
                 if (placement.snapped)
@@ -345,7 +347,7 @@ namespace DioramaEnigma.Sequences
 
         private void SavePlacement(bool snapped, Vector3 position, Quaternion rotation)
         {
-            if (!Application.isPlaying || PlacementKey == null) return;
+            if (!savePlacement || !Application.isPlaying || PlacementKey == null) return;
 
             JsonSaveLoad.Save(new PlacementSave { snapped = snapped, position = position, rotation = rotation }, PlacementKey);
         }

@@ -21,6 +21,9 @@ namespace DioramaEnigma.Sequences
             && AllGatesSatisfied()
             && !(irreversible && lastCompleted);
 
+        /// <summary> Активна ли группа шага в раннере (изменение состояния открыто раннером, безотносительно гейтов/латча) </summary>
+        public bool IsActive => isActive;
+
         private StepGate[] gates;
         private bool isActive;
         private bool irreversible;

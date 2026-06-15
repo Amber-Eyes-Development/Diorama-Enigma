@@ -1,18 +1,19 @@
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Хелперы сопоставления триггеров с событиями шага.
+    /// Хелперы сопоставления триггеров с событиями шага
     /// </summary>
-    /// <remarks>
-    /// <see cref="TriggerKind.InteractionRejected"/> — импульс без стационарного состояния и без
-    /// противоположности: <see cref="Responds"/> срабатывает по равенству, <see cref="Opposite"/>
-    /// возвращает сам себя, <see cref="IsSatisfiedBy"/> — false. Спец-веток не требует (дефолты подходят).
-    /// </remarks>
     public static class TriggerKindExtensions
     {
         /// <summary> Триггер «на любое изменение» (без конкретного состояния) </summary>
         public static bool IsChange(this TriggerKind trigger) =>
             trigger is TriggerKind.CompletionStateChange or TriggerKind.LockStateChange;
+
+        /// <summary>
+        /// Импульс-отказ взаимодействия
+        /// </summary>
+        public static bool IsRejection(this TriggerKind trigger) =>
+            trigger >= TriggerKind.InteractionRejected;
 
         /// <summary>
         /// Реагирует ли триггер на конкретное событие (<paramref name="fired"/> — один из четырёх конкретных)
@@ -22,7 +23,9 @@ namespace DioramaEnigma.Sequences
             || (trigger == TriggerKind.CompletionStateChange &&
                 fired is TriggerKind.Completed or TriggerKind.NotCompleted)
             || (trigger == TriggerKind.LockStateChange &&
-                fired is TriggerKind.Unlocked or TriggerKind.Locked);
+                fired is TriggerKind.Unlocked or TriggerKind.Locked)
+            || (trigger == TriggerKind.InteractionRejected &&
+                fired is TriggerKind.UnlockedInteractionRejected or TriggerKind.LockedInteractionRejected);
 
         /// <summary> Противоположное событие (для отката направленных триггеров); у «изменений» — само себя </summary>
         public static TriggerKind Opposite(this TriggerKind trigger) => trigger switch

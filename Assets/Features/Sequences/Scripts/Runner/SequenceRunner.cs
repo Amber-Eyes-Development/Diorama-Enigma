@@ -48,7 +48,31 @@ namespace DioramaEnigma.Sequences
         private void Awake()
         {
             if (sequence == null)
+            {
                 ServiceDebug.LogError(this, "sequence не назначен");
+                return;
+            }
+
+            ValidateTriggers();
+        }
+
+        /// <summary> Проверка конфигурации триггеров </summary>
+        /// <remarks> триггеры-отказы — фидбэк только для вьюшек, в раннер/эффекты не приходят </remarks>
+        private void ValidateTriggers()
+        {
+            if (startStep != null && startTrigger.IsRejection())
+                ServiceDebug.LogError(this,
+                    $"{nameof(startTrigger)} = {startTrigger}: reject-триггер не обрабатывается раннером");
+
+            foreach (var entry in sequence.Steps)
+            {
+                if (entry?.Effects == null) continue;
+
+                foreach (var effectEntry in entry.Effects)
+                    if (effectEntry != null && effectEntry.Trigger.IsRejection())
+                        ServiceDebug.LogError(this,
+                            $"Эффект шага {entry.Step} реагирует на {effectEntry.Trigger}: reject-триггер не обрабатывается в эффектах");
+            }
         }
 
         private void OnEnable()

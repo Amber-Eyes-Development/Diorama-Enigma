@@ -23,13 +23,17 @@ namespace DioramaEnigma.Sequences
             add => tracker.onUnlockChanged += value;
             remove => tracker.onUnlockChanged -= value;
         }
-        /// <summary> Отклонённая попытка изменить состояние шага (шаг недоступен: залочен или уже завершён) </summary>
-        public event Action onInteractionRejected;
+        /// <summary> Отклонённая попытка изменить состояние шага </summary>
+        /// <typeparam name="bool"> true: группа активна, но изменению мешает другое условие
+        /// (гейт/кулдаун/латч необратимости); false: группа неактивна (шаг заблокирован) </typeparam>
+        public event Action<bool> onInteractionRejected;
 
         /// <summary> Завершён ли шаг </summary>
         public abstract bool IsCompleted { get; }
         /// <summary> Можно ли менять состояние шага прямо сейчас (активен, гейт открыт, не залочен) </summary>
         public bool IsUnlocked => tracker.IsUnlocked;
+        /// <summary> Активна ли группа шага в раннере (безотносительно гейтов/латча необратимости) </summary>
+        public bool IsActive => tracker.IsActive;
         /// <summary> Является ли шаг необратимым </summary>
         public bool Irreversible => irreversible;
 
@@ -39,10 +43,7 @@ namespace DioramaEnigma.Sequences
 
         private readonly StepCompletionTracker tracker = new();
 
-        /// <summary>
-        /// Активировать/деактивировать шаг (раннер открывает изменение состояния). Гейты доступа
-        /// хранятся на записи шага (<see cref="StepEntry"/>) и передаются раннером при активации.
-        /// </summary>
+        /// <summary> Активировать/деактивировать шаг </summary>
         public void SetActive(bool active, StepGate[] gates = null)
         {
             if (tracker.SetActive(active, gates))
@@ -50,7 +51,7 @@ namespace DioramaEnigma.Sequences
         }
 
         /// <summary> Сообщить об отклонённой попытке изменить состояние (вызывает ввод при недоступном шаге) </summary>
-        public void NotifyInteractionRejected() => onInteractionRejected?.Invoke();
+        public void NotifyInteractionRejected() => onInteractionRejected?.Invoke(IsActive);
 
         /// <summary> Сбросить состояние шага к исходному </summary>
         public abstract void ResetState();

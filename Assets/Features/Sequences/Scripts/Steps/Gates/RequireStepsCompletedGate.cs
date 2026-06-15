@@ -1,4 +1,5 @@
 using System;
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -31,6 +32,10 @@ namespace DioramaEnigma.Sequences
         /// <inheritdoc/>
         public override void StartObserving()
         {
+            if (trigger.IsRejection())
+                ServiceDebug.LogError<RequireStepsCompletedGate>(
+                    $"{nameof(trigger)} = {trigger}: reject-триггер не обрабатывается гейтом");
+
             if (requiredSteps == null) return;
 
             foreach (var step in requiredSteps)
