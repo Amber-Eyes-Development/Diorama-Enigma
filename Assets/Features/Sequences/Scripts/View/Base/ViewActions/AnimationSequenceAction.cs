@@ -15,7 +15,7 @@ namespace DioramaEnigma.Sequences
         /// <summary> Действие при срабатывании триггера </summary>
         public AnimationCommand Command => command;
         /// <summary> Действие на откате (если включён reversible) </summary>
-        public AnimationReverseMode ReverseMode => reverseMode;
+        public AnimationCommand ReverseCommand => reverseCommand;
 
         public override void EnsureTarget(GameObject host)
         {
@@ -31,6 +31,6 @@ namespace DioramaEnigma.Sequences
         [Tooltip("Действие при срабатывании триггера")]
         [SerializeField] private AnimationCommand command;
         [Tooltip("Действие на откате (если включён reversible)")]
-        [SerializeField] private AnimationReverseMode reverseMode;
+        [SerializeField] private AnimationCommand reverseCommand = AnimationCommand.PlayBackwards;
     }
 }

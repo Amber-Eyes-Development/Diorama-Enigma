@@ -5,7 +5,7 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Проигрывание AnimationSequencer на события шага (прямое — Command, откат — ReverseMode)
+    /// Проигрывание AnimationSequencer на события шага
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class InteractableAnimationSequence : InteractableActionsBehaviour<AnimationSequenceAction>
@@ -15,27 +15,15 @@ namespace DioramaEnigma.Sequences
             var sequencer = action.Target;
             if (sequencer == null) return;
 
-            if (reverse)
+            AnimationCommand command = reverse ? action.ReverseCommand : action.Command;
+            switch (command)
             {
-                switch (action.ReverseMode)
-                {
-                    case AnimationReverseMode.Backwards: Backwards(sequencer, silent); break;
-                    case AnimationReverseMode.Stop: StopAt(sequencer, silent); break;
-                    default:
-                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationReverseMode)}: {action.ReverseMode}");
-                        break;
-                }
-            }
-            else
-            {
-                switch (action.Command)
-                {
-                    case AnimationCommand.Play: PlayForward(sequencer, silent); break;
-                    case AnimationCommand.Stop: StopAt(sequencer, silent); break;
-                    default:
-                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationCommand)}: {action.Command}");
-                        break;
-                }
+                case AnimationCommand.Play: PlayForward(sequencer, silent); break;
+                case AnimationCommand.PlayBackwards: Backwards(sequencer, silent); break;
+                case AnimationCommand.Stop: StopAt(sequencer, silent); break;
+                default:
+                    ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationCommand)}: {command}");
+                    break;
             }
         }
 

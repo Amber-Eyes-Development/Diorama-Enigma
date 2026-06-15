@@ -6,8 +6,10 @@ namespace DioramaEnigma.Sequences
     public enum AnimationCommand
     {
         /// <summary> Проиграть вперёд </summary>
-        Play,
+        Play = 0,
+        /// <summary> Проиграть назад (твин в обратную сторону) </summary>
+        PlayBackwards = 1,
         /// <summary> Остановить (в начало) </summary>
-        Stop,
+        Stop = 2,
     }
 }

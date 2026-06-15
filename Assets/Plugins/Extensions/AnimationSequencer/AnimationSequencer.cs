@@ -6,7 +6,8 @@ using UnityEngine;
 namespace Extensions.AnimationSequencer
 {
     /// <summary>
-    /// Контроллер очерёдности анимаций DOTweenAnimation
+    /// Собирает анимации DOTweenAnimation в единый Sequence (Append — следом, Join — параллельно)
+    /// и управляет им как одним твином
     /// </summary>
     // Раньше DOTweenAnimation (порядок по умолчанию 0): успеть снять autoPlay до того, как тот создаст твин в своём Awake
     [DefaultExecutionOrder(-100)]
@@ -19,8 +20,7 @@ namespace Extensions.AnimationSequencer
         [Header("Шаги"), Space]
         [SerializeField] private List<SequenceEntry> entries = new();
 
-        private Tween pendingCall;
-        private List<List<SequenceEntry>> groups;
+        private Sequence sequence;
 
         #region Unity Lifecycle
 
@@ -42,6 +42,8 @@ namespace Extensions.AnimationSequencer
 
         private void OnDisable() => Stop();
 
+        private void OnDestroy() => sequence?.Kill();
+
         #endregion
 
         #region Управление последовательностью
@@ -49,113 +51,57 @@ namespace Extensions.AnimationSequencer
         /// <summary> Запустить последовательность с начала </summary>
         public void Play()
         {
-            Stop();
+            if (!EnsureSequence()) return;
 
-            groups = BuildGroups();
-            if (groups.Count == 0) return;
-
-            PlayGroupAt(0);
+            sequence.Restart();
         }
 
-        /// <summary> Проиграть последовательность в обратном порядке (анимации — назад) </summary>
+        /// <summary> Проиграть последовательность в обратную сторону (с конца к началу) </summary>
         public void PlayBackwards()
         {
-            Stop();
+            if (!EnsureSequence()) return;
 
-            groups = BuildGroups();
-            if (groups.Count == 0) return;
-
-            PlayGroupBackwardsAt(groups.Count - 1);
+            sequence.PlayBackwards();
         }
 
         /// <summary> Отключить авто-запуск при старте (для внешнего распорядителя проигрывания) </summary>
         public void DisableAutoPlay() => playOnStart = false;
 
         /// <summary> Мгновенно установить последовательность в конечное состояние (без проигрыша) </summary>
-        public void SetAtEnd() => SetAll(toEnd: true);
+        public void SetAtEnd()
+        {
+            if (EnsureSequence()) sequence.Complete();
+        }
 
         /// <summary> Мгновенно установить последовательность в начальное состояние (без проигрыша) </summary>
-        public void SetAtStart() => SetAll(toEnd: false);
-
-        /// <summary> Остановить последовательность и все активные анимации </summary>
-        public void Stop()
+        public void SetAtStart()
         {
-            pendingCall?.Kill();
-            pendingCall = null;
-
-            foreach (var entry in entries)
-                entry.Animation?.tween?.Pause();
+            if (EnsureSequence()) sequence.Rewind();
         }
+
+        /// <summary> Остановить (поставить на паузу) последовательность </summary>
+        public void Stop() => sequence?.Pause();
 
         #endregion
 
         #region Internal
 
-        private void PlayGroupAt(int index)
+        private bool EnsureSequence()
         {
-            if (index >= groups.Count) return;
+            // Пересборка пересоздала бы относительные твины против уже повёрнутого объекта и копила бы поворот
+            if (sequence != null && sequence.IsActive()) return true;
 
-            var group = groups[index];
-
-            foreach (var entry in group)
-                entry.Animation.RecreateTweenAndPlay();
-
-            bool hasNext = index < groups.Count - 1;
-            if (!hasNext) return;
-
-            float duration = GetGroupDuration(group);
-            pendingCall = DOVirtual.DelayedCall(duration, () => PlayGroupAt(index + 1));
+            sequence = BuildSequence();
+            return sequence != null;
         }
 
-        private void PlayGroupBackwardsAt(int index)
+        private Sequence BuildSequence()
         {
-            if (index < 0) return;
+            Sequence built = DOTween.Sequence().SetAutoKill(false).Pause();
+            bool hasAny = false;
 
-            var group = groups[index];
-            group.Reverse();
-
-            foreach (var entry in group)
-                entry.Animation.tween?.PlayBackwards();
-
-            if (index == 0) return;
-
-            float duration = GetGroupDuration(group);
-            pendingCall = DOVirtual.DelayedCall(duration, () => PlayGroupBackwardsAt(index - 1));
-        }
-
-        private void SetAll(bool toEnd)
-        {
-            Stop();
-
-            foreach (var entry in entries)
-            {
-                if (entry.Animation == null) continue;
-
-                entry.Animation.RecreateTweenAndPlay();
-                var tween = entry.Animation.tween;
-                if (tween == null) continue;
-
-                tween.Complete();
-                if (!toEnd) tween.Rewind();
-            }
-        }
-
-        private static float GetGroupDuration(List<SequenceEntry> group)
-        {
-            float max = 0f;
-            foreach (var entry in group)
-            {
-                int loops = entry.Animation.loops;
-                float total = entry.Animation.duration * (loops > 0 ? loops : 1) + Mathf.Max(0f, entry.Animation.delay);
-                if (total > max) max = total;
-            }
-            return max;
-        }
-
-        private List<List<SequenceEntry>> BuildGroups()
-        {
-            var result = new List<List<SequenceEntry>>();
-            List<SequenceEntry> current = null;
+            float groupStart = 0f;
+            float timelineEnd = 0f;
 
             foreach (var entry in entries)
             {
@@ -165,16 +111,39 @@ namespace Extensions.AnimationSequencer
                     continue;
                 }
 
-                if (!entry.JoinWithPrevious || current == null)
-                {
-                    current = new List<SequenceEntry>();
-                    result.Add(current);
-                }
+                if (!hasAny || !entry.JoinWithPrevious) groupStart = timelineEnd;
 
-                current.Add(entry);
+                float delay = Mathf.Max(0f, entry.Animation.delay);
+                Tween tween = CreateDelayFreeTween(entry.Animation);
+                if (tween == null) continue;
+
+                float start = groupStart + delay;
+                built.Insert(start, tween);
+
+                float span = entry.Animation.duration * Mathf.Max(1, entry.Animation.loops);
+                timelineEnd = Mathf.Max(timelineEnd, start + span);
+                hasAny = true;
             }
 
-            return result;
+            if (hasAny) return built;
+
+            built.Kill();
+            return null;
+        }
+
+        /// <summary>
+        /// Собрать твин без собственной задержки: её закладываем в позицию вставки (Insert),
+        /// иначе при обратном проигрывании задержка DOTween не отражается зеркально
+        /// </summary>
+        private static Tween CreateDelayFreeTween(DOTweenAnimation animation)
+        {
+            float delay = animation.delay;
+
+            animation.delay = 0f;
+            animation.CreateTween(regenerateIfExists: true, andPlay: false);
+            animation.delay = delay;
+
+            return animation.tween;
         }
 
         #endregion

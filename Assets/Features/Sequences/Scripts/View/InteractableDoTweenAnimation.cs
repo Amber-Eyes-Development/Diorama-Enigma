@@ -5,7 +5,7 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Проигрывание DOTweenAnimation на события шага (прямое — Command, откат — ReverseMode)
+    /// Проигрывание DOTweenAnimation на события шага
     /// </summary>
     [DefaultExecutionOrder(-100)]
     [DisallowMultipleComponent]
@@ -21,27 +21,15 @@ namespace DioramaEnigma.Sequences
 
             EnsureTween(animation);
 
-            if (reverse)
+            AnimationCommand command = reverse ? action.ReverseCommand : action.Command;
+            switch (command)
             {
-                switch (action.ReverseMode)
-                {
-                    case AnimationReverseMode.Backwards: Backwards(animation, silent); break;
-                    case AnimationReverseMode.Stop: StopAt(animation, silent); break;
-                    default:
-                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationReverseMode)}: {action.ReverseMode}");
-                        break;
-                }
-            }
-            else
-            {
-                switch (action.Command)
-                {
-                    case AnimationCommand.Play: PlayForward(animation, silent); break;
-                    case AnimationCommand.Stop: StopAt(animation, silent); break;
-                    default:
-                        ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationCommand)}: {action.Command}");
-                        break;
-                }
+                case AnimationCommand.Play: PlayForward(animation, silent); break;
+                case AnimationCommand.PlayBackwards: Backwards(animation, silent); break;
+                case AnimationCommand.Stop: StopAt(animation, silent); break;
+                default:
+                    ServiceDebug.LogError(this, $"Необработанный {nameof(AnimationCommand)}: {command}");
+                    break;
             }
         }
 
