@@ -13,12 +13,22 @@ namespace DioramaEnigma.Completers
     {
         private void OnTriggerEnter(Collider other)
         {
-            if (State == null) return;
-
             var reference = other.GetComponentInParent<StepReference>();
+            SetState(reference, State.CompletionState);
+        }
+        
+        private void OnTriggerExit(Collider other)
+        {
+            var reference = other.GetComponentInParent<StepReference>();
+            SetState(reference, !State.CompletionState);
+        }
+
+        private void SetState(StepReference reference, bool state)
+        {
+            if (State == null) return;
             if (reference == null || reference.Step != State) return;
 
-            State.SetValue(State.CompletionState);
+            State.SetValue(state); // TODO учитывать irreversible
         }
     }
 }

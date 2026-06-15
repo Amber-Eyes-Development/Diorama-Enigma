@@ -59,6 +59,14 @@ namespace DioramaEnigma.Sequences
 
         private string SaveProfile => isGlobal ? GLOBAL_PROFILE : null;
 
+        protected override void OnEnable()
+        {
+            isLoaded = false;
+            runtimeValue = defaultValue;
+            lastChangeTime = float.NegativeInfinity;
+            base.OnEnable();
+        }
+        
         /// <summary> Установить значение (если шаг разблокирован и прошёл кулдаун переключения) </summary>
         /// <param name="bypassCooldown">Пропустить кулдаун (для физических событий — не пользовательского дребезга)</param>
         public void SetValue(bool newValue, bool bypassCooldown = false)
@@ -90,14 +98,6 @@ namespace DioramaEnigma.Sequences
                 ApplyValue(defaultValue);
             else
                 NotifyCompletionChanged();
-        }
-
-        protected override void OnEnable()
-        {
-            isLoaded = false;
-            runtimeValue = defaultValue;
-            lastChangeTime = float.NegativeInfinity;
-            base.OnEnable();
         }
 
         #region Internal
