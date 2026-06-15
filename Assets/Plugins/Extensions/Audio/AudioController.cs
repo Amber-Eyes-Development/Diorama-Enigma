@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.Audio;
@@ -109,32 +110,50 @@ namespace Extensions.Audio
         /// Воспроизвести аудио (2D по-умолчанию)
         /// </summary>
         /// <param name="resource">Аудио-ресурс</param>
-        public void Play(AudioResource resource, AudioModel model = AudioModel.UI, AudioSpatialPreset spatialPreset = null)
+        /// <param name="loop">Зациклить (источник живёт, пока его не остановят через <see cref="Stop"/>)</param>
+        /// <returns>Источник из пула, проигрывающий звук (null при ошибке); нужен для остановки зацикленного</returns>
+        public AudioSource Play(AudioResource resource, AudioModel model = AudioModel.UI, AudioSpatialPreset spatialPreset = null, bool loop = false)
         {
             if (spatialPreset == null) spatialPreset = GetSpatialDefaults(model);
-            Play(resource, null, null, model, spatialPreset);
+            return Play(resource, null, null, model, spatialPreset, loop);
         }
-        
+
         /// <summary>
         /// Воспроизвести аудио (в определенной точке, 3D по-умолчанию)
         /// </summary>
         /// <param name="resource">Аудио-ресурс</param>
-        public void Play(AudioResource resource, Vector3 position, AudioModel model = AudioModel.Sfx, AudioSpatialPreset spatialPreset = null)
+        /// <param name="loop">Зациклить (источник живёт, пока его не остановят через <see cref="Stop"/>)</param>
+        /// <returns>Источник из пула, проигрывающий звук (null при ошибке); нужен для остановки зацикленного</returns>
+        public AudioSource Play(AudioResource resource, Vector3 position, AudioModel model = AudioModel.Sfx, AudioSpatialPreset spatialPreset = null, bool loop = false)
         {
             if (spatialPreset == null) spatialPreset = GetSpatialDefaults(model);
-            Play(resource, position, null, model, spatialPreset);
+            return Play(resource, position, null, model, spatialPreset, loop);
         }
 
         /// <summary>
         /// Воспроизвести аудио (с закреплением за объектом, 3D по-умолчанию)
         /// </summary>
         /// <param name="resource">Аудио-ресурс</param>
-        public void Play(AudioResource resource, Transform followTarget, AudioModel model = AudioModel.Sfx, AudioSpatialPreset spatialPreset = null)
+        /// <param name="loop">Зациклить (источник живёт, пока его не остановят через <see cref="Stop"/>)</param>
+        /// <returns>Источник из пула, проигрывающий звук (null при ошибке); нужен для остановки зацикленного</returns>
+        public AudioSource Play(AudioResource resource, Transform followTarget, AudioModel model = AudioModel.Sfx, AudioSpatialPreset spatialPreset = null, bool loop = false)
         {
             if (spatialPreset == null) spatialPreset = GetSpatialDefaults(model);
-            Play(resource, null, followTarget, model, spatialPreset);
+            return Play(resource, null, followTarget, model, spatialPreset, loop);
         }
-        
+
+        /// <summary>
+        /// Остановить и вернуть в пул конкретный источник (для зацикленных звуков, которыми владеет вызывающий)
+        /// </summary>
+        /// <param name="source">Источник, полученный из <see cref="Play(AudioResource, Vector3, AudioModel, AudioSpatialPreset, bool)"/></param>
+        public void Stop(AudioSource source)
+        {
+            if (source == null) return;
+            if (!activeSources.ContainsKey(source)) return;
+
+            ReleaseImmediate(source);
+        }
+
         #region Settings
 
         /// <summary>
@@ -184,14 +203,7 @@ namespace Extensions.Audio
             settings.mixerGroup = defaults.mixerGroup;
             settings.volume = defaults.volumeModifier;
 
-            float minPitch = defaults.pitchMin;
-            float maxPitch = defaults.pitchMax;
-            if (maxPitch < minPitch)
-            {
-                (minPitch, maxPitch) = (maxPitch, minPitch);
-            }
-
-            settings.pitch = Random.Range(minPitch, maxPitch);
+            settings.pitch = RandomPitch(defaults);
 
             settings.spatialBlend = 0;
             settings.minDistance = 0;
@@ -234,16 +246,17 @@ namespace Extensions.Audio
         
         #region Internal
 
-        private void Play(AudioResource resource, Vector3? position, Transform followTarget, AudioModel model, AudioSpatialPreset spatialPreset = null)
+        private AudioSource Play(AudioResource resource, Vector3? position, Transform followTarget, 
+            AudioModel model, AudioSpatialPreset spatialPreset = null, bool loop = false)
         {
-            if (Logic.IsNull(resource, "Аудио-ресурс не назначен, аудио не воспроизведено")) return;
-            if (!isPoolValid()) return;
+            if (Logic.IsNull(resource, "Аудио-ресурс не назначен, аудио не воспроизведено")) return null;
+            if (!isPoolValid()) return null;
 
             AudioSource source = oneShotPool.Get();
             if (source == null)
             {
                 ServiceDebug.LogError("Ошибка создания источника звука, аудио не воспроизведено");
-                return;
+                return null;
             }
 
             if (followTarget != null)
@@ -252,7 +265,7 @@ namespace Extensions.Audio
                 source.transform.position = position.Value;
 
             AudioDefaults defaults = GetDefaults(model);
-            AppliedAudioSettings settings = BuildSettings(defaults);
+            AppliedAudioSettings settings = BuildSettings(defaults, loop);
             float volumeModifier = defaults.volumeModifier;
 
             if (spatialPreset != null)
@@ -270,13 +283,34 @@ namespace Extensions.Audio
             source.resource = resource;
             source.Play();
 
-            if (followTarget != null)
+            // Зацикленный источник не имеет естественного конца — в пул его вернёт только явный Stop
+            if (loop)
             {
-                ReleaseAfterPlayFollow(source, followTarget);
-                return;
+                GetReleaseTask(source).Start(LoopPitchRoutine(source, model));
+                return source;
             }
 
-            ReleaseAfterPlay(source);
+            if (followTarget != null)
+                ReleaseAfterPlayFollow(source, followTarget);
+            else
+                ReleaseAfterPlay(source);
+
+            return source;
+        }
+
+        private IEnumerator LoopPitchRoutine(AudioSource source, AudioModel model)
+        {
+            AudioDefaults defaults = GetDefaults(model);
+            int lastSample = source.timeSamples;
+
+            while (source != null && source.isPlaying)
+            {
+                int sample = source.timeSamples;
+                if (sample < lastSample) source.pitch = RandomPitch(defaults);
+                lastSample = sample;
+
+                yield return null;
+            }
         }
         
         private void ReleaseAfterPlay(AudioSource source)
@@ -312,14 +346,23 @@ namespace Extensions.Audio
                 yield return null;
             }
 
+            ReleaseImmediate(source);
+        }
+
+        /// <summary> Немедленно остановить источник, сбросить его и вернуть в пул </summary>
+        private void ReleaseImmediate(AudioSource source)
+        {
+            if (source == null) return;
+
             source.Stop();
             source.resource = null;
             source.loop = false;
 
             activeSources.Remove(source);
-            oneShotPool.Release(source);
 
-            if (releaseTasks.TryGetValue(source, out CoroutineTask task)) task.Stop();
+            if (oneShotPool != null) oneShotPool.Release(source);
+
+            if (releaseTasks.TryGetValue(source, out CoroutineTask task) && task != null) task.Stop();
         }
 
         private void RegisterActiveSource(AudioSource source, AudioModel model, float volumeModifier)
@@ -366,6 +409,16 @@ namespace Extensions.Audio
                 pair.Key.volume = GetAppliedVolume(pair.Value.Model, pair.Value.VolumeModifier);
             }
             onVolumeChanged?.Invoke();
+        }
+
+        /// <summary> Случайный питч в диапазоне типа аудио (для разнообразия повторов/циклов) </summary>
+        public static float RandomPitch(AudioDefaults defaults)
+        {
+            float minPitch = defaults.pitchMin;
+            float maxPitch = defaults.pitchMax;
+            if (maxPitch < minPitch) (minPitch, maxPitch) = (maxPitch, minPitch);
+
+            return Random.Range(minPitch, maxPitch);
         }
 
         private bool isPoolValid()

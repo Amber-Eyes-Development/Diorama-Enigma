@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using Extensions.Coroutines;
 using Extensions.Helpers;
@@ -27,10 +28,15 @@ namespace Extensions.Audio
 
         protected AudioSource source;
         protected CoroutineTask task;
+        protected CoroutineTask pitchTask;
 
         protected int token;
 
-        protected virtual void Awake() => task = new CoroutineTask(this);
+        protected virtual void Awake()
+        {
+            task = new CoroutineTask(this);
+            pitchTask = new CoroutineTask(this);
+        }
 
         protected override void OnEnable()
         {
@@ -52,6 +58,11 @@ namespace Extensions.Audio
             if (task != null)
             {
                 task.Stop();
+            }
+
+            if (pitchTask != null)
+            {
+                pitchTask.Stop();
             }
 
             if (source != null)
@@ -110,7 +121,7 @@ namespace Extensions.Audio
             source.volume = audioController.GetAppliedVolume(model, defaults.volumeModifier);
         }
         
-        protected System.Collections.IEnumerator SetLoopRoutine(
+        protected IEnumerator SetLoopRoutine(
             AudioResource resource,
             float fadeSeconds,
             int localToken)
@@ -158,6 +169,8 @@ namespace Extensions.Audio
 
             source.volume = 0f;
             source.Play();
+
+            pitchTask.Start(PitchRoutine(localToken));
 
             if (fadeSeconds <= 0f)
             {
@@ -213,6 +226,24 @@ namespace Extensions.Audio
             source.volume = start;
             source.resource = null;
             source.loop = false;
+        }
+
+        /// <summary> Обновлять питч на каждом новом цикле, пока актуален текущий запуск </summary>
+        protected IEnumerator PitchRoutine(int localToken)
+        {
+            if (source == null || audioController == null) yield break;
+
+            AudioDefaults defaults = audioController.GetDefaults(model);
+            int lastSample = source.timeSamples;
+
+            while (localToken == token && source != null && source.isPlaying)
+            {
+                int sample = source.timeSamples;
+                if (sample < lastSample) source.pitch = AudioController.RandomPitch(defaults);
+                lastSample = sample;
+
+                yield return null;
+            }
         }
     }
 }
