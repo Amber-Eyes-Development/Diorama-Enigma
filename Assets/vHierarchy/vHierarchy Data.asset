@@ -309,6 +309,7 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-348488910-0
         - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-8011460336556081238-612783476
         - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-126082145-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-169329468-0
         values:
         - colorIndex: 1
           iconNameOrGuid: Folder Icon
@@ -388,6 +389,10 @@ MonoBehaviour:
           isColorRecursive: 0
         - colorIndex: 3
           iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Light Icon
           isIconRecursive: 0
           isColorRecursive: 0
   bookmarks: []

@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
-  m_Name: "1.7 \u0414\u0432\u0435\u0440\u044C"
+  m_Name: "1.8 \u0414\u0432\u0435\u0440\u044C"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: 68a26b6485af4f55aea913b6af0e32d0
   irreversible: 1
