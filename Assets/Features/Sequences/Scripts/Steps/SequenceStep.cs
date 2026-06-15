@@ -29,6 +29,9 @@ namespace DioramaEnigma.Sequences
         public bool IsGlobal => isGlobal;
         /// <summary> Идёт ли кулдаун переключения прямо сейчас (значение менять нельзя) </summary>
         public bool IsOnCooldown => Application.isPlaying && Time.time - lastChangeTime < toggleCooldown;
+        /// <summary> Можно ли сейчас изменить значение взаимодействием: шаг разблокирован и не на кулдауне
+        /// (для жестов, решающих, стоит ли вообще начинать — напр. подхват драга) </summary>
+        public bool CanChangeValue => IsUnlocked && !IsOnCooldown;
 
         /// <inheritdoc/>
         public override bool IsCompleted => Value == completionState;
@@ -67,12 +70,17 @@ namespace DioramaEnigma.Sequences
             base.OnEnable();
         }
         
-        /// <summary> Установить значение (если шаг разблокирован и прошёл кулдаун переключения) </summary>
+        /// <summary> Установить значение, если шаг это допускает (разблокировка + кулдаун); иначе оповестить об отклонённой попытке </summary>
+        /// <param name="newValue">Новое значение</param>
+        /// <param name="notify">Оповещать ли об отклонённой попытке (фидбэк вью; комплитерам не нужно)</param>
         /// <param name="bypassCooldown">Пропустить кулдаун (для физических событий — не пользовательского дребезга)</param>
-        public void SetValue(bool newValue, bool bypassCooldown = false)
+        public void SetValue(bool newValue, bool notify = true, bool bypassCooldown = false)
         {
-            if (!IsUnlocked) return;
-            if (!bypassCooldown && IsOnCooldown) return;
+            if (!IsUnlocked || (!bypassCooldown && IsOnCooldown))
+            {
+                if (notify) NotifyInteractionRejected();
+                return;
+            }
 
             LoadIfNeeded();
             if (runtimeValue == newValue) return;
