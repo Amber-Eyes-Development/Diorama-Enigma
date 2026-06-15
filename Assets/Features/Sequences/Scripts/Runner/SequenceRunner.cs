@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Extensions.Attributes;
 using Extensions.Log;
 using UnityEngine;
 
@@ -25,6 +26,7 @@ namespace DioramaEnigma.Sequences
         [Tooltip("Если задан — старт по состоянию этого шага (вместо startOnEnable)")]
         [SerializeField] private SequenceStep startStep;
         [Tooltip("Состояние/событие шага старта, по которому запускается последовательность")]
+        [EnumRange(0, 9)]
         [SerializeField] private TriggerKind startTrigger = TriggerKind.Completed;
 
         private int currentGroupIndex;

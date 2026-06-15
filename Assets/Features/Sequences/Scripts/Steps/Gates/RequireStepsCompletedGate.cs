@@ -1,4 +1,5 @@
 using System;
+using Extensions.Attributes;
 using Extensions.Log;
 using UnityEngine;
 
@@ -11,6 +12,7 @@ namespace DioramaEnigma.Sequences
     public sealed class RequireStepsCompletedGate : StepGate
     {
         [Tooltip("Состояние шагов, при котором гейт считается пройденным")]
+        [EnumRange(0, 9)]
         [SerializeField] private TriggerKind trigger = TriggerKind.Completed;
         [Tooltip("Шаги, которые должны быть в нужном состоянии для разблокировки")]
         [SerializeField] private AbstractSequenceStep[] requiredSteps;

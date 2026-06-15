@@ -1,4 +1,5 @@
 using System;
+using Extensions.Attributes;
 using UnityEngine;
 
 namespace DioramaEnigma.Sequences
@@ -15,6 +16,7 @@ namespace DioramaEnigma.Sequences
         public SequenceStepEffect Effect => effect;
 
         [Tooltip("Событие шага, по которому выполняется эффект (как у вьюшек)")]
+        [EnumRange(0, 9)]
         [SerializeField] private TriggerKind trigger;
         [SerializeReference] private SequenceStepEffect effect;
     }
