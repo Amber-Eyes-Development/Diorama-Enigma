@@ -103,6 +103,8 @@ namespace DioramaEnigma.Sequences.Editor
 
             foreach (var runner in runners)
             {
+                if (runner == null) continue;
+
                 DrawRunnerRow(runner);
 
                 var sequence = runner.Editor_Sequence;

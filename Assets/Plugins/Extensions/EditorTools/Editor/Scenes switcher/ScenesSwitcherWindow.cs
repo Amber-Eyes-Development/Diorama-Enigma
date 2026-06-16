@@ -88,7 +88,7 @@ namespace Extensions.EditorTools
                     PlayerPrefs.DeleteAll();
                     PlayerPrefs.Save();
 
-                    JsonSaveLoad.DeleteAllAsync().ContinueWith(PlayProject).Forget();
+                    CleanProjectAndPlay().Forget();
                 }
 
                 var clearSavesContent = EditorGUIUtility.IconContent("TreeEditor.Trash");
@@ -239,6 +239,13 @@ namespace Extensions.EditorTools
 
             EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
             EditorApplication.isPlaying = false;
+        }
+
+        private static async UniTaskVoid CleanProjectAndPlay()
+        {
+            await JsonSaveLoad.DeleteAllAsync();
+
+            EditorApplication.delayCall += PlayProject;
         }
 
         private static void PlayProject()

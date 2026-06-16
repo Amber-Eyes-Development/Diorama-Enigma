@@ -11878,7 +11878,7 @@ MonoBehaviour:
   snapSmoothTime: 0.08
   acceptForeign: 1
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
-  acceptPhysicsDrop: 1
+  acceptPhysicsDrop: 0
 --- !u!135 &419426295
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -12941,7 +12941,6 @@ GameObject:
   - component: {fileID: 696543040}
   - component: {fileID: 696543042}
   - component: {fileID: 696543041}
-  - component: {fileID: 696543043}
   m_Layer: 0
   m_Name: Point Light
   m_TagString: Untagged
@@ -13058,21 +13057,6 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!114 &696543043
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 696543039}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bade68216ee140e3a44a36ac8298c2be, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Features.Light_Tools.CandleLightFlicker
-  flickerStrength: 0.2
-  flickerSpeed: 6
-  smoothing: 12
 --- !u!1 &734091407
 GameObject:
   m_ObjectHideFlags: 0
@@ -19679,7 +19663,7 @@ MonoBehaviour:
   snapSmoothTime: 0.08
   acceptForeign: 0
   group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
-  acceptPhysicsDrop: 1
+  acceptPhysicsDrop: 0
 --- !u!135 &1109792960
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -19695,7 +19679,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -21264,7 +21248,7 @@ GameObject:
   - component: {fileID: 1493535819}
   - component: {fileID: 1493535818}
   - component: {fileID: 1493535817}
-  - component: {fileID: 1493535816}
+  - component: {fileID: 1493535820}
   m_Layer: 2
   m_Name: "5.1 \u0412\u0430\u0440\u0438\u0430\u043D\u0442"
   m_TagString: Untagged
@@ -21287,31 +21271,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2052244853}
   m_LocalEulerAnglesHint: {x: 0, y: -19.6, z: 10.59}
---- !u!114 &1493535816
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1493535814}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a6a0da1da47ccc42bc5beacf3e2d723, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.DraggableInteractable
-  group: {fileID: 11400000, guid: 9f5932585eb1e2f4c9b352c0a0dd0ebe, type: 2}
-  dragDistance: 5
-  projectionRange: 50
-  followSmoothTime: 0.08
-  surfaceMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  zoneMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  releaseMode: 0
-  commitMode: 1
-  savePlacement: 0
 --- !u!114 &1493535817
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21356,6 +21315,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1493535814}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1493535820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493535814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e64406d165e45559fd7c225cb995a60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Completers.ColliderContactCompleter
 --- !u!1 &1507794369
 GameObject:
   m_ObjectHideFlags: 0
