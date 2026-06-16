@@ -8,6 +8,8 @@ namespace DioramaEnigma.Sequences
     [DisallowMultipleComponent]
     public sealed class InteractableObjectsSwitcher : InteractableActionsBehaviour<GameObjectActivationAction>
     {
+        protected override bool RestoresRestingState => true;
+
         protected override void Apply(GameObjectActivationAction action, bool reverse, bool silent)
         {
             if (action.Target == null) return;

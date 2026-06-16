@@ -64,6 +64,8 @@ namespace DioramaEnigma.Sequences
         /// <param name="silent">Тихо: без видимого/слышимого проигрыша (восстановление при загрузке)</param>
         protected abstract void Apply(TAction action, bool reverse, bool silent);
 
+        protected virtual bool RestoresRestingState => false;
+
         #region Internal
 
         private void OnCompletionChanged(bool completed) =>
@@ -140,11 +142,11 @@ namespace DioramaEnigma.Sequences
             {
                 if (action == null) continue;
 
-                if (action.Trigger.IsChange()) continue;
+                if (action.Trigger.IsChange() || action.Trigger.IsRejection()) continue;
 
                 if (action.Trigger.IsSatisfiedBy(StateSource.IsCompleted, StateSource.IsUnlocked))
                     Apply(action, reverse: false, silent: true);
-                else if (action.Reversible)
+                else if (action.Reversible || RestoresRestingState)
                     Apply(action, reverse: true, silent: true);
             }
         }

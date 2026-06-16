@@ -12,7 +12,7 @@ namespace DioramaEnigma.Sequences
     public sealed class InteractableDoTweenAnimation : InteractableActionsBehaviour<DoTweenAnimationAction>
     {
         // Заведомо больше длительности любого твина → позиция «конец»
-        private const float EndPosition = 99999f;
+        private const float END_POSITION = 99999f;
 
         protected override void Apply(DoTweenAnimationAction action, bool reverse, bool silent)
         {
@@ -37,7 +37,7 @@ namespace DioramaEnigma.Sequences
         {
             if (silent)
             {
-                animation.DOGotoAndPause(EndPosition);
+                animation.DOGotoAndPause(END_POSITION);
                 return;
             }
 
