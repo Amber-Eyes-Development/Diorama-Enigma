@@ -310,6 +310,12 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-8011460336556081238-612783476
         - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-126082145-0
         - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-169329468-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-581147495-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-907111661-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-2103044122-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-1053393057-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-197881178-0
+        - globalObjectIdString: GlobalObjectId_V1-2-c279c41ca5568e24c923c9ccc67febfc-228860131-0
         values:
         - colorIndex: 1
           iconNameOrGuid: Folder Icon
@@ -393,6 +399,30 @@ MonoBehaviour:
           isColorRecursive: 0
         - colorIndex: 0
           iconNameOrGuid: Light Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
           isIconRecursive: 0
           isColorRecursive: 0
   bookmarks: []

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
   m_Name: "1.7.3 \u0420\u044B\u0447\u0430\u0433 3"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
-  id: 2b41db216723423a9bb0da0e2ffe19c3
+  id: 13834e0ddbfa47adbd9c85d059c38ea0
   irreversible: 0
   isSaveable: 1
   isGlobal: 0

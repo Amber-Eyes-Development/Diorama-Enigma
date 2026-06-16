@@ -88,6 +88,7 @@ MonoBehaviour:
     - Transform Icon
     - 
     - DebuggerEnabled
+    - Camera Gizmo
     enabled: 1
   - builtinIcons: []
     customIcons: []
