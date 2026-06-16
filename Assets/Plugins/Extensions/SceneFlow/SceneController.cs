@@ -70,12 +70,16 @@ namespace Extensions.SceneFlow
         #endregion
         
         #region Внутренние переменные
-        
+
+        private const float MaxFrameDelta = 0.1f;
+        private const float ProgressEpsilon = 0.0001f;
+
         private bool isTransitionInProgress;
         private float currentProgress;
+        private bool lastLoadTimedOut;
 
         private CoroutineTask transitionTask;
-        
+
         #endregion
         
         #region MonoBehaviour
@@ -130,17 +134,31 @@ namespace Extensions.SceneFlow
             transitionTask.Start(TransitionRoutine(sceneName, additive));
         }
         
+        /// <summary>
+        /// Ожидание завершения асинхронной операции с таймаутом по «зависанию» прогресса
+        /// </summary>
         private IEnumerator WaitForAsyncOperation(
             AsyncOperation operation,
             float timeoutSeconds,
             string label,
             bool trackProgress)
         {
-            float timer = 0f;
+            lastLoadTimedOut = false;
+
+            float stallTimer = 0f;
+            float lastProgress = operation.progress;
 
             while (!operation.isDone)
             {
-                timer += Time.unscaledDeltaTime;
+                if (operation.progress > lastProgress + ProgressEpsilon)
+                {
+                    lastProgress = operation.progress;
+                    stallTimer = 0f;
+                }
+                else
+                {
+                    stallTimer += Mathf.Min(Time.unscaledDeltaTime, MaxFrameDelta);
+                }
 
                 if (trackProgress)
                 {
@@ -148,13 +166,12 @@ namespace Extensions.SceneFlow
                     onLoadingProgressUpdate?.Invoke(currentProgress);
                 }
 
-                if (timer >= timeoutSeconds)
+                if (stallTimer >= timeoutSeconds)
                 {
                     ServiceDebug.LogError($"Таймаут загрузки: «{label}». progress={operation.progress}, " +
                                           $"allowSceneActivation={operation.allowSceneActivation}");
 
-                    isTransitionInProgress = false;
-                    FallbackToFirstScene();
+                    lastLoadTimedOut = true;
                     yield break;
                 }
 
@@ -172,45 +189,68 @@ namespace Extensions.SceneFlow
             currentProgress = 0f;
             onLoadingStart?.Invoke();
 
-            if (!TryGetLoadingSceneName(out string loadingSceneName))
+            if (TryGetLoadingSceneName(out string loadingSceneName))
+            {
+                AsyncOperation loadLoading = SceneManager.LoadSceneAsync(loadingSceneName, LoadSceneMode.Single);
+                if (loadLoading != null)
+                    yield return WaitForAsyncOperation(loadLoading, targetTimeout, loadingSceneName, false);
+                else
+                    ServiceDebug.LogError($"Не удалось начать загрузку loading-сцены «{loadingSceneName}»");
+            }
+            else
             {
                 ServiceDebug.LogError($"Не найдена loading-сцена в {nameof(SceneController)}");
-                isTransitionInProgress = false;
-                FallbackToFirstScene();
-                yield break;
             }
 
-            AsyncOperation loadLoading = SceneManager.LoadSceneAsync(loadingSceneName, LoadSceneMode.Single);
-            if (loadLoading == null)
+            string sceneToLoad = targetSceneName;
+            bool loadAdditive = additive;
+            bool usingFallback = false;
+
+            while (true)
             {
-                ServiceDebug.LogError($"Не удалось начать загрузку loading-сцены «{loadingSceneName}»");
-                isTransitionInProgress = false;
-                FallbackToFirstScene();
-                yield break;
+                LoadSceneMode mode = loadAdditive ? LoadSceneMode.Additive : LoadSceneMode.Single;
+                AsyncOperation loadTarget = SceneManager.LoadSceneAsync(sceneToLoad, mode);
+
+                if (loadTarget != null)
+                {
+                    yield return WaitForAsyncOperation(loadTarget, targetTimeout, sceneToLoad, true);
+                    if (!lastLoadTimedOut)
+                        break;
+                }
+                else
+                {
+                    ServiceDebug.LogError($"Не удалось начать загрузку сцены «{sceneToLoad}»");
+                }
+
+                if (usingFallback)
+                {
+                    ServiceDebug.LogError($"Фолбэк-сцена «{sceneToLoad}» также не загрузилась. Переход прерван");
+                    isTransitionInProgress = false;
+                    yield break;
+                }
+
+                if (!TryGetFallbackSceneName(out string fallbackSceneName))
+                {
+                    isTransitionInProgress = false;
+                    yield break;
+                }
+
+                if (fallbackSceneName == sceneToLoad)
+                {
+                    ServiceDebug.LogError($"Фолбэк совпадает с целевой сценой «{sceneToLoad}». Переход прерван");
+                    isTransitionInProgress = false;
+                    yield break;
+                }
+
+                ServiceDebug.LogWarning($"Переход в фолбэк-сцену «{fallbackSceneName}»");
+                sceneToLoad = fallbackSceneName;
+                loadAdditive = false;
+                usingFallback = true;
             }
 
-            yield return WaitForAsyncOperation(loadLoading, targetTimeout, loadingSceneName, false);
-            if (!isTransitionInProgress)
-                yield break;
-
-            LoadSceneMode mode = additive ? LoadSceneMode.Additive : LoadSceneMode.Single;
-
-            AsyncOperation loadTarget = SceneManager.LoadSceneAsync(targetSceneName, mode);
-            if (loadTarget == null)
+            if (loadAdditive)
             {
-                ServiceDebug.LogError($"Не удалось начать загрузку целевой сцены «{targetSceneName}»");
-                isTransitionInProgress = false;
-                FallbackToFirstScene();
-                yield break;
-            }
-
-            yield return WaitForAsyncOperation(loadTarget, targetTimeout, targetSceneName, true);
-            if (!isTransitionInProgress)
-                yield break;
-
-            if (additive)
-            {
-                Scene loadedScene = SceneManager.GetSceneByName(targetSceneName);
+                Scene loadedScene = SceneManager.GetSceneByName(sceneToLoad);
                 if (loadedScene.IsValid())
                     SceneManager.SetActiveScene(loadedScene);
             }
@@ -219,24 +259,24 @@ namespace Extensions.SceneFlow
             isTransitionInProgress = false;
             onSceneLoaded?.Invoke();
         }
-        
-        private void FallbackToFirstScene()
+
+        private bool TryGetFallbackSceneName(out string sceneName)
         {
+            sceneName = string.Empty;
+
             if (firstScene == null)
             {
                 ServiceDebug.LogError($"Фолбэк невозможен: не назначена стартовая сцена");
-                return;
+                return false;
             }
 
-            if (!TryGetSceneName(firstScene.Id, out string fallbackSceneName))
+            if (!TryGetSceneName(firstScene.Id, out sceneName))
             {
                 ServiceDebug.LogError($"Фолбэк невозможен: стартовая сцена не найдена в списке сцен");
-                return;
+                return false;
             }
 
-            ServiceDebug.LogWarning($"Переход в фолбэк-сцену «{fallbackSceneName}»");
-            isTransitionInProgress = true;
-            transitionTask.Start(TransitionRoutine(fallbackSceneName, false));
+            return true;
         }
 
         #endregion
