@@ -204,6 +204,7 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-568a2a48eba674047ae86d637bdc43fb-412961579-0
         - globalObjectIdString: GlobalObjectId_V1-2-568a2a48eba674047ae86d637bdc43fb-348488910-0
         - globalObjectIdString: GlobalObjectId_V1-2-568a2a48eba674047ae86d637bdc43fb-8011460336556081238-612783476
+        - globalObjectIdString: GlobalObjectId_V1-2-568a2a48eba674047ae86d637bdc43fb-768615789-0
         values:
         - colorIndex: 1
           iconNameOrGuid: Folder Icon
@@ -279,6 +280,10 @@ MonoBehaviour:
           isColorRecursive: 0
         - colorIndex: 0
           iconNameOrGuid: Canvas Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Camera Icon
           isIconRecursive: 0
           isColorRecursive: 0
   bookmarks: []
