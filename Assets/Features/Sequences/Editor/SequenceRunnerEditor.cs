@@ -127,11 +127,16 @@ namespace DioramaEnigma.Sequences.Editor
                 if (childrenProp == null) return string.Empty;
 
                 int total = childrenProp.arraySize;
-                int done = 0;
+                int matched = 0;
                 for (int i = 0; i < total; i++)
-                    if (childrenProp.GetArrayElementAtIndex(i).objectReferenceValue is AbstractSequenceStep child && child.IsCompleted)
-                        done++;
-                return $"{done}/{total} дочерних";
+                {
+                    var entry = childrenProp.GetArrayElementAtIndex(i);
+                    if (entry.FindPropertyRelative("step").objectReferenceValue is not AbstractSequenceStep child) continue;
+
+                    var trigger = (TriggerKind)entry.FindPropertyRelative("trigger").intValue;
+                    if (trigger.IsSatisfiedBy(child.IsCompleted, child.IsUnlocked)) matched++;
+                }
+                return $"{matched}/{total} засчитано";
             }
 
             return string.Empty;

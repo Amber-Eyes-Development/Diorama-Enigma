@@ -1,23 +1,24 @@
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Режим завершения композитного шага по дочерним шагам
+    /// Режим завершения композитного шага по дочерним записям (шаг + условие триггера):
+    /// засчитанной считается запись, чей шаг удовлетворяет своему триггеру
     /// </summary>
     public enum CompletionMode
     {
-        /// <summary> Завершены все дочерние шаги </summary>
+        /// <summary> Засчитаны все дочерние записи </summary>
         All,
-        /// <summary> Завершён хотя бы один </summary>
+        /// <summary> Засчитана хотя бы одна </summary>
         Any,
-        /// <summary> Завершено не менее N </summary>
+        /// <summary> Засчитано не менее N </summary>
         AtLeast,
-        /// <summary> Завершено не более N </summary>
+        /// <summary> Засчитано не более N </summary>
         AtMost,
-        /// <summary> Завершено ровно N </summary>
+        /// <summary> Засчитано ровно N </summary>
         Exactly,
-        /// <summary> Не завершён ни один </summary>
+        /// <summary> Не засчитана ни одна </summary>
         None,
-        /// <summary> Завершены не все </summary>
+        /// <summary> Засчитаны не все </summary>
         NotAll,
     }
 }
