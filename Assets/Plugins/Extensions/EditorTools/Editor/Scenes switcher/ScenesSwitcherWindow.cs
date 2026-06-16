@@ -12,9 +12,11 @@ namespace Extensions.EditorTools
     /// <summary>
     /// Навигатор сцен проекта
     /// </summary>
+    [InitializeOnLoad]
     public sealed class ScenesSwitcherWindow : EditorWindow
     {
         private const string WINDOW_NAME = "Scenes";
+        private const string LAST_OPENED_KEY = "ScenesSwitcher.LastOpened";
 
         private static GUIStyle _sceneButtonStyle;
         private static GUIStyle _activeSceneStyle;
@@ -24,6 +26,12 @@ namespace Extensions.EditorTools
         [MenuItem("Tools/" + WINDOW_NAME)]
         public static void ShowWindow() =>
             GetWindow<ScenesSwitcherWindow>(WINDOW_NAME);
+
+        static ScenesSwitcherWindow()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.delayCall += RestoreLastOpenedScene;
+        }
 
         #region GUI
 
@@ -238,6 +246,7 @@ namespace Extensions.EditorTools
                 return;
 
             EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            LastOpenedScenePath = path;
             EditorApplication.isPlaying = false;
         }
 
@@ -277,6 +286,7 @@ namespace Extensions.EditorTools
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
+            LastOpenedScenePath = activeScene.path;
             EditorApplication.isPlaying = true;
         }
 
@@ -311,6 +321,41 @@ namespace Extensions.EditorTools
 
                 EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
             }
+        }
+
+        #endregion
+
+        #region Persistence
+
+        private static string LastOpenedScenePath
+        {
+            get => JsonSaveLoad.Load(LAST_OPENED_KEY, string.Empty, EditorToolsConstraints.PERSISTENT_SERVICE_PROFILE_NAME);
+            set => JsonSaveLoad.SaveAsync(value, LAST_OPENED_KEY, EditorToolsConstraints.PERSISTENT_SERVICE_PROFILE_NAME).Forget();
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredEditMode)
+                EditorApplication.delayCall += RestoreLastOpenedScene;
+        }
+
+        private static void RestoreLastOpenedScene()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            string path = LastOpenedScenePath;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return;
+
+            var active = SceneManager.GetActiveScene();
+            if (active.path == path)
+                return;
+
+            if (active.isDirty)
+                return;
+
+            EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
         }
 
         #endregion
