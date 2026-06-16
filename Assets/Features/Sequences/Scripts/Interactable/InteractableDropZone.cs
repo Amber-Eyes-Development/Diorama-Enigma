@@ -21,8 +21,6 @@ namespace DioramaEnigma.Sequences
         public bool SnapRotation => snapRotation;
         /// <summary> Плавность присоединения, сек (0 — мгновенно) </summary>
         public float SnapSmoothTime => snapSmoothTime;
-        /// <summary> Засчитывать ли физический контакт объекта с зоной как дроп (объект сам закатился) </summary>
-        public bool AcceptsPhysicsDrop => acceptPhysicsDrop;
         /// <summary> Шаг, который завершается объектом с тем же шагом (из <see cref="StepReference"/> зоны; null — зона без завершения) </summary>
         public AbstractSequenceStep Step => StepRef != null ? StepRef.Step : null;
 
@@ -38,8 +36,6 @@ namespace DioramaEnigma.Sequences
         [SerializeField] private bool acceptForeign = false;
         [Tooltip("Группа зоны: какие объекты сюда подходят (кабели↔розетки, цветы↔горшки). Совместимы при равенстве группы")]
         [SerializeField] private DragGroup group;
-        [Tooltip("Засчитывать дроп при физическом касании объекта с зоной (требуется триггер-коллайдер)")]
-        [SerializeField] private bool acceptPhysicsDrop = false;
 
         private StepReference stepRefCache;
         private bool stepRefResolved;
@@ -97,18 +93,14 @@ namespace DioramaEnigma.Sequences
 
         private void OnTriggerEnter(Collider other)
         {
-            if (!acceptPhysicsDrop) return;
-
             var draggable = other.GetComponentInParent<DraggableInteractable>();
-            if (draggable != null) draggable.TryPhysicsCommit(this);
+            if (draggable != null) draggable.OnZoneContact(this);
         }
 
         private void OnTriggerExit(Collider other)
         {
-            if (!acceptPhysicsDrop) return;
-
             var draggable = other.GetComponentInParent<DraggableInteractable>();
-            if (draggable != null) draggable.OnPhysicsExitedZone(this);
+            if (draggable != null) draggable.OnZoneExit(this);
         }
     }
 }

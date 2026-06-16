@@ -36,8 +36,6 @@ namespace DioramaEnigma.Sequences
         [Header("Параметры drop (завершения drag)"), Space]
         [Tooltip("Реакция на отпускание вне зоны дропа")]
         [SerializeField] private DragReleaseMode releaseMode = DragReleaseMode.PlaceOnScene;
-        [Tooltip("Когда завершать шаг при попадании в зону дропа")]
-        [SerializeField] private DropCommitMode commitMode = DropCommitMode.OnRelease;
         [Tooltip("Сохранять точную позицию объекта в зоне между сессиями (для любой зоны со снапом). Выкл — позиция не сохраняется")]
         [SerializeField] private bool savePlacement;
 
@@ -114,7 +112,6 @@ namespace DioramaEnigma.Sequences
             dragging = true;
             finished = false;
             snapping = false;
-            committedZone = null;
             pointerScreen = eventData.position;
             followVelocity = Vector3.zero;
 
@@ -126,11 +123,6 @@ namespace DioramaEnigma.Sequences
             if (!dragging || finished) return;
 
             pointerScreen = eventData.position;
-
-            if (commitMode != DropCommitMode.OnEnter) return;
-
-            if (TryFindZone(pointerScreen, out var zone, out var acceptance))
-                CommitToZone(zone, acceptance, ProjectLanding());
         }
 
         public void OnEndDrag(PointerEventData eventData)
@@ -139,7 +131,7 @@ namespace DioramaEnigma.Sequences
             dragging = false;
             pointerScreen = eventData.position;
 
-            if (TryFindZone(pointerScreen, out var zone, out var acceptance))
+            if (TryFindZone(out var zone, out var acceptance))
                 CommitToZone(zone, acceptance, ProjectLanding());
             else
                 ReleaseFree();
@@ -147,10 +139,10 @@ namespace DioramaEnigma.Sequences
         
         #endregion
 
-        /// <summary> Дроп по физическому контакту: объект сам закатился в зону (вызывает зона) </summary>
-        public void TryPhysicsCommit(InteractableDropZone zone)
+        /// <summary> Фиксация по физическому перекрытию коллайдера с зоной — авто-закат недрагового объекта (вызывает зона) </summary>
+        public void OnZoneContact(InteractableDropZone zone)
         {
-            if (dragging || snapping) return;
+            if (snapping || committedZone == zone) return;
 
             var acceptance = Classify(zone);
             if (acceptance == ZoneAcceptance.Reject) return;
@@ -209,27 +201,31 @@ namespace DioramaEnigma.Sequences
             transform.position = pos;
         }
 
-        private bool TryFindZone(Vector2 screenPos, out InteractableDropZone zone, out ZoneAcceptance acceptance)
+        private bool TryFindZone(out InteractableDropZone zone, out ZoneAcceptance acceptance)
         {
-            Ray ray = mainCamera.ScreenPointToRay(screenPos);
-            var hits = Physics.RaycastAll(ray, projectionRange, zoneMask, QueryTriggerInteraction.Collide);
+            zone = null;
+            acceptance = ZoneAcceptance.Reject;
+            if (cachedCollider == null) return false;
 
+            Bounds bounds = cachedCollider.bounds;
+            var hits = Physics.BoxCastAll(bounds.center, bounds.extents, mainCamera.transform.forward,
+                Quaternion.identity, projectionRange, zoneMask, QueryTriggerInteraction.Collide);
+
+            float nearest = float.PositiveInfinity;
             foreach (var hit in hits)
             {
                 var candidate = hit.collider.GetComponentInParent<InteractableDropZone>();
                 if (candidate == null) continue;
 
                 var match = Classify(candidate);
-                if (match == ZoneAcceptance.Reject) continue;
+                if (match == ZoneAcceptance.Reject || hit.distance >= nearest) continue;
 
+                nearest = hit.distance;
                 zone = candidate;
                 acceptance = match;
-                return true;
             }
 
-            zone = null;
-            acceptance = ZoneAcceptance.Reject;
-            return false;
+            return zone != null;
         }
 
         /// <summary> Тот же шаг → завершает; иначе совместимая группа и приём чужих → только снап </summary>
@@ -271,11 +267,11 @@ namespace DioramaEnigma.Sequences
             snapping = true;
         }
 
+        /// <summary> Посадка объекта на сцену при отпускании; шаг не трогаем — его ведёт триггер зоны </summary>
         private void ReleaseFree()
         {
             finished = true;
             snapping = false;
-            committedZone = null;
 
             switch (releaseMode)
             {
@@ -292,14 +288,12 @@ namespace DioramaEnigma.Sequences
 
             RestoreBody();
             SavePlacement(false, default, default);
-
-            ApplyCompletion(false);
         }
 
         /// <summary> Физический выход из зоны (вызывает зона): покинул свою завершающую зону → откат шага </summary>
-        public void OnPhysicsExitedZone(InteractableDropZone zone)
+        public void OnZoneExit(InteractableDropZone zone)
         {
-            if (dragging || snapping) return;
+            if (snapping) return;
             if (committedZone != zone) return;
 
             committedZone = null;
