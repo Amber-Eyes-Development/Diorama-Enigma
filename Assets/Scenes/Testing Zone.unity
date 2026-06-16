@@ -172,6 +172,11 @@ MonoBehaviour:
     reversible: 1
     target: {fileID: 552688044}
     active: 1
+  - trigger: 0
+    delay: 1
+    reversible: 0
+    target: {fileID: 552688044}
+    active: 0
 --- !u!114 &115918358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11509,9 +11514,9 @@ GameObject:
   m_Component:
   - component: {fileID: 401047259}
   - component: {fileID: 401047261}
-  - component: {fileID: 401047260}
-  - component: {fileID: 401047263}
   - component: {fileID: 401047262}
+  - component: {fileID: 401047264}
+  - component: {fileID: 401047263}
   m_Layer: 0
   m_Name: "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E\u0441\u0442\u044C \u0440\u044B\u0447\u0430\u0433\u043E\u0432"
   m_TagString: Untagged
@@ -11534,24 +11539,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 126082146}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &401047260
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 401047258}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
-  actions:
-  - trigger: 2
-    delay: 0.5
-    reversible: 1
-    target: {fileID: 798574439}
-    active: 1
 --- !u!114 &401047261
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11564,7 +11551,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f9c1a7b6e2d4c8a9b0f5d3e1a7c6b42, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.StepReference
-  step: {fileID: 11400000, guid: 225b86d1f0725054ea0aa50dcd3e70b0, type: 2}
+  step: {fileID: 11400000, guid: 41cfd3efb68f1ee4ca8011005424ef86, type: 2}
 --- !u!114 &401047262
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11574,16 +11561,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 401047258}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
+  m_Script: {fileID: 11500000, guid: 7f3a1c92e84b4d6fa05c1e2d3b4a5c61, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
     delay: 0
     reversible: 0
-    target: {fileID: 401047263}
-    command: 0
-    reverseCommand: 1
+    target: {fileID: 798574439}
+    active: 1
+  - trigger: 1
+    delay: 0.5
+    reversible: 0
+    target: {fileID: 798574439}
+    active: 0
 --- !u!114 &401047263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11627,11 +11618,11 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   targetIsSelf: 0
-  targetGO: {fileID: 1373356972}
+  targetGO: {fileID: 798574439}
   tweenTargetIsTargetGO: 1
   delay: 0
   duration: 0.5
-  easeType: 6
+  easeType: 27
   easeCurve:
     serializedVersion: 2
     m_Curve:
@@ -11659,21 +11650,21 @@ MonoBehaviour:
   loopType: 0
   loops: 1
   id: 
-  isRelative: 1
-  isFrom: 0
+  isRelative: 0
+  isFrom: 1
   isIndependentUpdate: 0
   autoKill: 0
   autoGenerate: 1
   isActive: 1
   isValid: 1
-  target: {fileID: 1373356973}
-  animationType: 1
+  target: {fileID: 798574440}
+  animationType: 5
   targetType: 11
   forcedTargetType: 0
   autoPlay: 1
   useTargetAsV3: 0
   endValueFloat: 0
-  endValueV3: {x: 0, y: 4.3, z: 0}
+  endValueV3: {x: 0, y: 0, z: 0}
   endValueV2: {x: 0, y: 0}
   endValueColor: {r: 1, g: 1, b: 1, a: 1}
   endValueString: 
@@ -11684,7 +11675,7 @@ MonoBehaviour:
     width: 0
     height: 0
   endValueTransform: {fileID: 0}
-  optionalBool0: 0
+  optionalBool0: 1
   optionalBool1: 0
   optionalFloat0: 0
   optionalInt0: 0
@@ -11692,6 +11683,25 @@ MonoBehaviour:
   optionalScrambleMode: 0
   optionalShakeRandomnessMode: 0
   optionalString: 
+--- !u!114 &401047264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 401047258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
+  actions:
+  - trigger: 0
+    delay: 0
+    reversible: 1
+    target: {fileID: 401047263}
+    command: 0
+    reverseCommand: 1
 --- !u!1 &414345370
 GameObject:
   m_ObjectHideFlags: 0
@@ -11975,11 +11985,6 @@ MonoBehaviour:
     reversible: 1
     target: {fileID: 274896059}
     command: 0
-  - trigger: 0
-    delay: 0.5
-    reversible: 0
-    target: {fileID: 274896059}
-    command: 1
 --- !u!114 &419426299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13322,8 +13327,9 @@ GameObject:
   - component: {fileID: 798574440}
   - component: {fileID: 798574442}
   - component: {fileID: 798574441}
-  - component: {fileID: 798574444}
-  - component: {fileID: 798574443}
+  - component: {fileID: 798574446}
+  - component: {fileID: 798574445}
+  - component: {fileID: 798574447}
   m_Layer: 0
   m_Name: "7. \u0420\u044B\u0447\u0430\u0433\u0438"
   m_TagString: Untagged
@@ -13382,7 +13388,140 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.StepReference
   step: {fileID: 11400000, guid: 225b86d1f0725054ea0aa50dcd3e70b0, type: 2}
---- !u!114 &798574443
+--- !u!114 &798574445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 798574439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d0390bd8b8ffd640b34fe25065ff1df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp-firstpass::DG.Tweening.DOTweenAnimation
+  updateType: 0
+  isSpeedBased: 0
+  hasOnStart: 0
+  hasOnPlay: 0
+  hasOnUpdate: 0
+  hasOnStepComplete: 0
+  hasOnComplete: 0
+  hasOnTweenCreated: 0
+  hasOnRewind: 0
+  onStart:
+    m_PersistentCalls:
+      m_Calls: []
+  onPlay:
+    m_PersistentCalls:
+      m_Calls: []
+  onUpdate:
+    m_PersistentCalls:
+      m_Calls: []
+  onStepComplete:
+    m_PersistentCalls:
+      m_Calls: []
+  onComplete:
+    m_PersistentCalls:
+      m_Calls: []
+  onTweenCreated:
+    m_PersistentCalls:
+      m_Calls: []
+  onRewind:
+    m_PersistentCalls:
+      m_Calls: []
+  targetIsSelf: 0
+  targetGO: {fileID: 1373356972}
+  tweenTargetIsTargetGO: 1
+  delay: 0
+  duration: 0.5
+  easeType: 6
+  easeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  loopType: 0
+  loops: 1
+  id: 
+  isRelative: 1
+  isFrom: 0
+  isIndependentUpdate: 0
+  autoKill: 0
+  autoGenerate: 1
+  isActive: 1
+  isValid: 1
+  target: {fileID: 1373356973}
+  animationType: 1
+  targetType: 11
+  forcedTargetType: 0
+  autoPlay: 1
+  useTargetAsV3: 0
+  endValueFloat: 0
+  endValueV3: {x: 0, y: 4.3, z: 0}
+  endValueV2: {x: 0, y: 0}
+  endValueColor: {r: 1, g: 1, b: 1, a: 1}
+  endValueString: 
+  endValueRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 0
+    height: 0
+  endValueTransform: {fileID: 0}
+  optionalBool0: 0
+  optionalBool1: 0
+  optionalFloat0: 0
+  optionalInt0: 0
+  optionalRotationMode: 0
+  optionalScrambleMode: 0
+  optionalShakeRandomnessMode: 0
+  optionalString: 
+--- !u!114 &798574446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 798574439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e4b2d03f95c5e70b16d2f3e4c5b6d72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableDoTweenAnimation
+  actions:
+  - trigger: 0
+    delay: 0
+    reversible: 1
+    target: {fileID: 798574445}
+    command: 0
+    reverseCommand: 1
+  - trigger: 0
+    delay: 0
+    reversible: 0
+    target: {fileID: 798574447}
+    command: 1
+    reverseCommand: 0
+--- !u!114 &798574447
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -13428,7 +13567,7 @@ MonoBehaviour:
   targetGO: {fileID: 0}
   tweenTargetIsTargetGO: 1
   delay: 0
-  duration: 0.533
+  duration: 0.5
   easeType: 27
   easeCurve:
     serializedVersion: 2
@@ -13460,7 +13599,7 @@ MonoBehaviour:
   isRelative: 0
   isFrom: 1
   isIndependentUpdate: 0
-  autoKill: 1
+  autoKill: 0
   autoGenerate: 1
   isActive: 1
   isValid: 1
@@ -13490,21 +13629,6 @@ MonoBehaviour:
   optionalScrambleMode: 0
   optionalShakeRandomnessMode: 0
   optionalString: 
---- !u!114 &798574444
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 798574439}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 40306178, guid: aa0b1eebb5db27a419fa4564bbe5c9c5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: DOTweenPro.dll::DG.Tweening.DOTweenVisualManager
-  preset: 1
-  onEnableBehaviour: 3
-  onDisableBehaviour: 2
 --- !u!1 &883396764
 GameObject:
   m_ObjectHideFlags: 0
@@ -20985,7 +21109,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u041D\u0430 \u043F\u043E\u043B\u0443"
+  m_text: "\u041A\u043B\u044E\u0447 \u0443\u043F\u0430\u043B"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: e73a58f6e2794ae7b1b7e50b7fb811b0, type: 2}
