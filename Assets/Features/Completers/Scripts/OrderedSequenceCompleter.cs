@@ -7,8 +7,7 @@ using DioramaEnigma.Sequences;
 namespace DioramaEnigma.Completers
 {
     /// <summary>
-    /// Завершитель: шаг завершается, когда шаги списка выполнены по очереди — от первого до последнего.
-    /// Поведение при нарушении очереди задаётся <see cref="SequenceOrderMode"/>
+    /// Завершитель: шаг завершается, когда шаги списка выполнены по очереди — от первого до последнего
     /// </summary>
     public sealed class OrderedSequenceCompleter : AbstractCompleter
     {
@@ -20,16 +19,23 @@ namespace DioramaEnigma.Completers
         private SequenceStep[] steps;
         private Action<bool>[] handlers;
 
+        private bool isDirty;
+        private bool isCommitting;
+
         /// <summary> Текущая позиция очереди (для <see cref="SequenceOrderMode.AutoCascade"/>) </summary>
         private int progress;
         /// <summary> Порядок выполнения по факту (для <see cref="SequenceOrderMode.CheckOnComplete"/>) </summary>
         private List<SequenceStep> completedOrder;
+        /// <summary> Изменения шагов в порядке поступления (для <see cref="SequenceOrderMode.CheckOnComplete"/>) </summary>
+        private readonly List<(SequenceStep step, bool completed)> pendingChanges = new();
 
         private void OnEnable()
         {
             steps = FilterSteps();
             handlers = new Action<bool>[steps.Length];
             progress = 0;
+            isCommitting = false;
+            pendingChanges.Clear();
             completedOrder = mode == SequenceOrderMode.CheckOnComplete ? SeedCompletedOrder() : null;
 
             for (int i = 0; i < steps.Length; i++)
@@ -39,7 +45,7 @@ namespace DioramaEnigma.Completers
                 step.onCompletionChanged += handlers[i];
             }
 
-            Recalculate(null, false);
+            isDirty = true;
         }
 
         private void OnDisable()
@@ -48,26 +54,54 @@ namespace DioramaEnigma.Completers
                 steps[i].onCompletionChanged -= handlers[i];
         }
 
+        private void LateUpdate()
+        {
+            if (!isDirty) return;
+
+            isDirty = false;
+            Commit();
+        }
+
         #region Internal
 
-        private void OnStepChanged(SequenceStep step, bool completed) => Recalculate(step, completed);
-
-        private void Recalculate(SequenceStep changed, bool completed)
+        private void OnStepChanged(SequenceStep step, bool completed)
         {
-            if (State == null || steps.Length == 0) return;
+            if (isCommitting) return;
 
-            switch (mode)
+            if (mode == SequenceOrderMode.CheckOnComplete)
+                pendingChanges.Add((step, completed));
+
+            isDirty = true;
+        }
+
+        private void Commit()
+        {
+            if (State == null || steps.Length == 0)
             {
-                case SequenceOrderMode.RevertOutOfOrder: RecalculateRevert(); break;
-                case SequenceOrderMode.AutoCascade: RecalculateCascade(); break;
-                case SequenceOrderMode.CheckOnComplete: RecalculateCheck(changed, completed); break;
-                default:
-                    ServiceDebug.LogError(this, $"Необработанный {nameof(SequenceOrderMode)}: {mode}");
-                    break;
+                pendingChanges.Clear();
+                return;
+            }
+
+            isCommitting = true;
+            try
+            {
+                switch (mode)
+                {
+                    case SequenceOrderMode.RevertOutOfOrder: RecalculateRevert(); break;
+                    case SequenceOrderMode.AutoCascade: RecalculateCascade(); break;
+                    case SequenceOrderMode.CheckOnComplete: RecalculateCheck(); break;
+                    default:
+                        ServiceDebug.LogError(this, $"Необработанный {nameof(SequenceOrderMode)}: {mode}");
+                        break;
+                }
+            }
+            finally
+            {
+                isCommitting = false;
             }
         }
 
-        /// <summary> Завершённые не по очереди шаги откатываются немедленно </summary>
+        /// <summary> Завершённые не по очереди шаги откатываются </summary>
         private void RecalculateRevert()
         {
             int k = 0;
@@ -93,13 +127,14 @@ namespace DioramaEnigma.Completers
         }
 
         /// <summary> Любой порядок выполнения; по завершении всех — проверка очереди, иначе откат всех </summary>
-        private void RecalculateCheck(SequenceStep changed, bool completed)
+        private void RecalculateCheck()
         {
-            if (changed != null)
+            foreach (var (step, completed) in pendingChanges)
             {
-                if (completed) completedOrder.Add(changed);
-                else completedOrder.Remove(changed);
+                if (completed) completedOrder.Add(step);
+                else completedOrder.Remove(step);
             }
+            pendingChanges.Clear();
 
             if (completedOrder.Count < steps.Length)
             {
