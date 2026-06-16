@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Extensions.Helpers;
+using Extensions.Helpers.Enumerations;
 using Extensions.Log;
 using UnityEngine;
 
@@ -63,6 +65,7 @@ namespace DioramaEnigma.Completers
             {
                 case LogicOperator.And: return matched == total;
                 case LogicOperator.Or: return matched > 0;
+                case LogicOperator.Not: return matched == 0;
                 default:
                     ServiceDebug.LogError(this, $"Необработанный {nameof(LogicOperator)}: {operatorKind}");
                     return false;
