@@ -13,19 +13,18 @@ namespace DioramaEnigma.Completers
     {
         private void OnTriggerEnter(Collider other)
         {
-            var reference = other.GetComponentInParent<StepReference>();
-            SetState(reference, State.CompletionState);
+            if (State == null) return;
+            SetState(other.GetComponentInParent<StepReference>(), State.CompletionState);
         }
-        
+
         private void OnTriggerExit(Collider other)
         {
-            var reference = other.GetComponentInParent<StepReference>();
-            SetState(reference, !State.CompletionState);
+            if (State == null) return;
+            SetState(other.GetComponentInParent<StepReference>(), !State.CompletionState);
         }
 
         private void SetState(StepReference reference, bool state)
         {
-            if (State == null) return;
             if (reference == null || reference.Step != State) return;
 
             State.SetValue(state, notify: false);
