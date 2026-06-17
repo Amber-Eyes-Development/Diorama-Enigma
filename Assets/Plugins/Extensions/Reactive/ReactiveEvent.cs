@@ -56,12 +56,19 @@ namespace Extensions.Reactive
             if (subscribers.Count == 0) return;
 
             isInvoking = true;
-            foreach (var t in subscribers)
-                t?.Invoke();
-            isInvoking = false;
+            try
+            {
+                int count = subscribers.Count;
+                for (int i = 0; i < count; i++)
+                    subscribers[i]?.Invoke();
+            }
+            finally
+            {
+                isInvoking = false;
+            }
 
             if (subscribersToRemove.Count <= 0) return;
-            
+
             foreach (var t in subscribersToRemove)
                 subscribers.Remove(t);
             subscribersToRemove.Clear();
@@ -127,12 +134,19 @@ namespace Extensions.Reactive
             if (subscribers.Count == 0) return;
 
             isInvoking = true;
-            foreach (var t in subscribers)
-                t?.Invoke(value);
-            isInvoking = false;
+            try
+            {
+                int count = subscribers.Count;
+                for (int i = 0; i < count; i++)
+                    subscribers[i]?.Invoke(value);
+            }
+            finally
+            {
+                isInvoking = false;
+            }
 
             if (subscribersToRemove.Count <= 0) return;
-            
+
             foreach (var t in subscribersToRemove)
                 subscribers.Remove(t);
             subscribersToRemove.Clear();
