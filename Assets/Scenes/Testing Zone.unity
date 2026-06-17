@@ -168,15 +168,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.InteractableObjectsSwitcher
   actions:
   - trigger: 0
-    delay: 0
-    reversible: 1
-    target: {fileID: 552688044}
-    active: 1
-  - trigger: 0
     delay: 1
     reversible: 0
     target: {fileID: 552688044}
     active: 0
+  - trigger: 0
+    delay: 0
+    reversible: 1
+    target: {fileID: 552688044}
+    active: 1
 --- !u!114 &115918358
 MonoBehaviour:
   m_ObjectHideFlags: 0

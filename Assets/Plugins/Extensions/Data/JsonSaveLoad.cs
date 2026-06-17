@@ -8,7 +8,6 @@ using Extensions.Log;
 using Newtonsoft.Json; // Newtonsoft.Json
 using UnityEngine;
 using System.Threading;
-using Newtonsoft.Json.Serialization;
 
 namespace Extensions.Data
 {
@@ -76,7 +75,7 @@ namespace Extensions.Data
             ReferenceLoopHandling = ReferenceLoopHandling.Error,
             PreserveReferencesHandling = PreserveReferencesHandling.None,
             TypeNameHandling = TypeNameHandling.None,
-            ContractResolver = new DefaultContractResolver()
+            ContractResolver = new PrivateSetterContractResolver()
         };
 
         private static int savingCount;

@@ -24,7 +24,7 @@ namespace Extensions.Generics
         /// </summary>
         public event Action onHoldStarted;
         /// <summary>
-        /// Измнение прогресса зажатия
+        /// Изменение прогресса зажатия
         /// </summary>
         /// <typeparam name="float">Прогресс зажатия от 0 до 1</typeparam>
         public event Action<float> onHoldProgressChanged;
@@ -103,7 +103,7 @@ namespace Extensions.Generics
         public void AddAction(AbstractHoldButtonAction action)
         {
             if (action != null) actions.Add(action);
-            sortActionsByPriority();
+            SortActionsByPriority();
         }
 
         /// <summary>

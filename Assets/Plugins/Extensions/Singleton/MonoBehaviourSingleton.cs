@@ -11,6 +11,7 @@ namespace Extensions.Singleton
         [SerializeField] protected bool dontDestroyOnLoad = false;
         
         private static T _instance;
+        private static bool applicationIsQuitting;
 
         /// <summary>
         /// Инстанс синглтона
@@ -19,6 +20,8 @@ namespace Extensions.Singleton
         {
             get
             {
+                if (applicationIsQuitting) return null;
+
                 if (_instance == null)
                 {
                     _instance = FindAnyObjectByType<T>();
@@ -39,6 +42,7 @@ namespace Extensions.Singleton
             if (_instance == null)
             {
                 _instance = this as T;
+                applicationIsQuitting = false;
                 if (dontDestroyOnLoad)
                 {
                     gameObject.transform.parent = null;
@@ -50,5 +54,7 @@ namespace Extensions.Singleton
                 Destroy(gameObject);
             }
         }
+
+        protected virtual void OnApplicationQuit() => applicationIsQuitting = true;
     }
 }

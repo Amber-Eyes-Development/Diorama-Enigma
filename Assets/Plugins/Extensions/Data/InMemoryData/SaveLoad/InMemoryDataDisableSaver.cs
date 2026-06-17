@@ -7,90 +7,45 @@ namespace Extensions.Data.InMemoryData
 {
     /// <summary>
     /// Сохранение InMemory БД на OnDisable
-    /// <remarks>
-    /// Используется для сохранения данных БД с отключенным автосейвом
-    /// Поддерживает как синхронное, так и асинхронное сохранение
-    /// </remarks>
     /// </summary>
+    /// <remarks>
+    /// Для БД с отключённым автосейвом. При выключении объекта данные синхронно помечаются к записи;
+    /// фактическую (батч-)запись на диск ведёт JsonSaveLoad. Гарантию записи при выходе даёт
+    /// <see cref="InMemoryDataPauseSaver"/> (через Application.wantsToQuit).
+    /// </remarks>
     public class InMemoryDataDisableSaver : MonoBehaviour
     {
-        [SerializeField]
-        protected List<InMemoryDataBaseObject> dataBases = new();
+        [SerializeField] protected List<InMemoryDataBaseObject> dataBases = new();
 
-        [SerializeField]
-        [Tooltip("Ждать завершения сохранения перед отключением (рекомендуется)")]
-        protected bool waitForSaveCompletion = true;
-
-        [SerializeField]
         [Tooltip("Показывать лог сохранения")]
-        protected bool showSaveLog = false;
+        [SerializeField] protected bool showSaveLog = false;
 
-        protected virtual async void OnDisable()
-        {
-            if (waitForSaveCompletion)
-            {
-                await SaveAllAsync();
-            }
-            else
-            {
-                SaveAllSync();
-            }
-        }
+        protected virtual void OnDisable() => SaveAllManual();
 
         /// <summary>
-        /// Асинхронное сохранение всех БД (ждет завершения)
+        /// Сохранить все БД: синхронно помечает данные к записи, запись на диск — батчем через JsonSaveLoad
         /// </summary>
-        private async UniTask SaveAllAsync()
+        public void SaveAllManual()
         {
-            if (showSaveLog)
-            {
-                ServiceDebug.Log($"Начало сохранения {dataBases.Count} БД...");
-            }
-
-            int savedCount = 0;
-            foreach (InMemoryDataBaseObject dataBase in dataBases)
-            {
-                if (dataBase == null) continue;
-
-                bool success = await dataBase.RequestSaveAsync();
-                
-                if (success)
-                {
-                    savedCount++;
-                    if (showSaveLog)
-                    {
-                        ServiceDebug.Log($"Сохранена БД: {dataBase.name}");
-                    }
-                }
-            }
-
-            if (showSaveLog)
-            {
-                ServiceDebug.Log($"Сохранено {savedCount}/{dataBases.Count} БД");
-            }
-        }
-
-        /// <summary>
-        /// Синхронное сохранение (fire-and-forget)
-        /// </summary>
-        private void SaveAllSync()
-        {
-            if (showSaveLog)
-            {
-                ServiceDebug.Log($"Быстрое сохранение {dataBases.Count} БД (fire-and-forget)...");
-            }
-
+            int requested = 0;
             foreach (InMemoryDataBaseObject dataBase in dataBases)
             {
                 if (dataBase == null) continue;
 
                 dataBase.RequestSave();
+                requested++;
             }
+
+            // Поторопить запись батча; гарантию записи при выходе/потере фокуса даёт JsonSaveLoad / PauseSaver
+            JsonSaveLoad.FlushAsync().Forget();
+
+            if (showSaveLog) ServiceDebug.Log($"Помечено к сохранению {requested} БД");
         }
 
         /// <summary>
-        /// Ручное сохранение всех БД извне (асинхронное)
+        /// Сохранить все БД и дождаться фактической записи на диск
         /// </summary>
+        /// <returns>Количество сохранённых БД</returns>
         public async UniTask<int> SaveAllManualAsync()
         {
             int savedCount = 0;
@@ -98,17 +53,10 @@ namespace Extensions.Data.InMemoryData
             {
                 if (dataBase == null) continue;
 
-                if (await dataBase.RequestSaveAsync())
-                {
-                    savedCount++;
-                }
+                if (await dataBase.RequestSaveAsync()) savedCount++;
             }
+
             return savedCount;
         }
-
-        /// <summary>
-        /// Ручное сохранение всех БД извне (синхронное fire-and-forget)
-        /// </summary>
-        public void SaveAllManual() => SaveAllSync();
     }
 }

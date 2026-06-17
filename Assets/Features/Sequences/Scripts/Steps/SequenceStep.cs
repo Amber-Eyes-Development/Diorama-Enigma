@@ -12,6 +12,8 @@ namespace DioramaEnigma.Sequences
     [CreateAssetMenu(menuName = "Sequences/Steps/Step", fileName = nameof(SequenceStep))]
     public sealed class SequenceStep : AbstractSequenceStep
     {
+        private const string GLOBAL_PROFILE = "global values";
+
         /// <summary> Текущее значение </summary>
         public bool Value
         {
@@ -53,8 +55,6 @@ namespace DioramaEnigma.Sequences
         [Tooltip("Защита от дребезга: сколько секунд после смены значения нельзя менять его снова")]
         [SoftRange(0f, 1f, 1)]
         [SerializeField] private float toggleCooldown = 0.5f;
-
-        private const string GLOBAL_PROFILE = "global values";
 
         [System.NonSerialized] private bool runtimeValue;
         [System.NonSerialized] private float lastChangeTime;
