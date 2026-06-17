@@ -26,7 +26,7 @@ namespace Extensions.Generics
         public void AddAction(BaseAbstractButtonAction action)
         {
             if (action != null) actions.Add(action);
-            sortActionsByPriority();
+            SortActionsByPriority();
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Extensions.Generics
             onButtonClicked?.Invoke();
         }
 
-        protected void sortActionsByPriority()
+        protected void SortActionsByPriority()
         {
             actions.Sort((a, b) => b.GetPriority.CompareTo(a.GetPriority));
         }

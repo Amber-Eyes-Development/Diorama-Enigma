@@ -103,7 +103,7 @@ namespace Extensions.Generics
         public void AddAction(AbstractHoldButtonAction action)
         {
             if (action != null) actions.Add(action);
-            sortActionsByPriority();
+            SortActionsByPriority();
         }
 
         /// <summary>

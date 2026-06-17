@@ -250,7 +250,7 @@ namespace Extensions.Audio
             AudioModel model, AudioSpatialPreset spatialPreset = null, bool loop = false)
         {
             if (Logic.IsNull(resource, "Аудио-ресурс не назначен, аудио не воспроизведено")) return null;
-            if (!isPoolValid()) return null;
+            if (!IsPoolValid()) return null;
 
             AudioSource source = oneShotPool.Get();
             if (source == null)
@@ -316,7 +316,7 @@ namespace Extensions.Audio
         private void ReleaseAfterPlay(AudioSource source)
         {
             if (Logic.IsNull(source, "Ошибка источника звука, аудио не воспроизведено")) return;
-            if (!isPoolValid()) return;
+            if (!IsPoolValid()) return;
 
             GetReleaseTask(source).Start(ReleaseRoutine(source, null));
         }
@@ -324,7 +324,7 @@ namespace Extensions.Audio
         private void ReleaseAfterPlayFollow(AudioSource source, Transform followTarget)
         {
             if (Logic.IsNull(source, "Ошибка источника звука, аудио не воспроизведено")) return;
-            if (!isPoolValid()) return;
+            if (!IsPoolValid()) return;
 
             GetReleaseTask(source).Start(ReleaseRoutine(source, followTarget));
         }
@@ -421,7 +421,7 @@ namespace Extensions.Audio
             return Random.Range(minPitch, maxPitch);
         }
 
-        private bool isPoolValid()
+        private bool IsPoolValid()
         {
             if (oneShotPool == null)
             {
