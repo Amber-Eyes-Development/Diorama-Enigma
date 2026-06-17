@@ -6,7 +6,7 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Гейт (условия доступности <see cref="SequenceStep"/> к измнению состояния)
+    /// Гейт (условия доступности <see cref="SequenceStep"/> к изменению состояния)
     /// </summary>
     [Serializable]
     public sealed class RequireStepsCompletedGate : StepGate

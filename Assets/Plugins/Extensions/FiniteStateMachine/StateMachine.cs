@@ -76,7 +76,7 @@ namespace Extensions.FiniteStateMachine
             if (currentState == null) throw new InvalidOperationException($"Реестр вернул невалидное состояние ({currentStateType.Name})");
 
             currentState.Enter(context);
-            if (logsEnabled) ServiceDebug.Log($"Запуск успешен");
+            if (logsEnabled) ServiceDebug.Log("Запуск успешен");
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace Extensions.FiniteStateMachine
         public void Restart<TInitialState>(TContext context)
             where TInitialState : class, IState<TContext>
         {
-            if (logsEnabled) ServiceDebug.Log($"Перезапуск...");
+            if (logsEnabled) ServiceDebug.Log("Перезапуск...");
             Stop(context);
             Start<TInitialState>(context);
         }
@@ -162,7 +162,7 @@ namespace Extensions.FiniteStateMachine
             stack.Clear();
             currentState = null;
             currentStateType = null;
-            if (logsEnabled) ServiceDebug.Log($"Остановка успешна");
+            if (logsEnabled) ServiceDebug.Log("Остановка успешна");
         }
 
         #endregion

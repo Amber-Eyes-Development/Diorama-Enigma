@@ -5,9 +5,7 @@ using UnityEngine;
 namespace DioramaEnigma.Sequences
 {
     /// <summary>
-    /// Базовый шаг последовательности: общий жизненный цикл — метка, активация/гейт/разблокировка
-    /// (через <see cref="StepCompletionTracker"/>), завершённость и сброс.
-    /// Наследник определяет только то, как вычисляется <see cref="IsCompleted"/>.
+    /// Базовый шаг последовательности
     /// </summary>
     public abstract class AbstractSequenceStep : IdentifiableObject
     {
@@ -24,8 +22,10 @@ namespace DioramaEnigma.Sequences
             remove => tracker.onUnlockChanged -= value;
         }
         /// <summary> Отклонённая попытка изменить состояние шага </summary>
-        /// <typeparam name="bool"> true: группа активна, но изменению мешает другое условие
-        /// (гейт/кулдаун/латч необратимости); false: группа неактивна (шаг заблокирован) </typeparam>
+        /// <remarks>
+        /// Аргумент: true — группа активна, но изменению мешает другое условие (гейт/кулдаун/латч необратимости);
+        /// false — группа неактивна (шаг заблокирован) 
+        /// </remarks>
         public event Action<bool> onInteractionRejected;
 
         /// <summary> Завершён ли шаг </summary>

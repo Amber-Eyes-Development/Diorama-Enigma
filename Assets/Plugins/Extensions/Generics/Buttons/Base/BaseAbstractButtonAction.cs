@@ -12,7 +12,6 @@ namespace Extensions.Generics
         /// <summary>
         /// Приоритет выполнения действия
         /// </summary>
-        /// <returns></returns>
         public virtual int GetPriority => DEFAULT_PRIORITY;
         
         /// <summary>

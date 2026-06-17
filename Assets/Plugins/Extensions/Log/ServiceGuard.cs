@@ -20,7 +20,7 @@ namespace Extensions.Log
             [CallerMemberName] string memberName = "") where T : class
         {
             if (value != null) return;
-            Throw(new ArgumentNullException(nameof(paramName), $"'{paramName}' не должен быть null."), filePath, memberName);
+            Throw(new ArgumentNullException(paramName, $"'{paramName}' не должен быть null."), filePath, memberName);
         }
 
         /// <summary>

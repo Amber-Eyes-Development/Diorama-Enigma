@@ -50,7 +50,7 @@ namespace Extensions.Pool
         /// </summary>
         protected readonly int maxSize;
 
-        #region  Компоненты для PoolCOntroller 
+        #region Компоненты для PoolsController
         
         /// <summary>
         /// Флаг инфраструктуры — навешивать ли PooledObject

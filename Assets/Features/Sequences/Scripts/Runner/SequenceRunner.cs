@@ -10,7 +10,7 @@ namespace DioramaEnigma.Sequences
     /// Исполнитель последовательности (один на префаб)
     /// </summary>
     /// <remarks>
-    /// Наблюдает завершённость шагов и управляет порядком групп и эффектами.=
+    /// Наблюдает завершённость шагов и управляет порядком групп и эффектами
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class SequenceRunner : MonoBehaviour

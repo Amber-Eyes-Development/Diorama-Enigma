@@ -17,7 +17,7 @@ namespace DioramaEnigma.Sequences
 
         private void Awake()
         {
-            if (step == null) ServiceDebug.LogError($"Шаг {step} не назначен для компонента {name}!");
+            if (step == null) ServiceDebug.LogError($"Шаг {nameof(step)} не назначен для компонента {name}!");
         }
     }
 }
