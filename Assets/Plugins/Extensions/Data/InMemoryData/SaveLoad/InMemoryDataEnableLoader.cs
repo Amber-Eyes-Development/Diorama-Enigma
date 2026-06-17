@@ -25,16 +25,10 @@ namespace Extensions.Data.InMemoryData
         [Tooltip("Показывать лог загрузки")]
         protected bool showLoadingLog = false;
 
-        protected virtual async void OnEnable()
+        protected virtual void OnEnable()
         {
-            if (useAsyncPreload)
-            {
-                await PreloadAsync();
-            }
-            else
-            {
-                PreloadSync();
-            }
+            if (useAsyncPreload) PreloadAsync().Forget();
+            else PreloadSync();
         }
 
         /// <summary>
