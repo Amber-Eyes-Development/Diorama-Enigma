@@ -8,7 +8,7 @@ namespace DioramaEnigma.Sequences
     /// <summary>
     /// Композитный шаг: завершается по совокупности условий дочерних шагов
     /// </summary>
-    [CreateAssetMenu(menuName = "Sequences/Steps/Composite Step", fileName = nameof(CompositeSequenceStep))]
+    [CreateAssetMenu(menuName = "StepSequences/Steps/Composite Step", fileName = nameof(CompositeSequenceStep))]
     public sealed class CompositeSequenceStep : AbstractSequenceStep
     {
         /// <inheritdoc/>

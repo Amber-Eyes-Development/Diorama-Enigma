@@ -7,7 +7,7 @@ namespace DioramaEnigma.Sequences
     /// <summary>
     /// Последовательность шагов <see cref="SequenceStep"/>: упорядоченные группы ссылок на ассеты-шаги
     /// </summary>
-    [CreateAssetMenu(menuName = "Sequences/Sequence", fileName = nameof(Sequence))]
+    [CreateAssetMenu(menuName = "StepSequences/Sequence", fileName = nameof(Sequence))]
     public sealed class Sequence : ScriptableObject
     {
         /// <summary> Записи шагов последовательности </summary>
