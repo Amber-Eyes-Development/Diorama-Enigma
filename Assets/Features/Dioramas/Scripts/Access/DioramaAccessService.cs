@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DioramaEnigma.Sequences;
+using Extensions.Data;
 using Extensions.Log;
 
 namespace DioramaEnigma.Dioramas
@@ -8,16 +9,9 @@ namespace DioramaEnigma.Dioramas
     /// <summary>
     /// Сервис доступа: вычисляет открытые/пройденные диорамы по графу входящих связей
     /// </summary>
-    /// <remarks>
-    /// Откат шагов учтён разделением двух понятий:
-    /// «пройдена сейчас» (<see cref="IsCompleted"/>) — живое <see cref="DioramaDefinition.IsCompleted"/>,
-    /// отражает откат шагов; «пройдена когда-либо» (everCompleted) — монотонно, персистится снимком и
-    /// держит открытость стабильной (откат шага не закрывает уже открытые диорамы). Поэтому снимок
-    /// не «залипает» в UI-состоянии: серость диорамы определяется живой завершённостью
-    /// </remarks>
     public sealed class DioramaAccessService
     {
-        private const char SNAPSHOT_SEPARATOR = ';';
+        private const string COMPLETED_SAVE_KEY = "dioramas.completed";
 
         /// <summary> Диорама открыта </summary>
         public event Action<DioramaDefinition> onDioramaUnlocked;
@@ -27,7 +21,6 @@ namespace DioramaEnigma.Dioramas
         public event Action<DioramaBlock> onBlockUnlocked;
 
         private readonly DioramaRegistry registry;
-        private readonly DioramaCompletedSnapshot completedSnapshot;
 
         private readonly HashSet<string> unlocked = new();
         private readonly HashSet<string> everCompleted = new();
@@ -36,10 +29,9 @@ namespace DioramaEnigma.Dioramas
 
         private bool initialized;
 
-        public DioramaAccessService(DioramaRegistry registry, DioramaCompletedSnapshot completedSnapshot)
+        public DioramaAccessService(DioramaRegistry registry)
         {
             this.registry = registry;
-            this.completedSnapshot = completedSnapshot;
         }
 
         #region Lifecycle
@@ -118,7 +110,7 @@ namespace DioramaEnigma.Dioramas
             if (!everCompleted.Add(def.Id)) return;
 
             unlocked.Add(def.Id);
-            AppendSnapshot(def.Id);
+            PersistCompleted();
             onDioramaCompleted?.Invoke(def);
             EvaluateUnlocks(true);
         }
@@ -132,10 +124,10 @@ namespace DioramaEnigma.Dioramas
         {
             var result = new List<DioramaBlock>();
 
-            foreach (var entry in registry.Blocks)
+            foreach (var blockEntry in registry.Blocks)
             {
-                if (entry?.Block == null) continue;
-                if (HasUnlockedDiorama(entry)) result.Add(entry.Block);
+                if (blockEntry?.Block == null) continue;
+                if (HasUnlockedDiorama(blockEntry)) result.Add(blockEntry.Block);
             }
 
             return result;
@@ -147,10 +139,16 @@ namespace DioramaEnigma.Dioramas
         {
             var result = new List<DioramaNode>();
 
-            foreach (var def in registry.InBlock(block))
+            foreach (var blockEntry in registry.Blocks)
             {
-                if (def == null || !unlocked.Contains(def.Id)) continue;
-                result.Add(new DioramaNode(def, StateOf(def)));
+                if (blockEntry == null || blockEntry.Block != block) continue;
+
+                foreach (var entry in blockEntry.Dioramas)
+                {
+                    var def = entry?.Definition;
+                    if (def == null || !unlocked.Contains(def.Id)) continue;
+                    result.Add(new DioramaNode(def, StateOf(def)));
+                }
             }
 
             return result;
@@ -161,9 +159,11 @@ namespace DioramaEnigma.Dioramas
         {
             var result = new List<DioramaDefinition>();
 
-            foreach (var def in registry.Ordered())
-                if (def != null && unlocked.Contains(def.Id))
-                    result.Add(def);
+            foreach (var entry in registry.Entries())
+            {
+                var def = entry.Definition;
+                if (def != null && unlocked.Contains(def.Id)) result.Add(def);
+            }
 
             return result;
         }
@@ -178,13 +178,14 @@ namespace DioramaEnigma.Dioramas
             var nodes = new List<DioramaNode>();
             var edges = new List<DioramaEdge>();
 
-            foreach (var def in registry.Ordered())
+            foreach (var entry in registry.Entries())
             {
+                var def = entry.Definition;
                 if (def == null) continue;
 
                 nodes.Add(new DioramaNode(def, StateOf(def)));
 
-                foreach (var link in def.IncomingLinks)
+                foreach (var link in entry.IncomingLinks)
                 {
                     if (link?.Source == null) continue;
                     edges.Add(new DioramaEdge(link.Source, def, link.Condition));
@@ -200,12 +201,14 @@ namespace DioramaEnigma.Dioramas
 
         private void SeedEverCompleted()
         {
-            foreach (var def in registry.Ordered())
-                if (def != null && def.IsCompleted)
-                    everCompleted.Add(def.Id);
+            foreach (var entry in registry.Entries())
+            {
+                var def = entry.Definition;
+                if (def != null && def.IsCompleted) everCompleted.Add(def.Id);
+            }
 
-            foreach (var id in ParseSnapshot())
-                everCompleted.Add(id);
+            foreach (var id in JsonSaveLoad.Load(COMPLETED_SAVE_KEY, new List<string>()))
+                if (!string.IsNullOrEmpty(id)) everCompleted.Add(id);
         }
 
         // Пройденная диорама обязательно была открыта — открытость монотонна и не должна откатываться
@@ -219,11 +222,9 @@ namespace DioramaEnigma.Dioramas
         {
             var seen = new HashSet<SequenceStep>();
 
-            foreach (var def in registry.Ordered())
+            foreach (var entry in registry.Entries())
             {
-                if (def == null) continue;
-
-                foreach (var link in def.IncomingLinks)
+                foreach (var link in entry.IncomingLinks)
                 {
                     if (link == null || link.Condition != DioramaLinkCondition.StepTrigger) continue;
 
@@ -248,10 +249,11 @@ namespace DioramaEnigma.Dioramas
             {
                 changed = false;
 
-                foreach (var def in registry.Ordered())
+                foreach (var entry in registry.Entries())
                 {
+                    var def = entry.Definition;
                     if (def == null || unlocked.Contains(def.Id)) continue;
-                    if (!ShouldUnlock(def)) continue;
+                    if (!ShouldUnlock(entry)) continue;
 
                     unlocked.Add(def.Id);
                     changed = true;
@@ -268,11 +270,11 @@ namespace DioramaEnigma.Dioramas
             }
         }
 
-        private bool ShouldUnlock(DioramaDefinition def)
+        private bool ShouldUnlock(DioramaEntry entry)
         {
-            if (def.UnlockedFromStart) return true;
+            if (entry.UnlockedFromStart) return true;
 
-            foreach (var link in def.IncomingLinks)
+            foreach (var link in entry.IncomingLinks)
                 if (IsLinkSatisfied(link)) return true;
 
             return false;
@@ -314,8 +316,9 @@ namespace DioramaEnigma.Dioramas
 
         private void SeedVisibleBlocks()
         {
-            foreach (var def in registry.Ordered())
+            foreach (var entry in registry.Entries())
             {
+                var def = entry.Definition;
                 if (def == null || !unlocked.Contains(def.Id)) continue;
 
                 var block = registry.BlockOf(def);
@@ -327,39 +330,27 @@ namespace DioramaEnigma.Dioramas
 
         #region Helpers
 
-        private bool HasUnlockedDiorama(DioramaBlockEntry entry)
+        private bool HasUnlockedDiorama(DioramaBlockEntry blockEntry)
         {
-            foreach (var def in entry.Dioramas)
+            foreach (var entry in blockEntry.Dioramas)
+            {
+                var def = entry?.Definition;
                 if (def != null && unlocked.Contains(def.Id)) return true;
+            }
 
             return false;
         }
 
-        private IEnumerable<string> ParseSnapshot()
-        {
-            string csv = completedSnapshot != null ? completedSnapshot.Value : null;
-            if (string.IsNullOrEmpty(csv)) yield break;
-
-            foreach (var id in csv.Split(SNAPSHOT_SEPARATOR))
-                if (!string.IsNullOrEmpty(id)) yield return id;
-        }
-
-        private void AppendSnapshot(string id)
-        {
-            if (completedSnapshot == null) return;
-
-            string csv = completedSnapshot.Value;
-            completedSnapshot.SetValue(string.IsNullOrEmpty(csv) ? id : $"{csv}{SNAPSHOT_SEPARATOR}{id}");
-        }
+        private void PersistCompleted() => JsonSaveLoad.Save(new List<string>(everCompleted), COMPLETED_SAVE_KEY);
 
         /// <summary> Предупредить о некорректной конфигурации связей (как ValidateTriggers у раннера) </summary>
         private void ValidateLinks()
         {
-            foreach (var def in registry.Ordered())
+            foreach (var entry in registry.Entries())
             {
-                if (def == null) continue;
+                var def = entry.Definition;
 
-                foreach (var link in def.IncomingLinks)
+                foreach (var link in entry.IncomingLinks)
                 {
                     if (link == null) continue;
 
