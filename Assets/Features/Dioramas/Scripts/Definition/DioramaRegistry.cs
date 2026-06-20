@@ -1,13 +1,14 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace DioramaEnigma.Dioramas
 {
     /// <summary>
-    /// Реестр диорам: упорядоченный список блоков, каждый со своим упорядоченным списком диорам.
-    /// Единый источник истины для очерёдности и принадлежности к блокам в рантайме
+    /// Реестр диорам: упорядоченный список блоков, каждый со своими записями диорам
     /// </summary>
+    /// <remarks>
+    /// Единый источник истины для очерёдности, принадлежности к блокам и параметров доступа
+    /// </remarks>
     [CreateAssetMenu(menuName = "Dioramas/Registry", fileName = nameof(DioramaRegistry))]
     public sealed class DioramaRegistry : ScriptableObject
     {
@@ -18,7 +19,16 @@ namespace DioramaEnigma.Dioramas
 
         private Dictionary<string, DioramaDefinition> byId;
         private Dictionary<DioramaDefinition, DioramaBlock> blockByDiorama;
-        private List<DioramaDefinition> ordered;
+        private List<DioramaEntry> entries;
+
+        /// <summary>
+        /// Все записи диорам по порядку: блок за блоком, внутри блока — по списку
+        /// </summary>
+        public IReadOnlyList<DioramaEntry> Entries()
+        {
+            EnsureIndex();
+            return entries;
+        }
 
         /// <summary>
         /// Определение по идентификатору (или null)
@@ -33,15 +43,6 @@ namespace DioramaEnigma.Dioramas
         }
 
         /// <summary>
-        /// Все диорамы в порядке: блок за блоком, внутри блока — по порядку списка
-        /// </summary>
-        public IReadOnlyList<DioramaDefinition> Ordered()
-        {
-            EnsureIndex();
-            return ordered;
-        }
-
-        /// <summary>
         /// Блок, которому принадлежит диорама (или null, если не числится в реестре)
         /// </summary>
         /// <param name="def">Определение диорамы</param>
@@ -53,50 +54,35 @@ namespace DioramaEnigma.Dioramas
             return blockByDiorama.TryGetValue(def, out var block) ? block : null;
         }
 
-        /// <summary>
-        /// Диорамы конкретного блока в порядке их следования
-        /// </summary>
-        /// <param name="block">Блок</param>
-        public IReadOnlyList<DioramaDefinition> InBlock(DioramaBlock block)
-        {
-            foreach (var entry in blocks)
-                if (entry != null && entry.Block == block)
-                    return entry.Dioramas;
-
-            return Array.Empty<DioramaDefinition>();
-        }
-
         /// <summary> Сбросить кэш индексов (после изменения списков) </summary>
         public void Invalidate()
         {
             byId = null;
             blockByDiorama = null;
-            ordered = null;
+            entries = null;
         }
 
         private void EnsureIndex()
         {
-            if (byId != null && blockByDiorama != null && ordered != null) return;
+            if (byId != null && blockByDiorama != null && entries != null) return;
 
             byId = new Dictionary<string, DioramaDefinition>();
             blockByDiorama = new Dictionary<DioramaDefinition, DioramaBlock>();
-            ordered = new List<DioramaDefinition>();
+            entries = new List<DioramaEntry>();
 
-            foreach (var entry in blocks)
+            foreach (var blockEntry in blocks)
             {
-                if (entry == null) continue;
+                if (blockEntry == null) continue;
 
-                foreach (var def in entry.Dioramas)
+                foreach (var entry in blockEntry.Dioramas)
                 {
-                    if (def == null) continue;
+                    if (entry?.Definition == null) continue;
 
-                    ordered.Add(def);
+                    entries.Add(entry);
 
-                    if (!string.IsNullOrEmpty(def.Id))
-                        byId[def.Id] = def;
-
-                    if (entry.Block != null)
-                        blockByDiorama[def] = entry.Block;
+                    var def = entry.Definition;
+                    if (!string.IsNullOrEmpty(def.Id)) byId[def.Id] = def;
+                    if (blockEntry.Block != null) blockByDiorama[def] = blockEntry.Block;
                 }
             }
         }
