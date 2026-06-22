@@ -40,12 +40,18 @@ namespace Extensions.EditorTools
             if (_sceneButtonStyle == null || _activeSceneStyle == null)
                 InitStyles();
 
-            DrawPlayControls();
-            GUILayout.Space(6);
+            using (new EditorGUILayout.VerticalScope(EditorToolsStyles.WindowPadding))
+            {
+                DrawPlayControls();
 
-            _scroll = GUILayout.BeginScrollView(_scroll);
-            DrawScenesList();
-            GUILayout.EndScrollView();
+                GUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+                EditorToolsGUI.Separator();
+                GUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+
+                _scroll = GUILayout.BeginScrollView(_scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUIStyle.none);
+                DrawScenesList();
+                GUILayout.EndScrollView();
+            }
         }
 
         private void InitStyles()
@@ -82,16 +88,16 @@ namespace Extensions.EditorTools
         {
             using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_GREEN))
             {
-                if (DrawIconButton("SceneAsset Icon", "Active"))
+                if (EditorToolsGUI.IconButton("SceneAsset Icon", "Active"))
                     PlayCurrentScene();
 
-                if (DrawIconButton("PlayButton", "Project"))
+                if (EditorToolsGUI.IconButton("PlayButton", "Project"))
                     PlayProject();
             }
 
             using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_PURPLE))
             {
-                if (DrawIconButton("PlayButton", "Clean Project"))
+                if (EditorToolsGUI.IconButton("PlayButton", "Clean Project"))
                 {
                     PlayerPrefs.DeleteAll();
                     PlayerPrefs.Save();
@@ -99,8 +105,7 @@ namespace Extensions.EditorTools
                     CleanProjectAndPlay().Forget();
                 }
 
-                var clearSavesContent = EditorGUIUtility.IconContent("TreeEditor.Trash");
-                clearSavesContent.tooltip = "Удалить сохранения";
+                var clearSavesContent = new GUIContent(EditorGUIUtility.IconContent("TreeEditor.Trash")) { tooltip = "Delete saves" };
                 if (GUILayout.Button(clearSavesContent,
                         GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT),
                         GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
@@ -119,7 +124,7 @@ namespace Extensions.EditorTools
             {
                 using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_GREEN))
                 {
-                    if (DrawIconButton("PlayButton", "Resume"))
+                    if (EditorToolsGUI.IconButton("PlayButton", "Resume"))
                         EditorApplication.isPaused = false;
                 }
             }
@@ -127,14 +132,14 @@ namespace Extensions.EditorTools
             {
                 using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_YELLOW))
                 {
-                    if (DrawIconButton("PauseButton", "Pause"))
+                    if (EditorToolsGUI.IconButton("PauseButton", "Pause"))
                         EditorApplication.isPaused = true;
                 }
             }
 
             using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_RED))
             {
-                if (DrawIconButton("PreMatQuad", "Stop"))
+                if (EditorToolsGUI.IconButton("PreMatQuad", "Stop"))
                     EditorApplication.isPlaying = false;
             }
         }
@@ -390,21 +395,6 @@ namespace Extensions.EditorTools
             var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
             if (sceneAsset != null)
                 EditorGUIUtility.PingObject(sceneAsset);
-        }
-
-        private static bool DrawIconButton(string iconName, string text)
-        {
-            var content = new GUIContent("  " + text);
-            var rect = GUILayoutUtility.GetRect(content, GUI.skin.button, GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
-            bool clicked = GUI.Button(rect, content);
-
-            float iconSize = EditorToolsConstraints.BASE_ELEMENT_HEIGHT - 8;
-            var iconRect = new Rect(rect.x + 4, rect.y + (rect.height - iconSize) / 2, iconSize, iconSize);
-            var icon = EditorGUIUtility.IconContent(iconName).image;
-            if (icon != null)
-                GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
-
-            return clicked;
         }
 
         #endregion
