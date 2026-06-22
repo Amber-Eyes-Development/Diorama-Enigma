@@ -13,8 +13,6 @@ namespace DioramaEnigma.Dioramas
 
         [Tooltip("Реестр диорам (единый ассет проекта)")]
         [SerializeField] private DioramaRegistry registry;
-        [Tooltip("Локатор для динамического UI — сюда публикуется сервис доступа")]
-        [SerializeField] private DioramaContext context;
         [Tooltip("Инициализировать сервис в Start (после выбора профиля сохранения)")]
         [SerializeField] private bool initializeOnStart = true;
 
@@ -25,11 +23,7 @@ namespace DioramaEnigma.Dioramas
             if (initializeOnStart) Initialize();
         }
 
-        private void OnDestroy()
-        {
-            access?.Dispose();
-            if (context != null) context.SetAccess(null);
-        }
+        private void OnDestroy() => access?.Dispose();
 
         /// <summary> Создать и инициализировать сервис доступа (идемпотентно) </summary>
         public DioramaAccessService Initialize()
@@ -44,8 +38,6 @@ namespace DioramaEnigma.Dioramas
 
             access = new DioramaAccessService(registry);
             access.Initialize();
-
-            if (context != null) context.SetAccess(access);
 
             return access;
         }

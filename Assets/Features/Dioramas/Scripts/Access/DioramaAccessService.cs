@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using DioramaEnigma.Sequences;
-using Extensions.Data;
 using Extensions.Log;
 
 namespace DioramaEnigma.Dioramas
@@ -11,8 +10,6 @@ namespace DioramaEnigma.Dioramas
     /// </summary>
     public sealed class DioramaAccessService
     {
-        private const string COMPLETED_SAVE_KEY = "dioramas.completed";
-
         /// <summary> Диорама открыта </summary>
         public event Action<DioramaDefinition> onDioramaUnlocked;
         /// <summary> Диорама пройдена впервые </summary>
@@ -207,7 +204,7 @@ namespace DioramaEnigma.Dioramas
                 if (def != null && def.IsCompleted) everCompleted.Add(def.Id);
             }
 
-            foreach (var id in JsonSaveLoad.Load(COMPLETED_SAVE_KEY, new List<string>()))
+            foreach (var id in DioramaProgressStore.LoadCompleted())
                 if (!string.IsNullOrEmpty(id)) everCompleted.Add(id);
         }
 
@@ -341,7 +338,7 @@ namespace DioramaEnigma.Dioramas
             return false;
         }
 
-        private void PersistCompleted() => JsonSaveLoad.Save(new List<string>(everCompleted), COMPLETED_SAVE_KEY);
+        private void PersistCompleted() => DioramaProgressStore.SaveCompleted(everCompleted);
 
         /// <summary> Предупредить о некорректной конфигурации связей (как ValidateTriggers у раннера) </summary>
         private void ValidateLinks()
