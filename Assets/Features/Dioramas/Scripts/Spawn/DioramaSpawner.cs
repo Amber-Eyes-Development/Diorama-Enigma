@@ -7,11 +7,12 @@ using UnityEngine;
 namespace DioramaEnigma.Dioramas
 {
     /// <summary>
-    /// Динамический спавнер диорам на игровой сцене
+    /// Сессия активного блока на игровой сцене: грузит ВСЕ диорамы выбранного блока (закрытые — заглушками),
+    /// раскладывает по слотам, ведёт фокус и навигацию внутри блока
     /// </summary>
     /// <remarks>
-    /// Держит окно из 2*radius+1 инстансов вокруг активной вдоль оси (упреждающая подгрузка InstantiateAsync,
-    /// выгрузка вышедших из окна), ведёт очередь и фокус, позиционирует инстансы по индексу в очереди
+    /// Камеру не двигает — шлёт <see cref="onFocusChanged"/>. На открытие диорамы блока меняет её заглушку
+    /// на реальную. Публикует себя в канал для динамического UI
     /// </remarks>
     public sealed class DioramaSpawner : MonoBehaviour
     {
@@ -20,35 +21,45 @@ namespace DioramaEnigma.Dioramas
 
         /// <summary> Активная (в фокусе) диорама </summary>
         public DioramaDefinition Active => activeDefinition;
-        /// <summary> Сервис доступа (для потребителей канала спавнера) </summary>
+        /// <summary> Активный блок </summary>
+        public DioramaBlock ActiveBlock => activeBlock;
+        /// <summary> Сервис доступа (для потребителей) </summary>
         public DioramaAccessService Access => access;
+        /// <summary> Все диорамы активного блока в порядке (вкл. закрытые) </summary>
+        public IReadOnlyList<DioramaDefinition> BlockDioramas => queue;
         /// <summary> Есть ли активная диорама </summary>
         public bool HasFocus => activeIndex >= 0;
+        /// <summary> Можно ли шагнуть вперёд </summary>
+        public bool CanFocusNext => activeIndex >= 0 && activeIndex + 1 < queue.Count;
+        /// <summary> Можно ли шагнуть назад </summary>
+        public bool CanFocusPrev => activeIndex > 0;
         /// <summary> Точка кадрирования активной диорамы (мировая позиция её слота) </summary>
         public Vector3 ActiveFramePoint => SlotPosition(activeIndex < 0 ? 0 : activeIndex);
         /// <summary> «Домашний» кадр — слот 0; камера берёт своё смещение относительно него </summary>
         public Vector3 HomePoint => axisRoot != null ? axisRoot.position : transform.position;
 
         [Header("Источник")]
-        [Tooltip("Бутстраппер с сервисом доступа")]
-        [SerializeField] private DioramaBootstrapper bootstrapper;
+        [Tooltip("Сервис доступа (ассет)")]
+        [SerializeField] private DioramaAccessService access;
+        [Tooltip("Выбранный блок (ассет-мост из меню)")]
+        [SerializeField] private DioramaBlockSelection selection;
         [Tooltip("Канал рантайм-ссылки на спавнер")]
         [SerializeField] private DioramaSpawnerReference reference;
 
         [Header("Раскладка")]
-        [Tooltip("Корень оси: позиция диорамы = axisRoot + spacing * индекс_в_очереди")]
+        [Tooltip("Корень оси: позиция диорамы = axisRoot + spacing * индекс_в_блоке")]
         [SerializeField] private Transform axisRoot;
         [Tooltip("Смещение между соседними диорамами")]
         [SerializeField] private Vector3 spacing = new(40f, 0f, 0f);
-        [Tooltip("Радиус окна: одновременно загружено 2*radius+1 диорам")]
-        [Min(0)]
-        [SerializeField] private int windowRadius = 1;
+        [Tooltip("Заглушка по умолчанию для закрытых диорам (если не задана на самой диораме)")]
+        [SerializeField] private GameObject defaultPlaceholder;
 
         private readonly List<DioramaDefinition> queue = new();
-        private readonly Dictionary<string, DioramaInstance> live = new();
+        private readonly Dictionary<string, DioramaInstance> liveInstances = new();
+        private readonly Dictionary<string, GameObject> placeholders = new();
         private readonly HashSet<string> loading = new();
 
-        private DioramaAccessService access;
+        private DioramaBlock activeBlock;
         private DioramaDefinition activeDefinition;
         private int activeIndex = -1;
 
@@ -56,27 +67,22 @@ namespace DioramaEnigma.Dioramas
 
         private void Start()
         {
-            if (bootstrapper == null)
+            if (access == null)
             {
-                ServiceDebug.LogError($"{nameof(bootstrapper)} не назначен");
+                ServiceDebug.LogError(this, $"{nameof(access)} не назначен");
                 return;
             }
 
             if (axisRoot == null)
             {
-                ServiceDebug.LogError($"{nameof(axisRoot)} не назначен");
+                ServiceDebug.LogError(this, $"{nameof(axisRoot)} не назначен");
                 return;
             }
 
-            access = bootstrapper.Initialize();
-            if (access == null) return;
-
             access.onDioramaUnlocked += OnDioramaUnlocked;
-
             if (reference != null) reference.Set(this);
 
-            queue.Clear();
-            queue.AddRange(access.VisibleOrdered());
+            LoadBlock(ResolveStartBlock());
 
             var start = ResolveStartDiorama();
             if (start != null)
@@ -85,7 +91,7 @@ namespace DioramaEnigma.Dioramas
                 activeIndex = queue.IndexOf(start);
             }
 
-            ReconcileWindow();
+            UpdateFocusGating();
             EmitFocus(false);
         }
 
@@ -99,19 +105,19 @@ namespace DioramaEnigma.Dioramas
 
         #region Navigation
 
-        /// <summary> Перейти к следующей диораме в очереди </summary>
+        /// <summary> Перейти к следующей диораме блока </summary>
         public void FocusNext()
         {
-            if (activeIndex + 1 < queue.Count) Focus(queue[activeIndex + 1]);
+            if (CanFocusNext) Focus(queue[activeIndex + 1]);
         }
 
-        /// <summary> Перейти к предыдущей диораме в очереди </summary>
+        /// <summary> Перейти к предыдущей диораме блока </summary>
         public void FocusPrev()
         {
-            if (activeIndex - 1 >= 0) Focus(queue[activeIndex - 1]);
+            if (CanFocusPrev) Focus(queue[activeIndex - 1]);
         }
 
-        /// <summary> Перейти к конкретной диораме (если открыта) </summary>
+        /// <summary> Перейти к конкретной диораме блока </summary>
         /// <param name="def"> Целевая диорама </param>
         public void FocusDiorama(DioramaDefinition def) => Focus(def);
 
@@ -125,151 +131,144 @@ namespace DioramaEnigma.Dioramas
 
             DioramaProgressStore.SaveLastActive(def.Id);
 
-            ReconcileWindow();
-            EmitFocus(true); 
+            UpdateFocusGating();
+            EmitFocus(true); // навигация — с анимацией перехода
+        }
+
+        // Только активный реальный инстанс принимает ввод
+        private void UpdateFocusGating()
+        {
+            foreach (var pair in liveInstances)
+            {
+                if (pair.Value == null) continue;
+                pair.Value.SetFocused(activeDefinition != null && pair.Key == activeDefinition.Id);
+            }
         }
 
         #endregion
 
-        #region Queue / window
+        #region Block load
 
-        private void OnDioramaUnlocked(DioramaDefinition def) => RebuildQueue();
-
-        private void RebuildQueue()
+        private DioramaBlock ResolveStartBlock()
         {
-            queue.Clear();
-            queue.AddRange(access.VisibleOrdered());
+            var selected = access.BlockById(selection != null ? selection.SelectedId : null);
+            if (selected != null) return selected;
 
-            if (activeDefinition != null && queue.Contains(activeDefinition))
-            {
-                activeIndex = queue.IndexOf(activeDefinition);
-            }
-            else
-            {
-                activeIndex = queue.Count > 0 ? 0 : -1;
-                activeDefinition = activeIndex >= 0 ? queue[0] : null;
-            }
-
-            ReconcileWindow();
-            EmitFocus(false); 
+            var visible = access.VisibleBlocks();
+            return visible.Count > 0 ? visible[0] : null;
         }
 
         private DioramaDefinition ResolveStartDiorama()
         {
-            string savedId = DioramaProgressStore.LoadLastActive();
-            if (!string.IsNullOrEmpty(savedId))
-            {
-                var saved = access.ById(savedId);
-                if (saved != null && queue.Contains(saved)) return saved;
-            }
+            if (queue.Count == 0) return null;
 
-            return queue.Count > 0 ? queue[0] : null;
+            var last = access.ById(DioramaProgressStore.LoadLastActive());
+            if (last != null && queue.Contains(last)) return last;
+
+            foreach (var def in queue)
+                if (access.IsUnlocked(def)) return def;
+
+            return queue[0];
         }
 
-        private void ReconcileWindow()
+        private void LoadBlock(DioramaBlock block)
         {
-            if (queue.Count == 0)
-            {
-                UnloadAll();
-                return;
-            }
+            UnloadAll();
+            queue.Clear();
+            activeBlock = block;
+            if (block == null) return;
 
-            int lo = Mathf.Max(0, activeIndex - windowRadius);
-            int hi = Mathf.Min(queue.Count - 1, activeIndex + windowRadius);
+            queue.AddRange(access.AllInBlock(block));
 
-            UnloadOutside(lo, hi);
-
-            for (int i = lo; i <= hi; i++)
+            for (int i = 0; i < queue.Count; i++)
             {
                 var def = queue[i];
                 if (def == null) continue;
 
-                if (live.TryGetValue(def.Id, out var instance))
-                {
-                    instance.transform.position = SlotPosition(i);
-                    instance.SetFocused(i == activeIndex);
-                }
-                else if (!loading.Contains(def.Id))
-                {
-                    BeginLoad(def);
-                }
+                if (access.IsUnlocked(def)) BeginLoadReal(def);
+                else SpawnPlaceholder(def, i);
             }
         }
 
-        private void UnloadOutside(int lo, int hi)
+        private void OnDioramaUnlocked(DioramaDefinition def)
         {
-            var toRemove = new List<string>();
+            if (def == null || !queue.Contains(def)) return;
+            if (!placeholders.ContainsKey(def.Id)) return;
 
-            foreach (var pair in live)
-            {
-                int index = pair.Value != null ? queue.IndexOf(pair.Value.Definition) : -1;
-                if (index < lo || index > hi) toRemove.Add(pair.Key);
-            }
-
-            foreach (var id in toRemove) Unload(id);
-        }
-
-        private void UnloadAll()
-        {
-            var ids = new List<string>(live.Keys);
-            foreach (var id in ids) Unload(id);
-        }
-
-        private void Unload(string id)
-        {
-            if (live.TryGetValue(id, out var instance) && instance != null)
-                Destroy(instance.gameObject);
-
-            live.Remove(id);
+            DestroyPlaceholder(def.Id);
+            BeginLoadReal(def);
         }
 
         #endregion
 
-        #region Loading
+        #region Instances
 
-        private void BeginLoad(DioramaDefinition def)
+        private void SpawnPlaceholder(DioramaDefinition def, int index)
+        {
+            var prefab = def.PlaceholderPrefab != null ? def.PlaceholderPrefab : defaultPlaceholder;
+            if (prefab == null) return;
+
+            var go = Instantiate(prefab, SlotPosition(index), Quaternion.identity, axisRoot);
+            placeholders[def.Id] = go;
+        }
+
+        private void DestroyPlaceholder(string id)
+        {
+            if (placeholders.TryGetValue(id, out var go) && go != null) Destroy(go);
+            placeholders.Remove(id);
+        }
+
+        private void BeginLoadReal(DioramaDefinition def)
         {
             if (def.RunnerPrefab == null)
             {
-                ServiceDebug.LogError($"У диорамы {def.name} не назначен {nameof(def.RunnerPrefab)}");
+                ServiceDebug.LogError(this, $"У диорамы {def.name} не назначен {nameof(def.RunnerPrefab)}");
                 return;
             }
 
-            loading.Add(def.Id);
+            if (liveInstances.ContainsKey(def.Id) || !loading.Add(def.Id)) return;
 
             var operation = InstantiateAsync(def.RunnerPrefab, axisRoot);
-            operation.completed += _ => OnLoaded(def, operation);
+            operation.completed += _ => OnRealLoaded(def, operation);
         }
 
-        private void OnLoaded(DioramaDefinition def, AsyncInstantiateOperation<SequenceRunner> operation)
+        private void OnRealLoaded(DioramaDefinition def, AsyncInstantiateOperation<SequenceRunner> operation)
         {
             loading.Remove(def.Id);
             if (this == null) return;
 
-            SequenceRunner runner = operation.Result != null && operation.Result.Length > 0 ? operation.Result[0] : null;
+            SequenceRunner runner = operation.Result is { Length: > 0 } ? operation.Result[0] : null;
             if (runner == null) return;
 
             int index = queue.IndexOf(def);
-            bool wanted = index >= 0 && IsInWindow(index) && !live.ContainsKey(def.Id);
-            if (!wanted)
+            if (index < 0 || liveInstances.ContainsKey(def.Id))
             {
-                Destroy(runner.gameObject);
+                Destroy(runner.gameObject); // блок сменился / уже загружено
                 return;
             }
 
             var instance = runner.GetComponent<DioramaInstance>();
             if (instance == null) instance = runner.gameObject.AddComponent<DioramaInstance>();
 
-            live[def.Id] = instance;
-
+            liveInstances[def.Id] = instance;
             runner.transform.position = SlotPosition(index);
 
             instance.Bind(def, access, runner, this);
-            instance.SetFocused(index == activeIndex);
+            instance.SetFocused(activeDefinition != null && def.Id == activeDefinition.Id);
         }
 
-        private bool IsInWindow(int index) =>
-            index >= activeIndex - windowRadius && index <= activeIndex + windowRadius;
+        private void UnloadAll()
+        {
+            foreach (var pair in liveInstances)
+                if (pair.Value != null) Destroy(pair.Value.gameObject);
+            liveInstances.Clear();
+
+            foreach (var pair in placeholders)
+                if (pair.Value != null) Destroy(pair.Value);
+            placeholders.Clear();
+
+            loading.Clear();
+        }
 
         private Vector3 SlotPosition(int index) => axisRoot.position + spacing * index;
 
