@@ -1,19 +1,21 @@
 using System.Collections.Generic;
-using Extensions.RuntimeReferences;
+using Extensions.Helpers;
+using Extensions.Log;
 using UnityEngine;
 
 namespace DioramaEnigma.Dioramas
 {
     /// <summary>
-    /// Презентер карты диорам: кнопки открытых блоков; по выбору блока — кнопки его открытых диорам;
-    /// по выбору диорамы — переход к ней через спавнер
+    /// Каталог диорам в главном меню (спавнер кнопок выбора локации/диорамы)
     /// </summary>
-    /// <remarks>
-    /// Спавнер берётся из канала <see cref="DioramaSpawnerReference"/> (база <see cref="RuntimeReferenceConsumer{T}"/>),
-    /// сервис доступа — из спавнера. Перестраивается на события сервиса (открытие/прохождение диорам, появление блоков)
-    /// </remarks>
-    public sealed class DioramaMapPresenter : RuntimeReferenceConsumer<DioramaSpawner>
+    public sealed class DioramaCatalogPresenter : MonoBehaviour
     {
+        [Header("Источник")]
+        [Tooltip("Сервис доступа (ассет)")]
+        [SerializeField] private DioramaAccessService access;
+        [Tooltip("Выбранный блок (ассет-мост в игровую сцену)")]
+        [SerializeField] private DioramaBlockSelection selection;
+
         [Header("Блоки")]
         [Tooltip("Контейнер кнопок блоков")]
         [SerializeField] private Transform blockContainer;
@@ -29,14 +31,15 @@ namespace DioramaEnigma.Dioramas
         private readonly List<GameObject> blockButtons = new();
         private readonly List<GameObject> dioramaButtons = new();
 
-        private DioramaAccessService access;
         private DioramaBlock selectedBlock;
 
-        // спавнер появился в канале → подключиться к сервису и построить карту
-        protected override void OnInitialized(DioramaSpawner spawner)
+        private void OnEnable()
         {
-            access = spawner.Access;
-            if (access == null) return;
+            if (access == null)
+            {
+                ServiceDebug.LogError($"{nameof(access)} не назначен");
+                return;
+            }
 
             access.onDioramaUnlocked += OnGraphChanged;
             access.onDioramaCompleted += OnGraphChanged;
@@ -45,24 +48,24 @@ namespace DioramaEnigma.Dioramas
             Rebuild();
         }
 
-        // спавнер снят или презентер выключается → отписаться и очистить
-        protected override void OnReleased()
+        private void OnDisable()
         {
             if (access != null)
             {
                 access.onDioramaUnlocked -= OnGraphChanged;
                 access.onDioramaCompleted -= OnGraphChanged;
                 access.onBlockUnlocked -= OnBlockUnlocked;
-                access = null;
             }
 
             ClearButtons(blockButtons);
             ClearButtons(dioramaButtons);
         }
 
-        /// <summary> Перестроить кнопки блоков и диорам выбранного блока </summary>
         public void Rebuild()
         {
+            GameObjectUtils.ClearChildren(blockContainer);
+            GameObjectUtils.ClearChildren(dioramaContainer);
+            
             BuildBlocks();
             BuildDioramas();
         }
@@ -95,6 +98,7 @@ namespace DioramaEnigma.Dioramas
         private void OnBlockSelected(DioramaBlock block)
         {
             selectedBlock = block;
+            if (selectedBlock != null && selection != null) selection.Select(selectedBlock.Id);
             BuildDioramas();
         }
 
@@ -113,7 +117,8 @@ namespace DioramaEnigma.Dioramas
 
         private void OnDioramaSelected(DioramaDefinition def)
         {
-            if (Value != null) Value.FocusDiorama(def);
+            if (selectedBlock != null && selection != null) selection.Select(selectedBlock.Id);
+            DioramaProgressStore.SaveLastActive(def.Id);
         }
 
         private void ClearButtons(List<GameObject> buttons)
