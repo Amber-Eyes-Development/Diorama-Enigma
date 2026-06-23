@@ -13,6 +13,8 @@ namespace DioramaEnigma.Dioramas
         public SequenceRunner RunnerPrefab => runnerPrefab;
         /// <summary> Последовательность диорамы (та же, что у раннера в префабе) </summary>
         public Sequence Sequence => sequence;
+        /// <summary> Модель-заглушка, пока диорама закрыта (если пусто — общая заглушка спавнера) </summary>
+        public GameObject PlaceholderPrefab => placeholderPrefab;
 
         /// <summary>
         /// Пройдена ли диорама целиком прямо сейчас (выводится из последовательности; учитывает откат шагов)
@@ -24,5 +26,7 @@ namespace DioramaEnigma.Dioramas
         [SerializeField] private SequenceRunner runnerPrefab;
         [Tooltip("Последовательность диорамы (та же, что назначена раннеру в префабе)")]
         [SerializeField] private Sequence sequence;
+        [Tooltip("Модель-заглушка, пока диорама закрыта (опционально; иначе общая заглушка спавнера)")]
+        [SerializeField] private GameObject placeholderPrefab;
     }
 }
