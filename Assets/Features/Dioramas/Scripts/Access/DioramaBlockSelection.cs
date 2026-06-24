@@ -4,34 +4,25 @@ using UnityEngine;
 namespace DioramaEnigma.Dioramas
 {
     /// <summary>
-    /// Выбранный игроком блок (Id) — мост «меню → игровая сцена»
+    /// Выбранный игроком блок (Id) — мост меню-сцена
     /// </summary>
-    /// <remarks>
-    /// Сессионный ассет: меню задаёт выбор, игровая сцена читает. Переживает переход сцен в памяти;
-    /// диск не нужен — блок выбирается заново через меню. Блоки — SO-ассеты, контейнер не требуется
-    /// </remarks>
     [CreateAssetMenu(menuName = "Dioramas/Block Selection", fileName = nameof(DioramaBlockSelection))]
     public sealed class DioramaBlockSelection : BaseSelectionContext
     {
         /// <summary> Id выбранного блока (пусто, если выбора нет) </summary>
-        public string SelectedId => selectedId;
+        public string SelectedId => DioramaProgressStore.LoadSelectedBlock();
 
-        [SerializeField] private string selectedId;
+        public override bool HasSelection => !string.IsNullOrEmpty(SelectedId);
 
-        /// <inheritdoc/>
-        public override bool HasSelection => !string.IsNullOrEmpty(selectedId);
-
-        /// <inheritdoc/>
         public override void Select(string selectionDataId)
         {
-            selectedId = selectionDataId;
+            DioramaProgressStore.SaveSelectedBlock(selectionDataId);
             OnSelectionChanged();
         }
 
-        /// <inheritdoc/>
         public override void Clear()
         {
-            selectedId = string.Empty;
+            DioramaProgressStore.SaveSelectedBlock(null);
             OnSelectionChanged();
         }
     }

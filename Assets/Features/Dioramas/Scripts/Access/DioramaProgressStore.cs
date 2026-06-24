@@ -11,6 +11,7 @@ namespace DioramaEnigma.Dioramas
     {
         private const string COMPLETED_KEY = "dioramas.completed";
         private const string LAST_ACTIVE_KEY = "dioramas.lastActive";
+        private const string SELECTED_BLOCK_KEY = "dioramas.selectedBlock";
 
         /// <summary> Идентификаторы когда-либо пройденных диорам </summary>
         public static List<string> LoadCompleted() => JsonSaveLoad.Load(COMPLETED_KEY, new List<string>());
@@ -26,5 +27,12 @@ namespace DioramaEnigma.Dioramas
         /// <summary> Сохранить Id последней активной диорамы </summary>
         /// <param name="dioramaId">Идентификатор диорамы</param>
         public static void SaveLastActive(string dioramaId) => JsonSaveLoad.Save(dioramaId, LAST_ACTIVE_KEY);
+
+        /// <summary> Id выбранного в меню блока (или null) </summary>
+        public static string LoadSelectedBlock() => JsonSaveLoad.Load<string>(SELECTED_BLOCK_KEY, null);
+
+        /// <summary> Сохранить Id выбранного блока </summary>
+        /// <param name="blockId">Идентификатор блока</param>
+        public static void SaveSelectedBlock(string blockId) => JsonSaveLoad.Save(blockId, SELECTED_BLOCK_KEY);
     }
 }

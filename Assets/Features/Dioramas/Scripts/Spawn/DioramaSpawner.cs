@@ -80,7 +80,6 @@ namespace DioramaEnigma.Dioramas
             }
 
             access.onDioramaUnlocked += OnDioramaUnlocked;
-            if (reference != null) reference.Set(this);
 
             LoadBlock(ResolveStartBlock());
 
@@ -93,6 +92,7 @@ namespace DioramaEnigma.Dioramas
 
             UpdateFocusGating();
             EmitFocus(false);
+            if (reference != null) reference.Set(this);
         }
 
         private void OnDestroy()
