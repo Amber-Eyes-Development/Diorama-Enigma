@@ -25,6 +25,7 @@ MonoBehaviour:
     - db724b073dc031743b769ca2f6b62e3f
     - ba7f68ea41f575741a2cdd9fcbdfbf53
     - 638dc1452f4882e47b78c0aa340a8db7
+    - e0c2d8ad1b131244490ee94fe1be55d3
     values:
     - goDatas_byGlobalId:
         keys:
@@ -533,6 +534,19 @@ MonoBehaviour:
           isColorRecursive: 0
         - colorIndex: 0
           iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: NetworkAnimator Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-1-e0c2d8ad1b131244490ee94fe1be55d3-0-0
+        - globalObjectIdString: GlobalObjectId_V1-1-e0c2d8ad1b131244490ee94fe1be55d3-7850458958282540379-0
+        values:
+        - colorIndex: 0
+          iconNameOrGuid: NetworkAnimator Icon
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 0
