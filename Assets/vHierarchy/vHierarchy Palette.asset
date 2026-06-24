@@ -89,6 +89,7 @@ MonoBehaviour:
     - 
     - DebuggerEnabled
     - Camera Gizmo
+    - NetworkAnimator Icon
     enabled: 1
   - builtinIcons: []
     customIcons: []
