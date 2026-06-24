@@ -181,6 +181,7 @@ namespace Extensions.EditorTools
 
                 DrawNameButton(data, resolved, isSelected);
                 DrawOpenFolderButtonIfNeeded(resolved);
+                DrawOpenPrefabButtonIfNeeded(resolved);
                 DrawSceneActionIfNeeded(data);
                 DrawRemoveButton(data);
             }
@@ -226,6 +227,29 @@ namespace Extensions.EditorTools
                 if (GUILayout.Button(content, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
                 {
                     OpenProjectFolder(assetPath);
+                }
+            }
+        }
+
+        private void DrawOpenPrefabButtonIfNeeded(Object resolved)
+        {
+            if (resolved == null) return;
+
+            string assetPath = AssetDatabase.GetAssetPath(resolved);
+
+            if (string.IsNullOrEmpty(assetPath) ||
+                !assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_PREFAB_BLUE))
+            {
+                GUIContent content = new GUIContent(EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_PREFAB)) { tooltip = "Open prefab" };
+
+                if (GUILayout.Button(content, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                {
+                    AssetDatabase.OpenAsset(resolved);
                 }
             }
         }

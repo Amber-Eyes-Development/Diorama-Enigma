@@ -26,6 +26,7 @@ namespace Extensions.EditorTools
 
         public static readonly Color COLOR_CYAN = new Color(0.5f, 1f, 1f);
         public static readonly Color COLOR_PURPLE = new Color(0.87f, 0.32f, 0.87f);
+        public static readonly Color COLOR_PREFAB_BLUE = new Color(0.498f, 0.839f,0.988f);
 
         public static readonly Color COLOR_ACCENT = new Color(0.45f, 0.45f, 0.45f);
 
@@ -41,6 +42,7 @@ namespace Extensions.EditorTools
         public const string ICON_SCENE = "SceneAsset Icon";
         public const string ICON_GLOBAL = "ToolHandleGlobal";
         public const string ICON_FOLDER = "FolderOpened Icon";
+        public const string ICON_PREFAB = "Prefab Icon";
         public const string ICON_MISSING = "console.erroricon";
 
         // Символы для текстовых кнопок (фолбэк, когда иконка недоступна)
