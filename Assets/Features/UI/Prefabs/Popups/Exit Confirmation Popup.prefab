@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7731939174452937882}
   - component: {fileID: 8255198426710621603}
   - component: {fileID: 3409916745067487570}
-  - component: {fileID: 9177977626775985771}
+  - component: {fileID: 8900340942790031411}
   m_Layer: 0
   m_Name: Cancel button
   m_TagString: Untagged
@@ -135,7 +135,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33f51cabeb734bc586eed9e9619a3a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp-firstpass::Extensions.Generics.ButtonClickOrchestrator
---- !u!114 &9177977626775985771
+--- !u!114 &8900340942790031411
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -144,10 +144,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 2090517609404759699}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f0fcce01ad4348aaad3ac942e5e2dcaa, type: 3}
+  m_Script: {fileID: 11500000, guid: e6013976737742358ed2aae7e04518a9, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-firstpass::Extensions.UIWindows.ButtonActionCloseUIWindow
+  m_EditorClassIdentifier: Assembly-CSharp-firstpass::Extensions.UIWindows.ButtonActionCloseUIWindowAnimated
   needToOpenPrevious: 1
+  beforeCloseAnimation: {fileID: 1598933009447618015}
 --- !u!1 &4108410519362059615
 GameObject:
   m_ObjectHideFlags: 0
@@ -836,14 +837,14 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8662249508029611937}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4582685899519605801}
   - {fileID: 7364804150201129712}
-  m_Father: {fileID: 4241970390174959732}
+  m_Father: {fileID: 8108210385782940981}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -928,7 +929,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: 6d43e88d6afa3eb43a943c20391b74ac, type: 2}
     - target: {fileID: 697887030882226154, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
       propertyPath: m_Name
-      value: Exit Confirmation
+      value: Exit Confirmation Popup
       objectReference: {fileID: 0}
     - target: {fileID: 4093794530206595640, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
       propertyPath: m_Pivot.x
@@ -1013,13 +1014,24 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 4093794530206595640, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
+    - targetCorrespondingSourceObject: {fileID: 8253043766378993529, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2492686881347033011}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
---- !u!224 &4241970390174959732 stripped
+--- !u!114 &1598933009447618015 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1458630742039443347, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
+  m_PrefabInstance: {fileID: 148220726820483660}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d0390bd8b8ffd640b34fe25065ff1df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp-firstpass::DG.Tweening.DOTweenAnimation
+--- !u!224 &8108210385782940981 stripped
 RectTransform:
-  m_CorrespondingSourceObject: {fileID: 4093794530206595640, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
+  m_CorrespondingSourceObject: {fileID: 8253043766378993529, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
   m_PrefabInstance: {fileID: 148220726820483660}
   m_PrefabAsset: {fileID: 0}
