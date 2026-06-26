@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
-  m_Name: "1.5.1 \u0412\u0430\u0440\u0438\u0430\u043D\u0442 \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F"
+  m_Name: "2.1 \u041A\u043D\u043E\u043F\u043A\u0430"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
-  id: eb83bf9cf9a549918d099bc6929a46aa
+  id: b82a9e1f0b1e4f739079c5d97b940bca
   irreversible: 1
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
-  toggleCooldown: 0
+  toggleCooldown: 0.5
