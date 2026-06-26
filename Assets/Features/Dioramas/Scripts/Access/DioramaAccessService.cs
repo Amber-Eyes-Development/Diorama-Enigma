@@ -175,6 +175,42 @@ namespace DioramaEnigma.Dioramas
             return result;
         }
 
+        /// <summary> Сколько блоков ещё скрыто (нет ни одной открытой диорамы) </summary>
+        public int HiddenBlockCount()
+        {
+            EnsureInitialized();
+            int hidden = 0;
+
+            foreach (var blockEntry in registry.Blocks)
+            {
+                if (blockEntry?.Block == null) continue;
+                if (!HasUnlockedDiorama(blockEntry)) hidden++;
+            }
+
+            return hidden;
+        }
+
+        /// <summary> Сколько диорам блока ещё закрыто </summary>
+        /// <param name="block">Блок</param>
+        public int HiddenDioramaCount(DioramaBlock block)
+        {
+            EnsureInitialized();
+            int hidden = 0;
+
+            foreach (var blockEntry in registry.Blocks)
+            {
+                if (blockEntry == null || blockEntry.Block != block) continue;
+
+                foreach (var entry in blockEntry.Dioramas)
+                {
+                    var def = entry?.Definition;
+                    if (def != null && !unlocked.Contains(def.Id)) hidden++;
+                }
+            }
+
+            return hidden;
+        }
+
         /// <summary> ВСЕ диорамы блока в порядке реестра (вкл. закрытые) — для загрузки сессии блока </summary>
         /// <param name="block">Блок</param>
         public IReadOnlyList<DioramaDefinition> AllInBlock(DioramaBlock block)

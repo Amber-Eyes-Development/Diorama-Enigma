@@ -199,7 +199,7 @@ Transform:
   m_GameObject: {fileID: 254525011642131941}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.7700001, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.31000012, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -5599,7 +5599,7 @@ Transform:
   m_GameObject: {fileID: 1011503404891185640}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.7700001, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.31000012, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -12419,7 +12419,7 @@ Transform:
   m_GameObject: {fileID: 2683157124952400926}
   serializedVersion: 2
   m_LocalRotation: {x: -0.015707562, y: -0.16948311, z: 0.09093713, w: 0.98120296}
-  m_LocalPosition: {x: 3.747, y: 3.83, z: 0.065}
+  m_LocalPosition: {x: 3.747, y: 5.08, z: 0.065}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -13212,7 +13212,7 @@ Transform:
   m_GameObject: {fileID: 2852185980489195172}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.83300006, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.3730001, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -18322,7 +18322,7 @@ GameObject:
   - component: {fileID: 5460402080954348074}
   - component: {fileID: 3941237268448566715}
   - component: {fileID: 8334837394746503438}
-  m_Layer: 2
+  m_Layer: 0
   m_Name: Sphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18413,7 +18413,7 @@ GameObject:
   - component: {fileID: 4876409995493693338}
   - component: {fileID: 8207103552405209319}
   - component: {fileID: 221175016660921982}
-  m_Layer: 2
+  m_Layer: 0
   m_Name: Text (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19113,7 +19113,7 @@ Transform:
   m_GameObject: {fileID: 3984949520229254691}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.7700001, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.31000012, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -20241,7 +20241,7 @@ Transform:
   m_GameObject: {fileID: 5336582187938671530}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.77, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.31, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -27318,7 +27318,7 @@ Transform:
   m_GameObject: {fileID: 7305183192273274027}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.7700001, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.31000012, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -32349,7 +32349,7 @@ GameObject:
   - component: {fileID: 736788477001780971}
   - component: {fileID: 2907359868789092346}
   - component: {fileID: 6003487695562411351}
-  m_Layer: 2
+  m_Layer: 0
   m_Name: Sphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -32933,7 +32933,7 @@ Transform:
   m_GameObject: {fileID: 8078165169833559512}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.42261827, z: -0, w: 0.9063079}
-  m_LocalPosition: {x: 2.6, y: 4.4, z: -0.99}
+  m_LocalPosition: {x: 2.6, y: 5.28, z: -0.99}
   m_LocalScale: {x: 0.099999994, y: 0.05, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -33516,7 +33516,7 @@ GameObject:
   - component: {fileID: 1311003882363094492}
   - component: {fileID: 1039620605309479945}
   - component: {fileID: 3346742142352405448}
-  m_Layer: 2
+  m_Layer: 0
   m_Name: Text (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -33711,7 +33711,7 @@ Transform:
   m_GameObject: {fileID: 8853722810170569208}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 0.7700001, z: 1.22}
+  m_LocalPosition: {x: -1.34, y: 0.31000012, z: 1.22}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

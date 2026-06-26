@@ -393,11 +393,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaCatalogPresenter
   access: {fileID: 11400000, guid: 990583b984597ee4e8688ef62fca3c32, type: 2}
-  selection: {fileID: 11400000, guid: 7f52c5b9bc3f86d42bf2b8ed0714e447, type: 2}
+  blockSelection: {fileID: 11400000, guid: 7f52c5b9bc3f86d42bf2b8ed0714e447, type: 2}
+  dioramaSelection: {fileID: 11400000, guid: 3a5116e46f0201746ab06825e6be823f, type: 2}
   blockContainer: {fileID: 584623522614252234}
   blockButtonPrefab: {fileID: 1784409380844357389, guid: 7bd259bf6c6bb4045b4026ce369aae24, type: 3}
   dioramaContainer: {fileID: 4428380053502308631}
   dioramaButtonPrefab: {fileID: 5603258855533304327, guid: 131f9d1a76477c845a326c5301e42de3, type: 3}
+  blockStubPrefab: {fileID: 2249863171511111054, guid: 77e0de074864caf40ae538a0328504b6, type: 3}
+  dioramaStubPrefab: {fileID: 248248782035035931, guid: 56ad7e893f82f8742858677fceb14e94, type: 3}
+  onlyOneStub: 1
 --- !u!1 &6694029100688803035
 GameObject:
   m_ObjectHideFlags: 0

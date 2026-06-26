@@ -21,6 +21,9 @@ namespace DioramaEnigma.Dioramas
         [SerializeField] private Color normalColor = Color.white;
         [SerializeField] private Color completedColor = new(0.6f, 0.6f, 0.6f, 1f);
 
+        [Tooltip("Индикация активного выбора диорамы (опционально)")]
+        [SerializeField] private DioramaSelectionIndicator selectionIndicator;
+
         private DioramaDefinition definition;
         private Action<DioramaDefinition> onSelected;
 
@@ -36,6 +39,7 @@ namespace DioramaEnigma.Dioramas
             if (label != null) label.text = definition != null ? definition.Title : string.Empty;
             if (icon != null) icon.sprite = definition != null ? definition.Icon : null;
             if (tintTarget != null) tintTarget.color = state == DioramaState.Completed ? completedColor : normalColor;
+            if (selectionIndicator != null) selectionIndicator.Bind(definition != null ? definition.Id : null);
         }
 
         public override void OnButtonClickAction() => onSelected?.Invoke(definition);

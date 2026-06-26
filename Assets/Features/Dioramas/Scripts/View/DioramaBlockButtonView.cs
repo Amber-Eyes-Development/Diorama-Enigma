@@ -13,6 +13,8 @@ namespace DioramaEnigma.Dioramas
     {
         [SerializeField] private TMP_Text label;
         [SerializeField] private Image icon;
+        [Tooltip("Индикация активного выбора блока (опционально)")]
+        [SerializeField] private DioramaSelectionIndicator selectionIndicator;
 
         private DioramaBlock block;
         private Action<DioramaBlock> onSelected;
@@ -27,6 +29,7 @@ namespace DioramaEnigma.Dioramas
 
             if (label != null) label.text = block != null ? block.Title : string.Empty;
             if (icon != null) icon.sprite = block != null ? block.Icon : null;
+            if (selectionIndicator != null) selectionIndicator.Bind(block != null ? block.Id : null);
         }
 
         public override void OnButtonClickAction() => onSelected?.Invoke(block);
