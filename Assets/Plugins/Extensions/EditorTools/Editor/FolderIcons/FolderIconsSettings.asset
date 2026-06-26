@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e01146b95620948903710c4646ca75, type: 3}
+  m_Name: FolderIconsSettings
+  m_EditorClassIdentifier: Assembly-CSharp-Editor-firstpass::Extensions.EditorTools.FolderIcons.FolderIconsSettings
+  rules:
+  - FolderName: Scripts
+    Icon: {fileID: 2800000, guid: 517a5bfe18f2ee04d9925db10be034e2, type: 3}
+  - FolderName: Data
+    Icon: {fileID: 2800000, guid: 05cfe010378336646ad6c721f66543d1, type: 3}
