@@ -244,7 +244,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5300596d659315842a489d495ef31734, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaCameraController
-  spawner: {fileID: 0}
+  spawner: {fileID: 1740526216}
   cameraRig: {fileID: 900364002}
   moveSpeed: 60
 --- !u!1 &200966132
@@ -1213,7 +1213,7 @@ MonoBehaviour:
   access: {fileID: 11400000, guid: 990583b984597ee4e8688ef62fca3c32, type: 2}
   selection: {fileID: 11400000, guid: 7f52c5b9bc3f86d42bf2b8ed0714e447, type: 2}
   reference: {fileID: 11400000, guid: 49a7317ee6d120c43a187aea565cb1c1, type: 2}
-  loadCoordinator: {fileID: 0}
+  loadCoordinator: {fileID: 9106780}
   axisRoot: {fileID: 1308218511}
   spacing: {x: 10, y: 0, z: 0}
   defaultPlaceholder: {fileID: 8240970300877844079, guid: 6fcd7bfaf6c91404cb59c7358ae569b5, type: 3}

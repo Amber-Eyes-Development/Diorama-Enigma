@@ -499,8 +499,18 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
     - goDatas_byGlobalId:
-        keys: []
-        values: []
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-1-5fb9e1051c911a94c896607a8a8c1fc5-1909704885724855118-0
+        - globalObjectIdString: GlobalObjectId_V1-1-5fb9e1051c911a94c896607a8a8c1fc5-6970540072007963056-0
+        values:
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
     - goDatas_byGlobalId:
         keys:
         - globalObjectIdString: GlobalObjectId_V1-1-5ab40e0961185684ab9f6664a1e37e19-512843865438944165-0
