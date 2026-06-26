@@ -409,6 +409,7 @@ MonoBehaviour:
   loadFirstSceneOnStart: 1
   transitionDelay: 0
   targetTimeout: 30
+  minLoadingDuration: 1
   loadingScene: {fileID: 11400000, guid: 62990fe0735fb9c4c987a9dacadec7e4, type: 2}
   scenes:
   - <Id>k__BackingField: {fileID: 11400000, guid: 62990fe0735fb9c4c987a9dacadec7e4, type: 2}
@@ -419,6 +420,11 @@ MonoBehaviour:
     <SceneName>k__BackingField: Game
   - <Id>k__BackingField: {fileID: 11400000, guid: bac0fb5923d9f34488a5a20f0e7247c0, type: 2}
     <SceneName>k__BackingField: Testing Zone
+  loadingScreenChannel: {fileID: 11400000, guid: 24628f5f46085104487c1945de6e2baa, type: 2}
+  coordinatorChannel: {fileID: 11400000, guid: c39ee4af3be221742bc10e3875a69337, type: 2}
+  referenceWaitTimeout: 5
+  readinessTimeout: 20
+  screenAnimationTimeout: 4
 --- !u!4 &1089915601
 Transform:
   m_ObjectHideFlags: 0

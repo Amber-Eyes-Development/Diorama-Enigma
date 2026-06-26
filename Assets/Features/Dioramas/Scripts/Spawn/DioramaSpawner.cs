@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DioramaEnigma.Sequences;
 using Extensions.Log;
+using Extensions.SceneFlow;
 using UnityEngine;
 
 namespace DioramaEnigma.Dioramas
@@ -14,11 +15,14 @@ namespace DioramaEnigma.Dioramas
     /// Камеру не двигает — шлёт <see cref="onFocusChanged"/>. На открытие диорамы блока меняет её заглушку
     /// на реальную. Публикует себя в канал для динамического UI
     /// </remarks>
-    public sealed class DioramaSpawner : MonoBehaviour
+    public sealed class DioramaSpawner : MonoBehaviour, ISceneLoadStep
     {
+        #region События 
         /// <summary> Фокус сменился: точка кадрирования активной диорамы и нужна ли анимация перехода </summary>
         public event Action<DioramaFocus> onFocusChanged;
+        #endregion
 
+        #region Свойства 
         /// <summary> Активная (в фокусе) диорама </summary>
         public DioramaDefinition Active => activeDefinition;
         /// <summary> Активный блок </summary>
@@ -37,7 +41,10 @@ namespace DioramaEnigma.Dioramas
         public Vector3 ActiveFramePoint => SlotPosition(activeIndex < 0 ? 0 : activeIndex);
         /// <summary> «Домашний» кадр — слот 0; камера берёт своё смещение относительно него </summary>
         public Vector3 HomePoint => axisRoot != null ? axisRoot.position : transform.position;
-
+        #endregion
+        
+        #region Параметры 
+        
         [Header("Источник")]
         [Tooltip("Сервис доступа (ассет)")]
         [SerializeField] private DioramaAccessService access;
@@ -45,6 +52,8 @@ namespace DioramaEnigma.Dioramas
         [SerializeField] private DioramaBlockSelection selection;
         [Tooltip("Канал рантайм-ссылки на спавнер")]
         [SerializeField] private DioramaSpawnerReference reference;
+        [Tooltip("Опционально. Координатор готовности сцены: спавнер регистрируется шагом загрузки и удерживает экран до прогрузки диорам блока")]
+        [SerializeField] private SceneLoadCoordinator loadCoordinator;
 
         [Header("Раскладка")]
         [Tooltip("Корень оси: позиция диорамы = axisRoot + spacing * индекс_в_блоке")]
@@ -53,33 +62,64 @@ namespace DioramaEnigma.Dioramas
         [SerializeField] private Vector3 spacing = new(40f, 0f, 0f);
         [Tooltip("Заглушка по умолчанию для закрытых диорам (если не задана на самой диораме)")]
         [SerializeField] private GameObject defaultPlaceholder;
+        
+        #endregion
 
+        #region Переменные 
+        
         private readonly List<DioramaDefinition> queue = new();
         private readonly Dictionary<string, DioramaInstance> liveInstances = new();
         private readonly Dictionary<string, GameObject> placeholders = new();
         private readonly HashSet<string> loading = new();
 
+        // Загрузки реальных диорам стартового блока — по ним считается готовность сцены (ISceneLoadStep)
+        private readonly HashSet<string> initialLoads = new();
+        private int initialLoadTotal;
+        private bool blockLoaded;
+
         private DioramaBlock activeBlock;
         private DioramaDefinition activeDefinition;
         private int activeIndex = -1;
+        
+        #endregion
 
+        #region ISceneLoadStep 
+
+        // Готовность сцены: блок загружен и все реальные диорамы стартового блока доспавнились
+        float ISceneLoadStep.Progress
+        {
+            get
+            {
+                if (!blockLoaded) return 0f;
+                if (initialLoadTotal == 0) return 1f;
+
+                return Mathf.Clamp01((initialLoadTotal - initialLoads.Count) / (float)initialLoadTotal);
+            }
+        }
+
+        bool ISceneLoadStep.IsDone => blockLoaded && initialLoads.Count == 0;
+
+        #endregion
+        
         #region MonoBehaviour
 
         private void Start()
         {
             if (access == null)
             {
-                ServiceDebug.LogError(this, $"{nameof(access)} не назначен");
+                ServiceDebug.LogError($"{nameof(access)} не назначен");
                 return;
             }
 
             if (axisRoot == null)
             {
-                ServiceDebug.LogError(this, $"{nameof(axisRoot)} не назначен");
+                ServiceDebug.LogError($"{nameof(axisRoot)} не назначен");
                 return;
             }
 
             access.onDioramaUnlocked += OnDioramaUnlocked;
+
+            if (loadCoordinator != null) loadCoordinator.Register(this);
 
             LoadBlock(ResolveStartBlock());
 
@@ -132,7 +172,7 @@ namespace DioramaEnigma.Dioramas
             DioramaProgressStore.SaveLastActive(def.Id);
 
             UpdateFocusGating();
-            EmitFocus(true); // навигация — с анимацией перехода
+            EmitFocus(true);
         }
 
         // Только активный реальный инстанс принимает ввод
@@ -175,8 +215,16 @@ namespace DioramaEnigma.Dioramas
         {
             UnloadAll();
             queue.Clear();
+            initialLoads.Clear();
+            initialLoadTotal = 0;
+            blockLoaded = false;
             activeBlock = block;
-            if (block == null) return;
+
+            if (block == null)
+            {
+                blockLoaded = true; 
+                return;
+            }
 
             queue.AddRange(access.AllInBlock(block));
 
@@ -185,9 +233,18 @@ namespace DioramaEnigma.Dioramas
                 var def = queue[i];
                 if (def == null) continue;
 
-                if (access.IsUnlocked(def)) BeginLoadReal(def);
+                if (access.IsUnlocked(def))
+                {
+                    if (BeginLoadReal(def))
+                    {
+                        initialLoads.Add(def.Id);
+                        initialLoadTotal++;
+                    }
+                }
                 else SpawnPlaceholder(def, i);
             }
+
+            blockLoaded = true;
         }
 
         private void OnDioramaUnlocked(DioramaDefinition def)
@@ -218,23 +275,26 @@ namespace DioramaEnigma.Dioramas
             placeholders.Remove(id);
         }
 
-        private void BeginLoadReal(DioramaDefinition def)
+        /// <returns> true, если асинхронная загрузка реально стартовала </returns>
+        private bool BeginLoadReal(DioramaDefinition def)
         {
             if (def.RunnerPrefab == null)
             {
-                ServiceDebug.LogError(this, $"У диорамы {def.name} не назначен {nameof(def.RunnerPrefab)}");
-                return;
+                ServiceDebug.LogError($"У диорамы {def.name} не назначен {nameof(def.RunnerPrefab)}");
+                return false;
             }
 
-            if (liveInstances.ContainsKey(def.Id) || !loading.Add(def.Id)) return;
+            if (liveInstances.ContainsKey(def.Id) || !loading.Add(def.Id)) return false;
 
             var operation = InstantiateAsync(def.RunnerPrefab, axisRoot);
             operation.completed += _ => OnRealLoaded(def, operation);
+            return true;
         }
 
         private void OnRealLoaded(DioramaDefinition def, AsyncInstantiateOperation<SequenceRunner> operation)
         {
             loading.Remove(def.Id);
+            initialLoads.Remove(def.Id);
             if (this == null) return;
 
             SequenceRunner runner = operation.Result is { Length: > 0 } ? operation.Result[0] : null;
@@ -243,7 +303,7 @@ namespace DioramaEnigma.Dioramas
             int index = queue.IndexOf(def);
             if (index < 0 || liveInstances.ContainsKey(def.Id))
             {
-                Destroy(runner.gameObject); // блок сменился / уже загружено
+                Destroy(runner.gameObject);
                 return;
             }
 
