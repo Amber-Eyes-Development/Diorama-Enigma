@@ -532,9 +532,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp-firstpass::Extensions.UIWindows.UIWindowsController
   dontDestroyOnLoad: 0
-  startWindow: {fileID: 6213087243141585182, guid: 6e60d5ad66a440745bdf421503306817, type: 3}
+  startWindow: {fileID: 6213087243141585182, guid: 0d4bd97f7aead54459dc0dd36540a7c1, type: 3}
   preparedUIWindows:
-  - {fileID: 6213087243141585182, guid: 6e60d5ad66a440745bdf421503306817, type: 3}
+  - {fileID: 6213087243141585182, guid: 0d4bd97f7aead54459dc0dd36540a7c1, type: 3}
   root: {fileID: 2029243579}
   popupRoot: {fileID: 0}
 --- !u!1001 &2029243578
