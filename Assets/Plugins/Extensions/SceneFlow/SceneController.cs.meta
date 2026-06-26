@@ -1,3 +1,15 @@
 fileFormatVersion: 2
 guid: 00d8b4277d3243a795cc2257417a864d
-timeCreated: 1770112575
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - firstScene: {instanceID: 0}
+  - loadingScene: {instanceID: 0}
+  - loadingScreenChannel: {fileID: 11400000, guid: 24628f5f46085104487c1945de6e2baa, type: 2}
+  - coordinatorChannel: {fileID: 11400000, guid: c39ee4af3be221742bc10e3875a69337, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

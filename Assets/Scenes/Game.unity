@@ -119,6 +119,52 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &9106778
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9106779}
+  - component: {fileID: 9106780}
+  m_Layer: 0
+  m_Name: Scene Load Coordinator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9106779
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9106778}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1936877674}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9106780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9106778}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0009baaa630a4834797bde9544b73a38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp-firstpass::Extensions.SceneFlow.SceneLoadCoordinator
+  channel: {fileID: 11400000, guid: c39ee4af3be221742bc10e3875a69337, type: 2}
+  sealAtEndOfFirstFrame: 1
 --- !u!1 &156713721
 GameObject:
   m_ObjectHideFlags: 0
@@ -154,6 +200,53 @@ Transform:
   - {fileID: 1618823561}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &166266676
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 166266677}
+  - component: {fileID: 166266678}
+  m_Layer: 0
+  m_Name: Diorama Camera Controller
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &166266677
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 166266676}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1936877674}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &166266678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 166266676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5300596d659315842a489d495ef31734, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaCameraController
+  spawner: {fileID: 0}
+  cameraRig: {fileID: 900364002}
+  moveSpeed: 60
 --- !u!1 &200966132
 GameObject:
   m_ObjectHideFlags: 0
@@ -219,6 +312,54 @@ ReflectionProbe:
   m_UseOcclusionCulling: 1
   m_Importance: 1
   m_CustomBakedTexture: {fileID: 0}
+--- !u!1 &212913383
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 212913384}
+  - component: {fileID: 212913385}
+  m_Layer: 0
+  m_Name: Completion Presenter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &212913384
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 212913383}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1936877674}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &212913385
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 212913383}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a877627dc5cca145834922d7df7113d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Statistics.DioramaBlockCompletionPresenter
+  access: {fileID: 11400000, guid: 990583b984597ee4e8688ef62fca3c32, type: 2}
+  recorder: {fileID: 1095776237}
+  results: {fileID: 11400000, guid: 0db7498089af9ea48950f11fa4323200, type: 2}
+  resultsWindow: {fileID: 11400000, guid: c2295dcc69748584f98d547bccd25bc1, type: 2}
 --- !u!1 &275459774
 GameObject:
   m_ObjectHideFlags: 0
@@ -578,6 +719,7 @@ MonoBehaviour:
   preparedUIWindows:
   - {fileID: 6213087243141585182, guid: c91b2670c2d5f964184c42859f1a2986, type: 3}
   - {fileID: 6213087243141585182, guid: db724b073dc031743b769ca2f6b62e3f, type: 3}
+  - {fileID: 6213087243141585182, guid: 93de0835fa606414f9133cb615138c10, type: 3}
   - {fileID: 329254087388393284, guid: 6d7a6b5a6491da449890d569ec83a87c, type: 3}
   root: {fileID: 612783477}
   popupRoot: {fileID: 0}
@@ -836,6 +978,51 @@ Transform:
   m_Children: []
   m_Father: {fileID: 156713722}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1095776235
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1095776236}
+  - component: {fileID: 1095776237}
+  m_Layer: 0
+  m_Name: Statistics
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1095776236
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1095776235}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1936877674}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1095776237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1095776235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 490362cca3c0b5846ae2d4469bd9200a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Statistics.DioramaStatisticsRecorder
+  spawner: {fileID: 1740526216}
 --- !u!1 &1147585660
 GameObject:
   m_ObjectHideFlags: 0
@@ -924,8 +1111,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1308218511}
-  - component: {fileID: 1308218512}
-  - component: {fileID: 1308218514}
   m_Layer: 0
   m_Name: "\u0414\u0438\u043E\u0440\u0430\u043C\u044B"
   m_TagString: Untagged
@@ -948,39 +1133,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1308218512
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1308218510}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d8f3cfea599fb08448ebee7ac5c8bc23, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaSpawner
-  access: {fileID: 11400000, guid: 990583b984597ee4e8688ef62fca3c32, type: 2}
-  selection: {fileID: 11400000, guid: 7f52c5b9bc3f86d42bf2b8ed0714e447, type: 2}
-  reference: {fileID: 11400000, guid: 49a7317ee6d120c43a187aea565cb1c1, type: 2}
-  axisRoot: {fileID: 1308218511}
-  spacing: {x: 10, y: 0, z: 0}
-  defaultPlaceholder: {fileID: 8240970300877844079, guid: 6fcd7bfaf6c91404cb59c7358ae569b5, type: 3}
---- !u!114 &1308218514
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1308218510}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5300596d659315842a489d495ef31734, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaCameraController
-  spawner: {fileID: 1308218512}
-  cameraRig: {fileID: 900364002}
-  moveSpeed: 60
 --- !u!1 &1618823560
 GameObject:
   m_ObjectHideFlags: 0
@@ -1014,6 +1166,57 @@ Transform:
   - {fileID: 897248476}
   m_Father: {fileID: 156713722}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1740526214
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1740526215}
+  - component: {fileID: 1740526216}
+  m_Layer: 0
+  m_Name: Diorama Spawn Controller
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1740526215
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1740526214}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1936877674}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1740526216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1740526214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8f3cfea599fb08448ebee7ac5c8bc23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaSpawner
+  access: {fileID: 11400000, guid: 990583b984597ee4e8688ef62fca3c32, type: 2}
+  selection: {fileID: 11400000, guid: 7f52c5b9bc3f86d42bf2b8ed0714e447, type: 2}
+  reference: {fileID: 11400000, guid: 49a7317ee6d120c43a187aea565cb1c1, type: 2}
+  loadCoordinator: {fileID: 0}
+  axisRoot: {fileID: 1308218511}
+  spacing: {x: 10, y: 0, z: 0}
+  defaultPlaceholder: {fileID: 8240970300877844079, guid: 6fcd7bfaf6c91404cb59c7358ae569b5, type: 3}
 --- !u!1 &1936877673
 GameObject:
   m_ObjectHideFlags: 0
@@ -1045,6 +1248,11 @@ Transform:
   m_Children:
   - {fileID: 883396765}
   - {fileID: 348488911}
+  - {fileID: 9106779}
+  - {fileID: 1095776236}
+  - {fileID: 1740526215}
+  - {fileID: 166266677}
+  - {fileID: 212913384}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2100693806

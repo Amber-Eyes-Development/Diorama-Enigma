@@ -90,6 +90,7 @@ MonoBehaviour:
     - DebuggerEnabled
     - Camera Gizmo
     - NetworkAnimator Icon
+    - BuildSettings.DedicatedServer.Hero
     enabled: 1
   - builtinIcons: []
     customIcons: []
