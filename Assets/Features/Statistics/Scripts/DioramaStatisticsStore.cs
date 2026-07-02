@@ -34,18 +34,6 @@ namespace DioramaEnigma.Statistics
             JsonSaveLoad.Save(best, BLOCK_BEST_TIME_KEY);
         }
 
-        /// <summary> Убрать рекорд блока (при рестарте блока) </summary>
-        /// <param name="blockId">Идентификатор блока</param>
-        public static void RemoveBlockBestTime(string blockId)
-        {
-            if (string.IsNullOrEmpty(blockId)) return;
-
-            var best = JsonSaveLoad.Load(BLOCK_BEST_TIME_KEY, new Dictionary<string, float>());
-            if (best == null || !best.Remove(blockId)) return;
-
-            JsonSaveLoad.Save(best, BLOCK_BEST_TIME_KEY);
-        }
-
         /// <summary> Накопленное время диорамы в секундах </summary>
         /// <param name="dioramaId">Идентификатор диорамы</param>
         public static float LoadDioramaSeconds(string dioramaId)

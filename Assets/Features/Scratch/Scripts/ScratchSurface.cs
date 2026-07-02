@@ -120,7 +120,7 @@ namespace DioramaEnigma.Scratch
                 surfaceCollider = dustRenderer.GetComponent<Collider>();
 
             BuildMask();
-            LoadSavedMask();
+            if (step == null || step.IsCompleted) LoadSavedMask();
 
             materialInstance = new Material(source);
             materialInstance.SetTexture(MASK_PROPERTY, mask);

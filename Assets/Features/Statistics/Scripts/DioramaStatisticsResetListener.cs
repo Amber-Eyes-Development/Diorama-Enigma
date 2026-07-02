@@ -32,11 +32,11 @@ namespace DioramaEnigma.Statistics
             access.onProgressReset -= OnProgressReset;
         }
 
+        // Рестарт — новая попытка ПОБИТЬ рекорд: обнуляем накопленное время попытки, но сам рекорд НЕ трогаем
         private void OnBlockRestarted(DioramaBlock block)
         {
             if (block == null) return;
 
-            DioramaStatisticsStore.RemoveBlockBestTime(block.Id);
             foreach (var def in access.AllInBlock(block))
                 if (def != null) DioramaStatisticsStore.RemoveDioramaSeconds(def.Id);
         }
