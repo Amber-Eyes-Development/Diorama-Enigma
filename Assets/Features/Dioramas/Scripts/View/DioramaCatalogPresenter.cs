@@ -58,6 +58,8 @@ namespace DioramaEnigma.Dioramas
             access.onDioramaUnlocked += OnGraphChanged;
             access.onDioramaCompleted += OnGraphChanged;
             access.onBlockUnlocked += OnBlockUnlocked;
+            access.onBlockRestarted += OnBlockUnlocked;
+            access.onProgressReset += Rebuild;
 
             Rebuild();
         }
@@ -69,6 +71,8 @@ namespace DioramaEnigma.Dioramas
                 access.onDioramaUnlocked -= OnGraphChanged;
                 access.onDioramaCompleted -= OnGraphChanged;
                 access.onBlockUnlocked -= OnBlockUnlocked;
+                access.onBlockRestarted -= OnBlockUnlocked;
+                access.onProgressReset -= Rebuild;
             }
 
             ClearButtons(blockButtons);
@@ -107,7 +111,7 @@ namespace DioramaEnigma.Dioramas
             foreach (var block in blocks)
             {
                 var view = Instantiate(blockButtonPrefab, blockContainer);
-                view.Bind(block, OnBlockSelected);
+                view.Bind(block, access.CompletedCountInBlock(block), access.AllInBlock(block).Count, OnBlockSelected);
                 blockButtons.Add(view.gameObject);
 
                 if (block == selectedBlock) selectedStillVisible = true;

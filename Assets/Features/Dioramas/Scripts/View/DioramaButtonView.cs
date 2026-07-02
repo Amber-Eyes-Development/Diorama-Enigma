@@ -23,6 +23,8 @@ namespace DioramaEnigma.Dioramas
 
         [Tooltip("Индикация активного выбора диорамы (опционально)")]
         [SerializeField] private DioramaSelectionIndicator selectionIndicator;
+        [Tooltip("Галочка пройденной диорамы (опционально)")]
+        [SerializeField] private GameObject completedCheckmark;
 
         private DioramaDefinition definition;
         private Action<DioramaDefinition> onSelected;
@@ -40,6 +42,7 @@ namespace DioramaEnigma.Dioramas
             if (icon != null) icon.sprite = definition != null ? definition.Icon : null;
             if (tintTarget != null) tintTarget.color = state == DioramaState.Completed ? completedColor : normalColor;
             if (selectionIndicator != null) selectionIndicator.Bind(definition != null ? definition.Id : null);
+            if (completedCheckmark != null) completedCheckmark.SetActive(state == DioramaState.Completed);
         }
 
         public override void OnButtonClickAction() => onSelected?.Invoke(definition);

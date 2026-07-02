@@ -53,7 +53,7 @@ namespace DioramaEnigma.Dioramas
         {
             if (boundSpawner == null)
             {
-                ServiceDebug.LogError(this, "спавнер недоступен (reference не назначен или сцена не готова)");
+                ServiceDebug.LogError($"Спавнер недоступен ({nameof(reference)} не назначен или сцена не готова)");
                 return;
             }
 
@@ -66,7 +66,7 @@ namespace DioramaEnigma.Dioramas
                     boundSpawner.FocusPrev();
                     break;
                 default:
-                    ServiceDebug.LogError(this, $"Необработанное направление: {direction}");
+                    ServiceDebug.LogError($"Необработанное направление: {direction}");
                     break;
             }
         }
