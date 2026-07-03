@@ -390,6 +390,9 @@ namespace DioramaEnigma.Scratch
         {
             if (!saveProgress || SaveKey == null || !saveDirty || mask == null) return;
 
+            // Персистим маску только у решённого шага — симметрично загрузке: незачтённое частичное стирание сбрасывается
+            if (step != null && !step.IsCompleted) return;
+
             // Перед кодированием убеждаемся, что последние мазки уже в текстуре
             if (dirty)
             {

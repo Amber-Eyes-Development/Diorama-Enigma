@@ -312,10 +312,14 @@ namespace DioramaEnigma.Sequences
             State.ForceValue(!State.CompletionState);
         }
 
-        /// <summary> Восстановить позу снапа из сейва (любая зона со снапом); фолбэк — усадить завершённый шаг в свою зону </summary>
+        /// <summary> Восстановить позу снапа из сейва (у решённого шага); фолбэк — усадить завершённый шаг в свою зону </summary>
+        /// <remarks>
+        /// Сохранённую позу поднимаем только при завершённом шаге: сброс прогресса откатывает шаг, но отдельный
+        /// placement-сейв при этом не чистится — без гейта объект (в т.ч. «чужой» снап) остался бы в зоне решённым
+        /// </remarks>
         private void RestoreIfCommitted()
         {
-            if (savePlacement && PlacementKey != null)
+            if (savePlacement && PlacementKey != null && (State == null || State.IsCompleted))
             {
                 var placement = JsonSaveLoad.Load(PlacementKey, default(PlacementSave));
                 if (placement.snapped)
