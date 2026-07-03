@@ -16,17 +16,17 @@ MonoBehaviour:
   - block: {fileID: 11400000, guid: 9db9c980e376c5944b49aceec29dfa50, type: 2}
     dioramas:
     - definition: {fileID: 11400000, guid: 4150b697f22548b4b9c5d09e0b791535, type: 2}
-      unlockedFromStart: 1
+      linkOperator: 1
       incomingLinks: []
     - definition: {fileID: 11400000, guid: 3d326cb2cbc28de4582ed7a229c4ea40, type: 2}
-      unlockedFromStart: 0
+      linkOperator: 1
       incomingLinks:
       - source: {fileID: 11400000, guid: 4150b697f22548b4b9c5d09e0b791535, type: 2}
         condition: 2
         step: {fileID: 11400000, guid: 0c4e685450b0fa94698ea03aae969c63, type: 2}
         stepTrigger: 0
     - definition: {fileID: 11400000, guid: d463394f11a599b448edca4992b3bba2, type: 2}
-      unlockedFromStart: 0
+      linkOperator: 1
       incomingLinks:
       - source: {fileID: 11400000, guid: 3d326cb2cbc28de4582ed7a229c4ea40, type: 2}
         condition: 1
@@ -35,9 +35,5 @@ MonoBehaviour:
   - block: {fileID: 11400000, guid: 7a3564ad676130e4fb7edafdd1c8950e, type: 2}
     dioramas:
     - definition: {fileID: 11400000, guid: 7cf42ad02cba8c444b1cea3533fc0b91, type: 2}
-      unlockedFromStart: 0
-      incomingLinks:
-      - source: {fileID: 11400000, guid: 3d326cb2cbc28de4582ed7a229c4ea40, type: 2}
-        condition: 1
-        step: {fileID: 11400000, guid: 0c4e685450b0fa94698ea03aae969c63, type: 2}
-        stepTrigger: 0
+      linkOperator: 1
+      incomingLinks: []

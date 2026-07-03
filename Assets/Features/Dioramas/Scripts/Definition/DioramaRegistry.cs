@@ -18,6 +18,7 @@ namespace DioramaEnigma.Dioramas
         [SerializeField] private List<DioramaBlockEntry> blocks = new();
 
         private Dictionary<string, DioramaDefinition> byId;
+        private Dictionary<string, DioramaBlock> blockById;
         private Dictionary<DioramaDefinition, DioramaBlock> blockByDiorama;
         private List<DioramaEntry> entries;
 
@@ -54,25 +55,42 @@ namespace DioramaEnigma.Dioramas
             return blockByDiorama.TryGetValue(def, out var block) ? block : null;
         }
 
+        /// <summary>
+        /// Блок по идентификатору (или null)
+        /// </summary>
+        /// <param name="id">Идентификатор блока</param>
+        public DioramaBlock BlockById(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+
+            EnsureIndex();
+            return blockById.TryGetValue(id, out var block) ? block : null;
+        }
+
         /// <summary> Сбросить кэш индексов (после изменения списков) </summary>
         public void Invalidate()
         {
             byId = null;
+            blockById = null;
             blockByDiorama = null;
             entries = null;
         }
 
         private void EnsureIndex()
         {
-            if (byId != null && blockByDiorama != null && entries != null) return;
+            if (byId != null && blockById != null && blockByDiorama != null && entries != null) return;
 
             byId = new Dictionary<string, DioramaDefinition>();
+            blockById = new Dictionary<string, DioramaBlock>();
             blockByDiorama = new Dictionary<DioramaDefinition, DioramaBlock>();
             entries = new List<DioramaEntry>();
 
             foreach (var blockEntry in blocks)
             {
                 if (blockEntry == null) continue;
+
+                var block = blockEntry.Block;
+                if (block != null && !string.IsNullOrEmpty(block.Id)) blockById[block.Id] = block;
 
                 foreach (var entry in blockEntry.Dioramas)
                 {
@@ -82,7 +100,7 @@ namespace DioramaEnigma.Dioramas
 
                     var def = entry.Definition;
                     if (!string.IsNullOrEmpty(def.Id)) byId[def.Id] = def;
-                    if (blockEntry.Block != null) blockByDiorama[def] = blockEntry.Block;
+                    if (block != null) blockByDiorama[def] = block;
                 }
             }
         }
