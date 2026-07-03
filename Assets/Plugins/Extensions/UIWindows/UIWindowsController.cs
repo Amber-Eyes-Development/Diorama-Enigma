@@ -36,6 +36,9 @@ namespace Extensions.UIWindows
         [SerializeField] protected List<UIWindow> preparedUIWindows = new();
         [SerializeField] protected Transform root;
 
+        [Tooltip("Корень для попапов. Если не задан — попапы создаются в root")]
+        [SerializeField] protected Transform popupRoot;
+
         #endregion
 
         #region Переменные
@@ -335,10 +338,22 @@ namespace Extensions.UIWindows
             UIWindow preparedWindow = GetPreparedWindowById(id);
             if (preparedWindow == null) return null;
 
-            UIWindow instantiatedWindow = Instantiate(preparedWindow.gameObject, root).GetComponent<UIWindow>();
+            Transform parent = ResolveRoot(preparedWindow);
+            UIWindow instantiatedWindow = Instantiate(preparedWindow.gameObject, parent).GetComponent<UIWindow>();
             openedUIWindows.Add(instantiatedWindow);
 
             return instantiatedWindow;
+        }
+
+        /// <summary>
+        /// Выбрать корень для создания окна: попапы уходят в popupRoot (если задан), остальные — в root
+        /// </summary>
+        private Transform ResolveRoot(UIWindow window)
+        {
+            if (window != null && window.Type == UIWindowType.popup && popupRoot != null)
+                return popupRoot;
+
+            return root;
         }
 
         /// <summary>

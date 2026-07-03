@@ -9,7 +9,7 @@ namespace DioramaEnigma.Sequences
     /// Булев шаг: завершается, когда его значение совпадает с целевым.
     /// Сам хранит значение и (опционально) сохраняет его между сессиями.
     /// </summary>
-    [CreateAssetMenu(menuName = "Sequences/Steps/Step", fileName = nameof(SequenceStep))]
+    [CreateAssetMenu(menuName = "StepSequences/Steps/Step", fileName = nameof(SequenceStep))]
     public sealed class SequenceStep : AbstractSequenceStep
     {
         private const string GLOBAL_PROFILE = "global values";

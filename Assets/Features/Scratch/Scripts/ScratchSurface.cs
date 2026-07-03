@@ -120,7 +120,7 @@ namespace DioramaEnigma.Scratch
                 surfaceCollider = dustRenderer.GetComponent<Collider>();
 
             BuildMask();
-            LoadSavedMask();
+            if (step == null || step.IsCompleted) LoadSavedMask();
 
             materialInstance = new Material(source);
             materialInstance.SetTexture(MASK_PROPERTY, mask);
@@ -389,6 +389,9 @@ namespace DioramaEnigma.Scratch
         private void SaveMask()
         {
             if (!saveProgress || SaveKey == null || !saveDirty || mask == null) return;
+
+            // Персистим маску только у решённого шага — симметрично загрузке: незачтённое частичное стирание сбрасывается
+            if (step != null && !step.IsCompleted) return;
 
             // Перед кодированием убеждаемся, что последние мазки уже в текстуре
             if (dirty)

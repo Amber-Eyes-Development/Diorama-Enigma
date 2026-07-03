@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DioramaEnigma.Dioramas;
 using Extensions.EditorTools;
 using UnityEditor;
 using UnityEngine;
@@ -19,12 +20,25 @@ namespace DioramaEnigma.Sequences.Editor
         {
             public Sequence Asset;
             public string Guid;
+            public DioramaDefinition Definition;
         }
+
+        /// <summary> Группа последовательностей одного блока (или «без блока», если Block == null) </summary>
+        private sealed class BlockGroup
+        {
+            public DioramaBlock Block;
+            public string Key;
+            public readonly List<SequenceInfo> Sequences = new();
+        }
+
+        private const string NO_BLOCK_KEY = "";
 
         private static readonly Color COLOR_OPEN = new(1f, 0.52f, 0.05f);
 
         private readonly List<SequenceInfo> sequences = new();
+        private readonly List<BlockGroup> blockGroups = new();
         private readonly HashSet<string> expanded = new();
+        private readonly HashSet<string> expandedBlocks = new();
 
         private readonly HashSet<int> inspectorExpanded = new();
         private readonly Dictionary<int, UnityEditor.Editor> embeddedEditors = new();
@@ -78,8 +92,8 @@ namespace DioramaEnigma.Sequences.Editor
             }
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
-            foreach (var info in sequences)
-                DrawSequence(info);
+            foreach (var group in blockGroups)
+                DrawBlock(group);
             EditorGUILayout.EndScrollView();
         }
 
@@ -99,6 +113,52 @@ namespace DioramaEnigma.Sequences.Editor
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary> Блок-уровень: иконка-папка сворачивает детей, плашка открывает ассет блока </summary>
+        private void DrawBlock(BlockGroup group)
+        {
+            bool isExpanded = expandedBlocks.Contains(group.Key);
+            bool hasAsset = group.Block != null;
+            int inspectorId = hasAsset ? group.Block.GetInstanceID() : 0;
+            bool inspectorOpen = hasAsset && inspectorExpanded.Contains(inspectorId);
+
+            EditorGUILayout.BeginHorizontal();
+
+            var folderIcon = EditorGUIUtility.IconContent(isExpanded ? "FolderOpened Icon" : "Folder Icon");
+            folderIcon.tooltip = isExpanded ? "Свернуть блок" : "Развернуть блок";
+            if (GUILayout.Button(folderIcon, GUILayout.Width(SQUARE), GUILayout.Height(SQUARE)))
+                ToggleExpandedBlock(group.Key);
+
+            string title = hasAsset ? BuildBlockLabel(group.Block) : "Без блока";
+            string indicator = (hasAsset ? inspectorOpen : isExpanded) ? "▼" : "▶";
+
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_PURPLE))
+            {
+                if (GUILayout.Button($"  {indicator}  {title}   ({group.Sequences.Count})", styleMainButton, GUILayout.Height(SQUARE)))
+                {
+                    if (hasAsset) ToggleInspector(inspectorId);
+                    else ToggleExpandedBlock(group.Key);
+                }
+            }
+
+            if (hasAsset)
+            {
+                DrawOpenButton(group.Block);
+                DrawPingButton(group.Block);
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            if (inspectorOpen) DrawInlineInspector(group.Block, 1);
+
+            if (!isExpanded) return;
+
+            EditorGUI.indentLevel++;
+            foreach (var info in group.Sequences)
+                DrawSequence(info);
+            EditorGUI.indentLevel--;
+            EditorGUILayout.Space(2);
+        }
+
         private void DrawSequence(SequenceInfo info)
         {
             bool isExpanded = expanded.Contains(info.Guid);
@@ -106,6 +166,7 @@ namespace DioramaEnigma.Sequences.Editor
             bool inspectorOpen = inspectorExpanded.Contains(id);
 
             EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(EditorGUI.indentLevel * 12f);
 
             var folderIcon = EditorGUIUtility.IconContent(isExpanded ? "FolderOpened Icon" : "Folder Icon");
             folderIcon.tooltip = isExpanded ? "Свернуть шаги" : "Развернуть шаги";
@@ -236,16 +297,101 @@ namespace DioramaEnigma.Sequences.Editor
         {
             sequences.Clear();
 
+            var definitionBySequence = BuildDefinitionMap();
+
             foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(Sequence)}"))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var asset = AssetDatabase.LoadAssetAtPath<Sequence>(path);
                 if (asset == null) continue;
 
-                sequences.Add(new SequenceInfo { Asset = asset, Guid = guid });
+                definitionBySequence.TryGetValue(asset, out var definition);
+                sequences.Add(new SequenceInfo { Asset = asset, Guid = guid, Definition = definition });
             }
 
-            sequences.Sort((a, b) => string.Compare(a.Asset.name, b.Asset.name, System.StringComparison.OrdinalIgnoreCase));
+            sequences.Sort((a, b) => string.Compare(a.Asset.name, b.Asset.name, StringComparison.OrdinalIgnoreCase));
+
+            RebuildBlockGroups();
+        }
+
+        /// <summary> Карта «последовательность → определение диорамы» по ассетам проекта </summary>
+        private static Dictionary<Sequence, DioramaDefinition> BuildDefinitionMap()
+        {
+            var map = new Dictionary<Sequence, DioramaDefinition>();
+
+            foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(DioramaDefinition)}"))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var definition = AssetDatabase.LoadAssetAtPath<DioramaDefinition>(path);
+                if (definition == null || definition.Sequence == null) continue;
+
+                map[definition.Sequence] = definition;
+            }
+
+            return map;
+        }
+
+        /// <summary> Сгруппировать последовательности по блокам в порядке реестра; не учтённые — «без блока» </summary>
+        private void RebuildBlockGroups()
+        {
+            blockGroups.Clear();
+
+            var infoByDefinition = new Dictionary<DioramaDefinition, SequenceInfo>();
+            foreach (var info in sequences)
+                if (info.Definition != null)
+                    infoByDefinition[info.Definition] = info;
+
+            var placed = new HashSet<SequenceInfo>();
+            var registry = LoadRegistry();
+
+            if (registry != null)
+            {
+                int entryIndex = 0;
+                foreach (var entry in registry.Blocks)
+                {
+                    if (entry == null) continue;
+
+                    var group = new BlockGroup
+                    {
+                        Block = entry.Block,
+                        Key = entry.Block != null ? entry.Block.Id : $"entry:{entryIndex}",
+                    };
+                    entryIndex++;
+
+                    foreach (var dioramaEntry in entry.Dioramas)
+                    {
+                        var def = dioramaEntry?.Definition;
+                        if (def != null && infoByDefinition.TryGetValue(def, out var info) && placed.Add(info))
+                            group.Sequences.Add(info);
+                    }
+
+                    blockGroups.Add(group);
+                }
+            }
+
+            BlockGroup noBlock = null;
+            foreach (var info in sequences)
+            {
+                if (placed.Contains(info)) continue;
+
+                noBlock ??= new BlockGroup { Block = null, Key = NO_BLOCK_KEY };
+                noBlock.Sequences.Add(info);
+            }
+
+            if (noBlock != null) blockGroups.Add(noBlock);
+
+            expandedBlocks.Clear();
+            foreach (var group in blockGroups)
+                expandedBlocks.Add(group.Key);
+        }
+
+        /// <summary> Первый найденный реестр диорам в проекте (или null) </summary>
+        private static DioramaRegistry LoadRegistry()
+        {
+            var guids = AssetDatabase.FindAssets($"t:{nameof(DioramaRegistry)}");
+            if (guids.Length == 0) return null;
+
+            return AssetDatabase.LoadAssetAtPath<DioramaRegistry>(AssetDatabase.GUIDToAssetPath(guids[0]));
         }
 
         #endregion
@@ -256,6 +402,12 @@ namespace DioramaEnigma.Sequences.Editor
         {
             string typeName = stepAsset.GetType().Name.Replace("Sequence", "");
             return $"  {typeName} · {stepAsset.name}";
+        }
+
+        private static string BuildBlockLabel(DioramaBlock block)
+        {
+            string title = string.IsNullOrEmpty(block.Title) ? block.name : block.Title;
+            return $"Блок · {title}";
         }
 
         private void EnsureStyles()
@@ -280,6 +432,12 @@ namespace DioramaEnigma.Sequences.Editor
         {
             if (!inspectorExpanded.Remove(instanceId))
                 inspectorExpanded.Add(instanceId);
+        }
+
+        private void ToggleExpandedBlock(string key)
+        {
+            if (!expandedBlocks.Remove(key))
+                expandedBlocks.Add(key);
         }
 
         /// <summary> Получить (или создать) встроенный редактор ассета; кэшируется по InstanceID </summary>

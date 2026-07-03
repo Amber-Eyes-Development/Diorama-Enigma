@@ -24,12 +24,9 @@ namespace Extensions.EditorTools
         private BookmarksDataBase dataBase;
 
         [NonSerialized]
-        private GUIStyle bookmarkStyle;
-
-        [NonSerialized]
         private GUIStyle selectedBookmarkStyle;
         private Vector2 scroll = Vector2.zero;
-        
+
         private readonly Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
 
         [MenuItem("Tools/" + WINDOW_NAME)]
@@ -44,33 +41,31 @@ namespace Extensions.EditorTools
         {
             if (dataBase == null)
             {
-                EditorGUILayout.HelpBox("BookmarksDataBase не назначена", MessageType.Error);
+                EditorGUILayout.HelpBox("BookmarksDataBase is not assigned", MessageType.Error);
                 return;
             }
 
-            if (bookmarkStyle == null) InitStyles();
+            if (selectedBookmarkStyle == null) InitStyles();
 
-            DrawAddButton();
-            GUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+            using (new EditorGUILayout.VerticalScope(EditorToolsStyles.WindowPadding))
+            {
+                DrawAddButton();
 
-            scroll = GUILayout.BeginScrollView(scroll);
-            DrawBookmarksList();
-            GUILayout.EndScrollView();
+                GUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+                EditorToolsGUI.Separator();
+                GUILayout.Space(EditorToolsConstraints.SPACE_BLOCK_SIZE);
+
+                scroll = GUILayout.BeginScrollView(scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUIStyle.none);
+                DrawBookmarksList();
+                GUILayout.EndScrollView();
+            }
         }
 
         #region UI
 
         private void InitStyles()
         {
-            bookmarkStyle = new GUIStyle(GUI.skin.button)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
-                fixedHeight = EditorToolsConstraints.BASE_ELEMENT_HEIGHT,
-                padding = new RectOffset(EditorToolsConstraints.TEXT_PADDING, EditorToolsConstraints.TEXT_PADDING, 0, 0)
-            };
-
-            selectedBookmarkStyle = new GUIStyle(bookmarkStyle)
+            selectedBookmarkStyle = new GUIStyle(EditorToolsStyles.RowButton)
             {
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.green }
@@ -83,7 +78,7 @@ namespace Extensions.EditorTools
 
             using (new EditorGUI.DisabledScope(selected == null))
             {
-                if (GUILayout.Button("+ Добавить выбранный объект +", GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                if (EditorToolsGUI.IconButton(EditorToolsConstraints.ICON_ADD, "Add Selected Object", GUILayout.ExpandWidth(true)))
                 {
                     AddBookmark(selected);
                 }
@@ -100,7 +95,7 @@ namespace Extensions.EditorTools
 
             if (items.Count == 0)
             {
-                GUILayout.Label("Закладок пока нет");
+                GUILayout.Label("No bookmarks yet", EditorToolsStyles.MutedLabel);
                 return;
             }
 
@@ -142,20 +137,20 @@ namespace Extensions.EditorTools
                 string foldoutLabel;
 
                 if (key == PROJECT_ASSETS_SECTION)
-                    foldoutLabel = $"Ассеты проекта ({groups[key].Count})";
+                    foldoutLabel = $"Project Assets ({groups[key].Count})";
                 else
                 {
                     string sceneName = System.IO.Path.GetFileNameWithoutExtension(key);
                     bool isCurrent = key == activeScene;
 
                     foldoutLabel = isCurrent
-                        ? $"Сцена: {sceneName} (текущая, {groups[key].Count})"
-                        : $"Сцена: {sceneName} ({groups[key].Count})";
+                        ? $"Scene: {sceneName} (current, {groups[key].Count})"
+                        : $"Scene: {sceneName} ({groups[key].Count})";
                 }
 
                 foldouts.TryAdd(key, true);
 
-                foldouts[key] = EditorGUILayout.Foldout(foldouts[key], foldoutLabel, true);
+                foldouts[key] = EditorGUILayout.Foldout(foldouts[key], foldoutLabel, true, EditorToolsStyles.BoldFoldout);
 
                 if (foldouts[key])
                 {
@@ -186,6 +181,7 @@ namespace Extensions.EditorTools
 
                 DrawNameButton(data, resolved, isSelected);
                 DrawOpenFolderButtonIfNeeded(resolved);
+                DrawOpenPrefabButtonIfNeeded(resolved);
                 DrawSceneActionIfNeeded(data);
                 DrawRemoveButton(data);
             }
@@ -195,7 +191,7 @@ namespace Extensions.EditorTools
         {
             Texture icon = resolved != null
                 ? EditorGUIUtility.ObjectContent(resolved, resolved.GetType()).image
-                : EditorGUIUtility.IconContent("console.erroricon").image;
+                : EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_MISSING).image;
 
             GUILayout.Label(icon, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT));
         }
@@ -204,7 +200,7 @@ namespace Extensions.EditorTools
         {
             using (new EditorGUI.DisabledScope(resolved == null))
             {
-                if (GUILayout.Button(data.Name, isSelected ? selectedBookmarkStyle : bookmarkStyle))
+                if (GUILayout.Button(data.Name, isSelected ? selectedBookmarkStyle : EditorToolsStyles.RowButton))
                 {
                     Selection.activeObject = resolved;
                     EditorGUIUtility.PingObject(resolved);
@@ -226,11 +222,34 @@ namespace Extensions.EditorTools
 
             using (new GUIBackgroundColorScope(new Color(1f, 0.52f, 0.05f)))
             {
-                GUIContent content = EditorGUIUtility.IconContent("FolderOpened Icon");
+                GUIContent content = new GUIContent(EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_FOLDER)) { tooltip = "Open folder" };
 
                 if (GUILayout.Button(content, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
                 {
                     OpenProjectFolder(assetPath);
+                }
+            }
+        }
+
+        private void DrawOpenPrefabButtonIfNeeded(Object resolved)
+        {
+            if (resolved == null) return;
+
+            string assetPath = AssetDatabase.GetAssetPath(resolved);
+
+            if (string.IsNullOrEmpty(assetPath) ||
+                !assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_PREFAB_BLUE))
+            {
+                GUIContent content = new GUIContent(EditorGUIUtility.IconContent(EditorToolsConstraints.ICON_PREFAB)) { tooltip = "Open prefab" };
+
+                if (GUILayout.Button(content, GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                {
+                    AssetDatabase.OpenAsset(resolved);
                 }
             }
         }
@@ -247,7 +266,7 @@ namespace Extensions.EditorTools
             {
                 using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_YELLOW))
                 {
-                    if (GUILayout.Button("Открыть сцену", GUILayout.Width(110), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                    if (EditorToolsGUI.IconButton(EditorToolsConstraints.ICON_SCENE, "Open Scene", GUILayout.Width(120)))
                     {
                         if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                         {
@@ -262,7 +281,7 @@ namespace Extensions.EditorTools
         {
             using (new GUIBackgroundColorScope(EditorToolsConstraints.COLOR_RED))
             {
-                if (GUILayout.Button("✕", GUILayout.Width(EditorToolsConstraints.BASE_ELEMENT_HEIGHT), GUILayout.Height(EditorToolsConstraints.BASE_ELEMENT_HEIGHT)))
+                if (EditorToolsGUI.IconButtonSquare(EditorToolsConstraints.ICON_REMOVE, EditorToolsConstraints.SYMBOL_REMOVE, "Remove"))
                 {
                     dataBase.Remove(data);
                 }
