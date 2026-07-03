@@ -20,9 +20,14 @@ namespace DioramaEnigma.Dioramas
         public GameObject PlaceholderPrefab => placeholderPrefab;
 
         /// <summary>
-        /// Пройдена ли диорама целиком прямо сейчас (выводится из последовательности; учитывает откат шагов)
+        /// Полностью ли пройдены ВСЕ шаги (вкл. Always/фоновые) — трек №1
         /// </summary>
-        public bool IsCompleted => sequence != null && sequence.IsCompleted;
+        public bool IsFullyCompleted => sequence != null && sequence.IsCompleted;
+
+        /// <summary>
+        /// Решена ли диорама: пройдены все линейные группы (Always не учитываются) — трек №2
+        /// </summary>
+        public bool IsSolved => sequence != null && sequence.IsSolved;
 
         /// <summary> Разблокирована ли диорама </summary>
         public bool IsUnlocked

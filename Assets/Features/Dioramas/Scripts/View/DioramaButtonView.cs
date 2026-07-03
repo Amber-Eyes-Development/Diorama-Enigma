@@ -31,16 +31,17 @@ namespace DioramaEnigma.Dioramas
 
         /// <summary> Привязать кнопку к диораме и её состоянию </summary>
         /// <param name="definition">Определение диорамы</param>
-        /// <param name="state">Состояние доступа</param>
+        /// <param name="state">Состояние доступа (Completed = решена, трек №2)</param>
+        /// <param name="fullyCompleted">Полностью ли пройдены все шаги, вкл. фоновые (трек №1)</param>
         /// <param name="onSelected">Колбэк выбора диорамы</param>
-        public void Bind(DioramaDefinition definition, DioramaState state, Action<DioramaDefinition> onSelected)
+        public void Bind(DioramaDefinition definition, DioramaState state, bool fullyCompleted, Action<DioramaDefinition> onSelected)
         {
             this.definition = definition;
             this.onSelected = onSelected;
 
             if (label != null) label.text = definition != null ? definition.Title : string.Empty;
             if (icon != null) icon.sprite = definition != null ? definition.Icon : null;
-            if (tintTarget != null) tintTarget.color = state == DioramaState.Completed ? completedColor : normalColor;
+            if (tintTarget != null) tintTarget.color = fullyCompleted ? completedColor : normalColor;
             if (selectionIndicator != null) selectionIndicator.Bind(definition != null ? definition.Id : null);
             if (completedCheckmark != null) completedCheckmark.SetActive(state == DioramaState.Completed);
         }

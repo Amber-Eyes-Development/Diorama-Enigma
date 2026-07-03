@@ -168,8 +168,8 @@ namespace DioramaEnigma.Dioramas
 
             activeDefinition = def;
             activeIndex = index;
-
-            DioramaProgressStore.SaveLastActive(def.Id);
+            
+            if (access.IsUnlocked(def)) DioramaProgressStore.SaveLastActive(def.Id);
 
             UpdateFocusGating();
             EmitFocus(true);
@@ -192,7 +192,7 @@ namespace DioramaEnigma.Dioramas
         private DioramaBlock ResolveStartBlock()
         {
             var selected = access.BlockById(selection != null ? selection.SelectedId : null);
-            if (selected != null) return selected;
+            if (selected != null && selected.IsUnlocked) return selected; // устаревший выбор закрытого блока игнорируем
 
             var visible = access.VisibleBlocks();
             return visible.Count > 0 ? visible[0] : null;

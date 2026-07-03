@@ -18,12 +18,15 @@ namespace DioramaEnigma.Dioramas
         public DioramaDefinition Definition => definition;
         /// <summary> Раннер диорамы </summary>
         public SequenceRunner Runner => runner;
+        /// <summary> В фокусе ли диорама (принимает ли ввод) </summary>
+        public bool IsFocused => focused;
 
         private DioramaDefinition definition;
         private DioramaAccessService access;
         private DioramaSpawner spawner;
         private SequenceRunner runner;
         private InteractableInput[] inputs;
+        private bool focused;
 
         /// <summary> Привязать инстанс к определению, сервису доступа, раннеру и спавнеру </summary>
         public void Bind(DioramaDefinition definition, DioramaAccessService access, SequenceRunner runner, DioramaSpawner spawner)
@@ -36,12 +39,13 @@ namespace DioramaEnigma.Dioramas
             inputs = GetComponentsInChildren<InteractableInput>(true);
             runner.onSequenceCompleted += OnSequenceCompleted;
 
-            if (definition.IsCompleted) access.MarkCompleted(definition);
+            if (definition.IsSolved) access.MarkCompleted(definition);
         }
 
         /// <summary> Включить/выключить взаимодействие (фокус) </summary>
         public void SetFocused(bool focused)
         {
+            this.focused = focused;
             if (inputs == null) return;
 
             foreach (var input in inputs)

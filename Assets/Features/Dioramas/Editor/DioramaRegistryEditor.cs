@@ -6,8 +6,7 @@ using UnityEngine;
 namespace DioramaEnigma.Dioramas.Editor
 {
     /// <summary>
-    /// Инспектор <see cref="DioramaRegistry"/>: блоки и их диорамы по порядку прохождения,
-    /// с условиями доступа (оператор + входящие связи) и подсказкой про неявную линейную связь
+    /// Инспектор <see cref="DioramaRegistry"/>
     /// </summary>
     [CustomEditor(typeof(DioramaRegistry))]
     internal sealed class DioramaRegistryEditor : UnityEditor.Editor

@@ -21,7 +21,9 @@ namespace DioramaEnigma.Dioramas
             if (target == null) return;
 
             var instance = GetComponentInParent<DioramaInstance>();
-            instance?.TryFocus(target);
+            if (instance == null || !instance.IsFocused) return; // дверь работает только у диорамы в фокусе
+
+            instance.TryFocus(target);
         }
     }
 }

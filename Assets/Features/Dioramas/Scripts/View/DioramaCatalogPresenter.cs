@@ -165,7 +165,7 @@ namespace DioramaEnigma.Dioramas
             foreach (var node in access.DioramasInBlock(selectedBlock))
             {
                 var view = Instantiate(dioramaButtonPrefab, dioramaContainer);
-                view.Bind(node.Definition, node.State, OnDioramaSelected);
+                view.Bind(node.Definition, node.State, node.FullyCompleted, OnDioramaSelected);
                 dioramaButtons.Add(view.gameObject);
             }
 

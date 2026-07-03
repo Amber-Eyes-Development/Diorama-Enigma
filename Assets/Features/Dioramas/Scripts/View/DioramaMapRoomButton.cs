@@ -43,7 +43,7 @@ namespace DioramaEnigma.Dioramas
             gameObject.SetActive(state != DioramaState.Locked); // закрытая комната не видна
 
             if (tintTarget != null)
-                tintTarget.color = state == DioramaState.Completed ? completedColor : normalColor;
+                tintTarget.color = access.IsFullyCompleted(diorama) ? completedColor : normalColor;
         }
 
         public override void OnButtonClickAction()

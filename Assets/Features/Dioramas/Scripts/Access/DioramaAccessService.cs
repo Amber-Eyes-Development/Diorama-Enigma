@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DioramaEnigma.Sequences;
+using Extensions.Helpers.Enumerations;
 using Extensions.Log;
 using UnityEngine;
 
@@ -34,9 +35,13 @@ namespace DioramaEnigma.Dioramas
 
         // Транзиентная защита от повторного onBlockCompleted в пределах сессии
         private readonly HashSet<string> announcedBlocks = new();
+        // То же для onDioramaCompleted: уже решённые на момент инициализации диорамы не стреляют событием заново
+        private readonly HashSet<string> announcedCompletions = new();
         private readonly List<SequenceStep> subscribedSteps = new();
 
         private bool initialized;
+        // На время массового сброса шагов глушим реакцию на их события — пересчёт делаем один раз в конце
+        private bool suppressStepReeval;
 
         #endregion
 
@@ -59,6 +64,7 @@ namespace DioramaEnigma.Dioramas
             SubscribeConditionSteps();
             EvaluateUnlocks(false);
             SeedAnnouncedBlocks();
+            SeedAnnouncedCompletions();
         }
 
         private void OnDisable()
@@ -73,6 +79,7 @@ namespace DioramaEnigma.Dioramas
 
             subscribedSteps.Clear();
             announcedBlocks.Clear();
+            announcedCompletions.Clear();
             initialized = false;
         }
 
@@ -87,15 +94,18 @@ namespace DioramaEnigma.Dioramas
             return def != null && def.IsUnlocked;
         }
 
-        /// <summary> Пройдена ли диорама прямо сейчас (с учётом отката шагов) </summary>
-        public bool IsCompleted(DioramaDefinition def) => def != null && def.IsCompleted;
+        /// <summary> Решена ли диорама — трек №2 (все линейные группы пройдены), для прогрессии </summary>
+        public bool IsSolved(DioramaDefinition def) => def != null && def.IsSolved;
 
-        /// <summary> Состояние доступа диорамы </summary>
+        /// <summary> Полностью ли пройдены все шаги — трек №1 (вкл. фоновые), для UI-индикации </summary>
+        public bool IsFullyCompleted(DioramaDefinition def) => def != null && def.IsFullyCompleted;
+
+        /// <summary> Состояние доступа диорамы (Completed = решена, трек №2) </summary>
         public DioramaState StateOf(DioramaDefinition def)
         {
             EnsureInitialized();
             if (def == null) return DioramaState.Locked;
-            if (def.IsCompleted) return DioramaState.Completed;
+            if (def.IsSolved) return DioramaState.Completed;
             if (def.IsUnlocked) return DioramaState.Unlocked;
 
             return DioramaState.Locked;
@@ -107,15 +117,7 @@ namespace DioramaEnigma.Dioramas
 
         /// <summary> Блок по идентификатору (или null) </summary>
         /// <param name="id">Идентификатор блока</param>
-        public DioramaBlock BlockById(string id)
-        {
-            if (registry == null || string.IsNullOrEmpty(id)) return null;
-
-            foreach (var blockEntry in registry.Blocks)
-                if (blockEntry?.Block != null && blockEntry.Block.Id == id) return blockEntry.Block;
-
-            return null;
-        }
+        public DioramaBlock BlockById(string id) => registry != null ? registry.BlockById(id) : null;
 
         /// <summary> Блок, которому принадлежит диорама (или null) </summary>
         /// <param name="def">Определение диорамы</param>
@@ -149,7 +151,10 @@ namespace DioramaEnigma.Dioramas
         public void MarkCompleted(DioramaDefinition def)
         {
             EnsureInitialized();
-            if (def == null || !def.IsCompleted) return;
+            if (def == null || !def.IsSolved) return;
+
+            // Уже учтено (в т.ч. загрузка уже решённой диорамы на сцене) — не дублируем событие и каскад
+            if (!announcedCompletions.Add(def.Id)) return;
 
             onDioramaCompleted?.Invoke(def);
             EvaluateUnlocks(true);
@@ -166,29 +171,30 @@ namespace DioramaEnigma.Dioramas
             EnsureInitialized();
             if (registry == null || block == null) return;
 
-            foreach (var blockEntry in registry.Blocks)
+            suppressStepReeval = true;
+            try
             {
-                if (blockEntry?.Block != block) continue;
-
-                DioramaDefinition entryDiorama = null;
-
-                foreach (var entry in blockEntry.Dioramas)
+                foreach (var blockEntry in registry.Blocks)
                 {
-                    var def = entry?.Definition;
-                    if (def == null) continue;
+                    if (blockEntry?.Block != block) continue;
 
-                    ResetSteps(def, includeGlobal: false);
-                    def.LockReset();
-                    entryDiorama ??= def;
+                    foreach (var entry in blockEntry.Dioramas)
+                    {
+                        var def = entry?.Definition;
+                        if (def == null) continue;
+
+                        ResetSteps(def, includeGlobal: false);
+                        def.LockReset();
+                        announcedCompletions.Remove(def.Id);
+                    }
+
+                    break;
                 }
-
-                entryDiorama?.Unlock();
-
-                break;
             }
+            finally { suppressStepReeval = false; }
 
             announcedBlocks.Remove(block.Id);
-            EvaluateUnlocks(false);
+            EvaluateUnlocks(false); // вход блока заново откроет правило первой записи / неявная связь по графу
             onBlockRestarted?.Invoke(block);
         }
 
@@ -200,24 +206,31 @@ namespace DioramaEnigma.Dioramas
             EnsureInitialized();
             if (registry == null) return;
 
-            foreach (var entry in registry.Entries())
+            suppressStepReeval = true;
+            try
             {
-                var def = entry.Definition;
-                if (def == null) continue;
+                foreach (var entry in registry.Entries())
+                {
+                    var def = entry.Definition;
+                    if (def == null) continue;
 
-                ResetSteps(def, includeGlobal: true);
-                def.LockReset();
+                    ResetSteps(def, includeGlobal: true);
+                    def.LockReset();
+                }
+
+                foreach (var blockEntry in registry.Blocks)
+                    blockEntry?.Block?.LockReset();
             }
-
-            foreach (var blockEntry in registry.Blocks)
-                blockEntry?.Block?.LockReset();
+            finally { suppressStepReeval = false; }
 
             DioramaProgressStore.SaveLastActive(null);
             DioramaProgressStore.SaveSelectedBlock(null);
 
             announcedBlocks.Clear();
+            announcedCompletions.Clear();
             EvaluateUnlocks(false); // заново открыть стартовые диорамы/блоки
             SeedAnnouncedBlocks();
+            SeedAnnouncedCompletions();
             onProgressReset?.Invoke();
         }
 
@@ -266,7 +279,7 @@ namespace DioramaEnigma.Dioramas
                 {
                     var def = entry?.Definition;
                     if (def == null || !def.IsUnlocked) continue;
-                    result.Add(new DioramaNode(def, StateOf(def)));
+                    result.Add(new DioramaNode(def, StateOf(def), def.IsFullyCompleted));
                 }
             }
 
@@ -309,13 +322,13 @@ namespace DioramaEnigma.Dioramas
             return hidden;
         }
 
-        /// <summary> Сколько диорам блока пройдено (живое состояние) </summary>
+        /// <summary> Сколько диорам блока решено (живое состояние, трек №2) </summary>
         /// <param name="block">Блок</param>
         public int CompletedCountInBlock(DioramaBlock block)
         {
             int completed = 0;
             foreach (var def in AllInBlock(block))
-                if (def != null && def.IsCompleted) completed++;
+                if (def != null && def.IsSolved) completed++;
 
             return completed;
         }
@@ -355,34 +368,6 @@ namespace DioramaEnigma.Dioramas
 
         #endregion
 
-        #region API карты блока
-
-        /// <summary> Построить срез карты: все диорамы как узлы (с состоянием) и связи как рёбра </summary>
-        public DioramaMapView BuildMap()
-        {
-            EnsureInitialized();
-            var nodes = new List<DioramaNode>();
-            var edges = new List<DioramaEdge>();
-
-            foreach (var entry in registry.Entries())
-            {
-                var def = entry.Definition;
-                if (def == null) continue;
-
-                nodes.Add(new DioramaNode(def, StateOf(def)));
-
-                foreach (var link in entry.IncomingLinks)
-                {
-                    if (link?.Source == null) continue;
-                    edges.Add(new DioramaEdge(link.Source, def, link.Condition));
-                }
-            }
-
-            return new DioramaMapView(nodes, edges);
-        }
-
-        #endregion
-
         #region Разблокировка
 
         private void SubscribeConditionSteps()
@@ -405,22 +390,29 @@ namespace DioramaEnigma.Dioramas
             }
         }
 
-        private void OnConditionStepChanged(bool _) => EvaluateUnlocks(true);
+        private void OnConditionStepChanged(bool _)
+        {
+            if (suppressStepReeval) return; // массовый сброс сам вызовет один пересчёт в конце
+            EvaluateUnlocks(true);
+        }
 
         // Транзитивно выставить флаг IsUnlocked достижимым диорамам/блокам; при notify — события на новые
+        // Разблокировка монотонна: однажды открытая диорама остаётся открытой даже при откате условий
         private void EvaluateUnlocks(bool notify)
         {
+            var entries = registry.Entries();
             bool changed = true;
 
             while (changed)
             {
                 changed = false;
 
-                foreach (var entry in registry.Entries())
+                for (int i = 0; i < entries.Count; i++)
                 {
+                    var entry = entries[i];
                     var def = entry.Definition;
                     if (def == null || def.IsUnlocked) continue;
-                    if (!ShouldUnlock(entry)) continue;
+                    if (!ShouldUnlock(entry, i)) continue;
 
                     def.Unlock();
                     changed = true;
@@ -438,21 +430,35 @@ namespace DioramaEnigma.Dioramas
             }
         }
 
-        private bool ShouldUnlock(DioramaEntry entry)
+        // Условие открытия: первая запись реестра — стартовая; без связей — по решению предыдущей записи;
+        // со связями — их комбинация логическим оператором записи
+        private bool ShouldUnlock(DioramaEntry entry, int index)
         {
-            if (IsFirstEntry(entry)) return true;
+            if (index == 0) return true;
 
-            foreach (var link in entry.IncomingLinks)
+            var links = entry.IncomingLinks;
+            if (links == null || links.Count == 0)
+                return PreviousSolved(index);
+
+            if (entry.LinkOperator == LogicOperator.And)
+            {
+                foreach (var link in links)
+                    if (!IsLinkSatisfied(link)) return false;
+
+                return true;
+            }
+
+            foreach (var link in links)
                 if (IsLinkSatisfied(link)) return true;
 
             return false;
         }
 
-        // Самая первая диорама реестра — единственная стартовая точка (доступна с самого начала)
-        private bool IsFirstEntry(DioramaEntry entry)
+        // Неявная линейная связь: диорама без входящих связей открывается, когда решена предыдущая запись реестра
+        private bool PreviousSolved(int index)
         {
-            var entries = registry.Entries();
-            return entries.Count > 0 && ReferenceEquals(entries[0], entry);
+            var prev = registry.Entries()[index - 1].Definition;
+            return prev != null && prev.IsSolved;
         }
 
         private bool IsLinkSatisfied(DioramaLink link)
@@ -465,8 +471,8 @@ namespace DioramaEnigma.Dioramas
                     return link.Source != null && link.Source.IsUnlocked;
 
                 case DioramaLinkCondition.SourceCompleted:
-                    // Момент первого выполнения фиксируется персистентным флагом цели — откат источника цель не закроет
-                    return link.Source != null && link.Source.IsCompleted;
+                    // «Решена» = трек №2 (линейные группы). Открытая диорама монотонна — откат источника её не закроет
+                    return link.Source != null && link.Source.IsSolved;
 
                 case DioramaLinkCondition.StepTrigger:
                     return IsStepTriggerSatisfied(link);
@@ -498,6 +504,16 @@ namespace DioramaEnigma.Dioramas
             }
         }
 
+        // Диорамы, уже решённые на момент инициализации, не должны заново стрелять onDioramaCompleted в этой сессии
+        private void SeedAnnouncedCompletions()
+        {
+            foreach (var entry in registry.Entries())
+            {
+                var def = entry.Definition;
+                if (def != null && def.IsSolved) announcedCompletions.Add(def.Id);
+            }
+        }
+
         private bool IsBlockCompleted(DioramaBlock block)
         {
             foreach (var blockEntry in registry.Blocks)
@@ -509,7 +525,7 @@ namespace DioramaEnigma.Dioramas
             return false;
         }
 
-        // Блок пройден, если у него есть диорамы и все они пройдены прямо сейчас (живое состояние)
+        // Блок пройден, если у него есть диорамы и все они решены прямо сейчас (живое состояние, трек №2)
         private bool IsBlockEntryCompleted(DioramaBlockEntry blockEntry)
         {
             bool any = false;
@@ -520,7 +536,7 @@ namespace DioramaEnigma.Dioramas
                 if (def == null) continue;
 
                 any = true;
-                if (!def.IsCompleted) return false;
+                if (!def.IsSolved) return false;
             }
 
             return any;
