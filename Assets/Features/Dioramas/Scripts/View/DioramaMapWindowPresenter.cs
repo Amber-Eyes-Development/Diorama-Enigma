@@ -46,7 +46,7 @@ namespace DioramaEnigma.Dioramas
 
             if (block.MapLayoutPrefab == null)
             {
-                ServiceDebug.LogWarning(this, $"У блока {block.name} не задан mapLayoutPrefab");
+                ServiceDebug.LogWarning($"У блока {block.name} не задан mapLayoutPrefab");
                 return;
             }
 

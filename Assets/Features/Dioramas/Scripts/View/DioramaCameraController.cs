@@ -30,12 +30,10 @@ namespace DioramaEnigma.Dioramas
         {
             if (spawner == null || cameraRig == null)
             {
-                ServiceDebug.LogError(this, "spawner или cameraRig не назначен");
+                ServiceDebug.LogError($"{nameof(spawner)}spawner или {nameof(cameraRig)} не назначен");
                 return;
             }
 
-            // смещение — относительно слота 0 (дизайнерский кадр), а НЕ активной диорамы:
-            // иначе при резюме на не-нулевой диораме offset «съезжает» и навигация уводит камеру
             if (!hasOffset)
             {
                 offset = cameraRig.position - spawner.HomePoint;
@@ -44,7 +42,6 @@ namespace DioramaEnigma.Dioramas
 
             spawner.onFocusChanged += OnFocusChanged;
 
-            // если спавнер уже стартовал (поздняя подписка) — встать по текущему фокусу
             if (spawner.HasFocus) OnFocusChanged(new DioramaFocus(spawner.ActiveFramePoint, false));
         }
 
@@ -53,7 +50,6 @@ namespace DioramaEnigma.Dioramas
             if (spawner != null) spawner.onFocusChanged -= OnFocusChanged;
         }
 
-        // доезд только во время перехода; вне его кадр пропускается
         private void Update()
         {
             if (!moving) return;

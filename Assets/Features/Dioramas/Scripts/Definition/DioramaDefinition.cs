@@ -34,7 +34,7 @@ namespace DioramaEnigma.Dioramas
             }
         }
 
-        [Header("Диорама")]
+        [Header("Диорама"), Space]
         [Tooltip("Префаб диорамы — в корне должен быть SequenceRunner")]
         [SerializeField] private SequenceRunner runnerPrefab;
         [Tooltip("Последовательность диорамы (та же, что назначена раннеру в префабе)")]
