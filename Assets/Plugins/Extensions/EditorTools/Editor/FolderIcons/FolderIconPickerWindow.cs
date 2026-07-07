@@ -6,8 +6,7 @@ using UnityEngine;
 namespace Extensions.EditorTools.FolderIcons
 {
     /// <summary>
-    /// Всплывающий выбор встроенной иконки редактора: поиск + сетка иконок.
-    /// Возвращает выбранное имя через колбэк, переданный в Open
+    /// Всплывающий выбор встроенной иконки редактора: поиск + сетка иконок
     /// </summary>
     public sealed class FolderIconPickerWindow : EditorWindow
     {

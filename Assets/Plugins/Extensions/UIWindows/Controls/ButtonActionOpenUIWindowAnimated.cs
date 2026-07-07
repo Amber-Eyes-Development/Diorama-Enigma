@@ -11,6 +11,7 @@ namespace Extensions.UIWindows
 #if DOTWEEN
         [Header("Анимация"), Space]
         [SerializeField] protected DOTweenAnimation beforeOpenAnimation;
+        [SerializeField] protected bool realtime = true;
 #endif
 
         public override void OnButtonClickAction()
@@ -19,7 +20,7 @@ namespace Extensions.UIWindows
             if (openMode == UIWindowOpenMode.Pop && beforeOpenAnimation)
             {
                 beforeOpenAnimation.DORestart();
-                CoroutineDelay.Run(this, beforeOpenAnimation.duration, base.OnButtonClickAction);
+                CoroutineDelay.Run(this, beforeOpenAnimation.duration, base.OnButtonClickAction, realtime);
                 return;
             }
 #endif

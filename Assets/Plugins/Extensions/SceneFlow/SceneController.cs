@@ -176,38 +176,9 @@ namespace Extensions.SceneFlow
             // Сцены, которые предстоит выгрузить под прикрытием экрана загрузки (снимок до его поднятия)
             List<Scene> scenesToUnload = SnapshotScenesToUnload();
 
-            // 1. Поднимаем сцену загрузки оверлеем поверх текущих
-            float loadingShownTime = Time.unscaledTime;
-            bool overlayShown = false;
-            if (TryGetLoadingSceneName(out string loadingSceneName))
-            {
-                AsyncOperation loadLoading = SceneManager.LoadSceneAsync(loadingSceneName, LoadSceneMode.Additive);
-                if (loadLoading != null)
-                {
-                    yield return WaitForAsyncOperation(loadLoading, targetTimeout, loadingSceneName, false);
-                    overlayShown = !lastLoadTimedOut;
-                    loadingShownTime = Time.unscaledTime;
-                }
-                else
-                {
-                    ServiceDebug.LogError($"Не удалось начать загрузку loading-сцены «{loadingSceneName}»");
-                }
-            }
-            else
-            {
-                ServiceDebug.LogWarning($"Не найдена loading-сцена в {nameof(SceneController)} — переход без экрана загрузки");
-            }
-
-            // 2. Дожидаемся публикации экрана и проигрываем его появление
-            ILoadingScreen loadingScreen = null;
-            if (loadingScreenChannel != null)
-            {
-                yield return WaitForReferencePublished(loadingScreenChannel, referenceWaitTimeout, "экран загрузки");
-                loadingScreen = loadingScreenChannel.HasValue ? loadingScreenChannel.Current : null;
-            }
-
-            if (loadingScreen != null)
-                yield return WaitForCallback(loadingScreen.PlayIntro, screenAnimationTimeout, "появление экрана");
+            // 1–2. Поднимаем экран загрузки оверлеем поверх текущих и проигрываем его появление
+            LoadingOverlayHandle overlay = new LoadingOverlayHandle();
+            yield return ShowLoadingOverlay(overlay);
 
             // 3. Выгружаем прежние сцены — их уже закрывает оверлей
             yield return UnloadScenesRoutine(scenesToUnload);
@@ -219,7 +190,7 @@ namespace Extensions.SceneFlow
             {
                 // Целевая и фолбэк не загрузились — снимаем оверлей, чтобы переход не завис
                 ServiceDebug.LogError($"Не удалось загрузить целевую сцену «{targetSceneName}»");
-                yield return ReleaseLoadingOverlay(loadingScreen, overlayShown, loadingSceneName, loadingShownTime);
+                yield return ReleaseLoadingOverlay(overlay);
                 isTransitionInProgress = false;
                 yield break;
             }
@@ -235,12 +206,12 @@ namespace Extensions.SceneFlow
             onLoadingProgressUpdate?.Invoke(currentProgress);
 
             // 6. Выдерживаем минимальное время показа экрана загрузки
-            yield return WaitForMinimumDuration(loadingShownTime);
+            yield return WaitForMinimumDuration(overlay.ShownTime);
 
             onSceneLoaded?.Invoke();
 
             // 7. Проигрываем исчезновение экрана и снимаем оверлей
-            yield return ReleaseLoadingOverlay(loadingScreen, overlayShown, loadingSceneName, loadingShownTime);
+            yield return ReleaseLoadingOverlay(overlay);
 
             isTransitionInProgress = false;
         }
@@ -359,22 +330,78 @@ namespace Extensions.SceneFlow
         }
 
         /// <summary>
-        /// Проигрывание исчезновения экрана и выгрузка сцены загрузки
+        /// Поднять экран загрузки оверлеем поверх текущих сцен и проиграть его появление
         /// </summary>
-        private IEnumerator ReleaseLoadingOverlay(
-            ILoadingScreen loadingScreen,
-            bool overlayShown,
-            string loadingSceneName,
-            float loadingShownTime)
+        /// <remarks>
+        /// Аддитивно грузит loading-сцену, ждёт публикации <see cref="ILoadingScreen"/> в канал и вызывает
+        /// его <see cref="ILoadingScreen.PlayIntro"/>. Состояние поднятого оверлея пишется в <paramref name="handle"/>
+        /// для последующего <see cref="ReleaseLoadingOverlay"/>. Публично — чтобы переиспользовать экран из
+        /// аддитивной смены под-сцен (<see cref="SubSceneLoader"/>)
+        /// </remarks>
+        /// <param name="handle">Хендл состояния оверлея (заполняется методом)</param>
+        public IEnumerator ShowLoadingOverlay(LoadingOverlayHandle handle)
         {
+            handle ??= new LoadingOverlayHandle();
+            handle.ShownTime = Time.unscaledTime;
+            handle.Shown = false;
+            handle.SceneName = null;
+            handle.Screen = null;
+
+            // 1. Поднимаем сцену загрузки оверлеем поверх текущих
+            if (TryGetLoadingSceneName(out string loadingSceneName))
+            {
+                handle.SceneName = loadingSceneName;
+
+                AsyncOperation loadLoading = SceneManager.LoadSceneAsync(loadingSceneName, LoadSceneMode.Additive);
+                if (loadLoading != null)
+                {
+                    yield return WaitForAsyncOperation(loadLoading, targetTimeout, loadingSceneName, false);
+                    handle.Shown = !lastLoadTimedOut;
+                    handle.ShownTime = Time.unscaledTime;
+                }
+                else
+                {
+                    ServiceDebug.LogError($"Не удалось начать загрузку loading-сцены «{loadingSceneName}»");
+                }
+            }
+            else
+            {
+                ServiceDebug.LogWarning($"Не найдена loading-сцена в {nameof(SceneController)} — переход без экрана загрузки");
+            }
+
+            // 2. Дожидаемся публикации экрана и проигрываем его появление
+            if (loadingScreenChannel != null)
+            {
+                yield return WaitForReferencePublished(loadingScreenChannel, referenceWaitTimeout, "экран загрузки");
+                handle.Screen = loadingScreenChannel.HasValue ? loadingScreenChannel.Current : null;
+            }
+
+            if (handle.Screen != null)
+                yield return WaitForCallback(handle.Screen.PlayIntro, screenAnimationTimeout, "появление экрана");
+        }
+
+        /// <summary>
+        /// Проиграть исчезновение экрана загрузки и снять оверлей (выгрузить loading-сцену)
+        /// </summary>
+        /// <remarks>
+        /// Гарантирует минимальное время показа даже на аварийных путях, затем <see cref="ILoadingScreen.PlayOutro"/>
+        /// и выгрузку loading-сцены. Публично — чтобы переиспользовать экран из аддитивной смены под-сцен
+        /// (<see cref="SubSceneLoader"/>)
+        /// </remarks>
+        /// <param name="handle">Хендл состояния оверлея из <see cref="ShowLoadingOverlay"/></param>
+        public IEnumerator ReleaseLoadingOverlay(LoadingOverlayHandle handle)
+        {
+            if (handle == null)
+                yield break;
+
             // Гарантируем минимальное время показа и на путях аварийного снятия оверлея
-            yield return WaitForMinimumDuration(loadingShownTime);
+            yield return WaitForMinimumDuration(handle.ShownTime);
 
-            if (loadingScreen != null)
-                yield return WaitForCallback(loadingScreen.PlayOutro, screenAnimationTimeout, "исчезновение экрана");
+            if (handle.Screen != null)
+                yield return WaitForCallback(handle.Screen.PlayOutro, screenAnimationTimeout, "исчезновение экрана");
 
-            if (overlayShown)
-                yield return UnloadSceneByNameRoutine(loadingSceneName);
+            if (handle.Shown)
+                yield return UnloadSceneByNameRoutine(handle.SceneName);
         }
 
         #endregion
@@ -603,6 +630,25 @@ namespace Extensions.SceneFlow
             [field: SerializeField] public SceneID Id { get; private set; }
 
             [field: SerializeField] public string SceneName { get; private set; }
+        }
+
+        /// <summary>
+        /// Состояние поднятого оверлея экрана загрузки
+        /// </summary>
+        /// <remarks>
+        /// Передаётся между <see cref="ShowLoadingOverlay"/> и <see cref="ReleaseLoadingOverlay"/>,
+        /// чтобы не хранить состояние оверлея в полях контроллера (переход и смена под-сцены не пересекаются)
+        /// </remarks>
+        public sealed class LoadingOverlayHandle
+        {
+            /// <summary>Экран загрузки (или null)</summary>
+            public ILoadingScreen Screen { get; set; }
+            /// <summary>Loading-сцена была загружена и подлежит выгрузке</summary>
+            public bool Shown { get; set; }
+            /// <summary>Имя loading-сцены</summary>
+            public string SceneName { get; set; }
+            /// <summary>Момент появления оверлея (Time.unscaledTime)</summary>
+            public float ShownTime { get; set; }
         }
 
         #endregion

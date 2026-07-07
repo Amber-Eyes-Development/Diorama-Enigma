@@ -79,5 +79,48 @@ namespace Extensions.EditorTools
             Rect rect = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.Height(1), GUILayout.ExpandWidth(true));
             EditorGUI.DrawRect(rect, EditorToolsConstraints.COLOR_ACCENT);
         }
+
+        private static GUIStyle _shadowLabel;
+        private static readonly Vector2[] ShadowOffsets =
+        {
+            new Vector2(1, 0), new Vector2(-1, 0), new Vector2(0, 1), new Vector2(0, -1),
+            new Vector2(1, 1), new Vector2(-1, -1), new Vector2(1, -1), new Vector2(-1, 1)
+        };
+
+        /// <summary>
+        /// Белый текст с чёрной обводкой-тенью в точке мира — читается на любом фоне сцены
+        /// </summary>
+        /// <remarks>Вызывать из <c>OnSceneGUI</c> (нужен GUI-контекст сцены), не из <c>OnDrawGizmos</c></remarks>
+        public static void SceneLabelWithShadow(Vector3 worldPosition, string text, GUIStyle style = null)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            style ??= _shadowLabel ??= new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.UpperCenter,
+                fontSize = EditorToolsConstraints.BASE_FONT_SIZE,
+                normal = { textColor = Color.white }
+            };
+
+            Handles.BeginGUI();
+
+            GUIContent content = new GUIContent(text);
+            Vector2 size = style.CalcSize(content);
+            Vector2 point = HandleUtility.WorldToGUIPoint(worldPosition);
+            Rect rect = new Rect(point.x - size.x * 0.5f, point.y, size.x, size.y);
+
+            Color previous = GUI.contentColor;
+
+            GUI.contentColor = Color.black;
+            foreach (Vector2 offset in ShadowOffsets)
+                GUI.Label(new Rect(rect.x + offset.x, rect.y + offset.y, rect.width, rect.height), content, style);
+
+            GUI.contentColor = Color.white;
+            GUI.Label(rect, content, style);
+
+            GUI.contentColor = previous;
+
+            Handles.EndGUI();
+        }
     }
 }
