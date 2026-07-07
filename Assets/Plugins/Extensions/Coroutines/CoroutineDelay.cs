@@ -19,7 +19,7 @@ namespace Extensions.Coroutines
         /// <param name="owner">Хозяин корутины</param>
         /// <param name="delay">Задержка в секундах</param>
         /// <param name="action">Действие</param>
-        public static void Run(MonoBehaviour owner, float delay, Action action)
+        public static void Run(MonoBehaviour owner, float delay, Action action, bool realtime = false)
         {
             if (owner == null || !owner.isActiveAndEnabled)
                 return;
@@ -32,7 +32,7 @@ namespace Extensions.Coroutines
                 return;
             }
 
-            owner.StartCoroutine(Routine(owner, delay, action));
+            owner.StartCoroutine(Routine(owner, delay, action, realtime));
         }
 
         /// <summary>
@@ -64,9 +64,12 @@ namespace Extensions.Coroutines
         /// <param name="action">Действие</param>
         public static void Run(MonoBehaviour owner, Action action) => Run(owner, 1, action);
 
-        private static IEnumerator Routine(MonoBehaviour owner, float delay, Action action)
+        private static IEnumerator Routine(MonoBehaviour owner, float delay, Action action, bool realtime = false)
         {
-            yield return new WaitForSeconds(delay);
+            if (realtime)
+                yield return new WaitForSecondsRealtime(delay);
+            else
+                yield return new WaitForSeconds(delay);
 
             if (owner == null || !owner.isActiveAndEnabled)
                 yield break;

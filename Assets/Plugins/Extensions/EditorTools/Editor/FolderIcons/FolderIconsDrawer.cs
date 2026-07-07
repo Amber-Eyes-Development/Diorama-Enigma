@@ -8,8 +8,7 @@ namespace Extensions.EditorTools.FolderIcons
 {
     /// <summary>
     /// Перерисовывает окно Project: подменяет иконки папок по правилам FolderIconsSettings
-    /// и (опционально) выделяет жирным имена папок внутри Features.
-    /// Кэш строится лениво и пересобирается из окна после правок
+    /// и (опционально) выделяет жирным имена папок внутри Features
     /// </summary>
     [InitializeOnLoad]
     public static class FolderIconsDrawer

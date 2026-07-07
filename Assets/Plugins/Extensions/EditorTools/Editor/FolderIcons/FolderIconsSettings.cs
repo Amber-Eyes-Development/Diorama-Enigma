@@ -5,8 +5,7 @@ using UnityEngine;
 namespace Extensions.EditorTools.FolderIcons
 {
     /// <summary>
-    /// Набор правил «имя папки → иконка» для кастомной отрисовки в окне Project.
-    /// Единый ассет на проект, создаётся автоматически при первом обращении из окна
+    /// Набор правил «имя папки → иконка» для кастомной отрисовки в окне Project
     /// </summary>
     public sealed class FolderIconsSettings : ScriptableObject
     {
