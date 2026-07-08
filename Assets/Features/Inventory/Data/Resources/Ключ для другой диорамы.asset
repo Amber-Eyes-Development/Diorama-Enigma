@@ -10,9 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5bac67245095a2e4a8e22511750d30f0, type: 3}
-  m_Name: "\u0422\u0435\u0441\u0442\u043E\u0432\u044B\u0439 \u043A\u043B\u044E\u0447"
+  m_Name: "\u041A\u043B\u044E\u0447 \u0434\u043B\u044F \u0434\u0440\u0443\u0433\u043E\u0439
+    \u0434\u0438\u043E\u0440\u0430\u043C\u044B"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.ResourceValue
-  id: ce779f16b49f4504899960df53a688c0
+  id: f86b10667fe1450d96efb74d7f7bc4cf
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
+  title: Another key...
+  icon: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}

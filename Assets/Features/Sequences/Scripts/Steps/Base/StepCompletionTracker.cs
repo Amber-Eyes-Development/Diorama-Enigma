@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace DioramaEnigma.Sequences
 {
@@ -23,6 +24,9 @@ namespace DioramaEnigma.Sequences
 
         /// <summary> Активна ли группа шага в раннере (изменение состояния открыто раннером, безотносительно гейтов/латча) </summary>
         public bool IsActive => isActive;
+
+        /// <summary> Активные гейты шага (null, если группа неактивна) </summary>
+        public IReadOnlyList<StepGate> Gates => gates;
 
         private StepGate[] gates;
         private bool isActive;

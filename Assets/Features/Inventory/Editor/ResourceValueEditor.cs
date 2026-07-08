@@ -1,10 +1,10 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace DioramaEnigma.Sequences.Editor
+namespace DioramaEnigma.Inventory.Editor
 {
     /// <summary>
-    /// Инспектор ресурса: стандартный + read-only превью текущего количества (как у шага)
+    /// Инспектор предмета
     /// </summary>
     [CustomEditor(typeof(ResourceValue))]
     internal sealed class ResourceValueEditor : UnityEditor.Editor
@@ -17,7 +17,7 @@ namespace DioramaEnigma.Sequences.Editor
             DrawPreview();
         }
 
-        /// <summary> Текущее количество ресурса: read-only превью </summary>
+        /// <summary> Текущее количество ресурса </summary>
         private void DrawPreview()
         {
             if (target is not ResourceValue resource) return;

@@ -27,6 +27,7 @@ MonoBehaviour:
     - 638dc1452f4882e47b78c0aa340a8db7
     - e0c2d8ad1b131244490ee94fe1be55d3
     - 6e60d5ad66a440745bdf421503306817
+    - 7331eb06043e53242b2ee67b4716ba29
     values:
     - goDatas_byGlobalId:
         keys:
@@ -529,6 +530,8 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-1-c91b2670c2d5f964184c42859f1a2986-6250860191826668152-0
         - globalObjectIdString: GlobalObjectId_V1-1-c91b2670c2d5f964184c42859f1a2986-2914994790470291427-0
         - globalObjectIdString: GlobalObjectId_V1-1-c91b2670c2d5f964184c42859f1a2986-6478598515691985389-0
+        - globalObjectIdString: GlobalObjectId_V1-1-c91b2670c2d5f964184c42859f1a2986-2262676258375188731-0
+        - globalObjectIdString: GlobalObjectId_V1-1-c91b2670c2d5f964184c42859f1a2986-7678891008607519373-0
         values:
         - colorIndex: 0
           iconNameOrGuid: Folder Icon
@@ -540,6 +543,14 @@ MonoBehaviour:
           isColorRecursive: 0
         - colorIndex: 0
           iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 0
+          iconNameOrGuid: NetworkAnimator Icon
           isIconRecursive: 0
           isColorRecursive: 0
     - goDatas_byGlobalId:
@@ -610,6 +621,14 @@ MonoBehaviour:
           isColorRecursive: 0
         - colorIndex: 0
           iconNameOrGuid: Folder Icon
+          isIconRecursive: 0
+          isColorRecursive: 0
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-1-7331eb06043e53242b2ee67b4716ba29-2285192840840007270-0
+        values:
+        - colorIndex: 0
+          iconNameOrGuid: NetworkAnimator Icon
           isIconRecursive: 0
           isColorRecursive: 0
   bookmarks: []

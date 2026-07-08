@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using DioramaEnigma.Inventory;
 using Extensions.EditorTools;
 using UnityEditor;
 using UnityEngine;
@@ -48,6 +49,7 @@ namespace DioramaEnigma.Sequences.Editor
         private static readonly (string label, Type type)[] EffectTypes =
         {
             ("Award Resource", typeof(AwardResourceEffect)),
+            ("Consume Resource", typeof(ConsumeResourceEffect)),
             ("Set Step State", typeof(SetStepStateEffect)),
         };
 
