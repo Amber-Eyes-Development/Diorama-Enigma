@@ -63,7 +63,10 @@ MonoBehaviour:
     groupIndex: 6
     availability: 0
     interactableAfterCompletion: 0
-    effects: []
+    effects:
+    - trigger: 0
+      effect:
+        rid: 7545908907203625028
     gates:
     - rid: 7045590526002200639
   - step: {fileID: 11400000, guid: 4673f2238ed163641a10450502ea3e46, type: 2}
@@ -127,7 +130,7 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 7045590491607334986
-      type: {class: AwardResourceEffect, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      type: {class: AwardResourceEffect, ns: DioramaEnigma.Inventory, asm: Assembly-CSharp}
       data:
         resource: {fileID: 11400000, guid: e76b53e5854b30b4fb6f2868b70caee5, type: 2}
         valueToAdd: 1
@@ -138,12 +141,17 @@ MonoBehaviour:
         requiredSteps:
         - {fileID: 11400000, guid: 984b36345b3a15243bbe8d59df09df29, type: 2}
     - rid: 7045590526002200639
-      type: {class: RequireResourceGate, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      type: {class: RequireResourceGate, ns: DioramaEnigma.Inventory, asm: Assembly-CSharp}
       data:
         resource: {fileID: 11400000, guid: e76b53e5854b30b4fb6f2868b70caee5, type: 2}
-        valueToRemove: 1
+        requiredAmount: 1
     - rid: 7045590593426423874
-      type: {class: AwardResourceEffect, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      type: {class: AwardResourceEffect, ns: DioramaEnigma.Inventory, asm: Assembly-CSharp}
       data:
         resource: {fileID: 11400000, guid: 06dfc343e5c0987479fcb94d9b51adc8, type: 2}
         valueToAdd: 1
+    - rid: 7545908907203625028
+      type: {class: ConsumeResourceEffect, ns: DioramaEnigma.Inventory, asm: Assembly-CSharp}
+      data:
+        resource: {fileID: 11400000, guid: e76b53e5854b30b4fb6f2868b70caee5, type: 2}
+        amount: 1
