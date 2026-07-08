@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Extensions.Identification;
 using UnityEngine;
 
@@ -34,6 +35,8 @@ namespace DioramaEnigma.Sequences
         public bool IsUnlocked => tracker.IsUnlocked;
         /// <summary> Активна ли группа шага в раннере (безотносительно гейтов/латча необратимости) </summary>
         public bool IsActive => tracker.IsActive;
+        /// <summary> Активные гейты шага (условия доступа; null, если группа неактивна) </summary>
+        public IReadOnlyList<StepGate> ActiveGates => tracker.Gates;
         /// <summary> Является ли шаг необратимым </summary>
         public bool Irreversible => irreversible;
 
