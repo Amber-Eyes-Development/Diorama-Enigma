@@ -13,6 +13,7 @@ namespace DioramaEnigma.Inventory
         public Sprite Icon => icon;
 
         [Header("Предмет"), Space]
+        [Tooltip("Строка, выводимая в подсказке при наводке на ресурс в UI")]
         [SerializeField] private string title;
         [SerializeField] private Sprite icon;
     }
