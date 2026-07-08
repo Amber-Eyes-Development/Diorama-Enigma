@@ -767,6 +767,7 @@ MonoBehaviour:
   preparedUIWindows:
   - {fileID: 6213087243141585182, guid: 5fb9e1051c911a94c896607a8a8c1fc5, type: 3}
   - {fileID: 6213087243141585182, guid: 6d6133a87e3a129488b305e5704277cb, type: 3}
+  - {fileID: 329254087388393284, guid: 4b349b5cc8c329d47a29a8a2c33775f9, type: 3}
   - {fileID: 329254087388393284, guid: 18d1444bdccaffb41ba016b3512a5fc4, type: 3}
   root: {fileID: 246953482}
   popupRoot: {fileID: 0}

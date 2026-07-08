@@ -288,6 +288,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1673098387533941888, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3095738184781748161}
+    - targetCorrespondingSourceObject: {fileID: 1673098387533941888, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2554411995148501321}
   m_SourcePrefab: {fileID: 100100000, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
 --- !u!1 &1528584947911196364 stripped
 GameObject:
@@ -349,6 +352,19 @@ MonoBehaviour:
   model: 2
   spatialPreset: {fileID: 11400000, guid: b10f41c08c193e348a4d9399e7a45926, type: 2}
   onHoldCompleteSound: {fileID: 8300000, guid: 2c8aeceb2d9c95742aa85884e6dc52da, type: 3}
+--- !u!114 &2554411995148501321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1528584947911196364}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9eb01472169740c0905b5e1c3af9a290, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp-firstpass::Extensions.UIWindows.HoldButtonActionCloseUIWindow
+  needToOpenPrevious: 1
 --- !u!224 &6125604128382798037 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6272407660064176793, guid: 638dc1452f4882e47b78c0aa340a8db7, type: 3}
