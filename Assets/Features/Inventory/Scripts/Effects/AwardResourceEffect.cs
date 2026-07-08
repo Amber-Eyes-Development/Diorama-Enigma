@@ -1,17 +1,19 @@
 using System;
+using DioramaEnigma.Sequences;
 using Extensions.Helpers;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
-namespace DioramaEnigma.Sequences
+namespace DioramaEnigma.Inventory
 {
     /// <summary>
-    /// Эффект шага: добавить значение к ресурсу
+    /// Эффект шага <see cref="SequenceStep"/>: добавить значение к ресурсу <see cref="ResourceValue"/> (выдать предмет)
     /// </summary>
     [Serializable]
     public sealed class AwardResourceEffect : SequenceStepEffect
     {
         [SerializeField] private ResourceValue resource;
-        [Tooltip("Сколько добавить к ресурсу (может быть отрицательным)")]
+        [Tooltip("Сколько добавить к ресурсу"), Min(1)]
         [SerializeField] private int valueToAdd = 1;
 
         /// <inheritdoc/>
