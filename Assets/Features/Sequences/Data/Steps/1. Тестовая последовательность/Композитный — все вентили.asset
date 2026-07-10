@@ -11,22 +11,24 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f171439c1f7fd5749bbdc9e1acdf4442, type: 3}
   m_Name: "\u041A\u043E\u043C\u043F\u043E\u0437\u0438\u0442\u043D\u044B\u0439 \u2014
-    \u0443\u0441\u043B\u043E\u0432\u0438\u044F \u0434\u0432\u0435\u0440\u0438"
+    \u0432\u0441\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u0438"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.CompositeSequenceStep
-  id: 0710a05ce14a461bbc04be11739f7815
+  id: 8fb27caa739744db993db75355584b7a
   irreversible: 0
-  isQuestStep: 0
-  questText: 
+  isQuestStep: 1
+  questText: Open all valves
   isPriorityQuest: 0
-  ignoreUnlocked: 1
+  ignoreUnlocked: 0
   questGates: []
   children:
-  - step: {fileID: 11400000, guid: 225b86d1f0725054ea0aa50dcd3e70b0, type: 2}
+  - step: {fileID: 11400000, guid: 984b36345b3a15243bbe8d59df09df29, type: 2}
     trigger: 0
-  - step: {fileID: 11400000, guid: 41cfd3efb68f1ee4ca8011005424ef86, type: 2}
+  - step: {fileID: 11400000, guid: 93ca65cc6ce7adf46b67a3a97dbf0c06, type: 2}
+    trigger: 0
+  - step: {fileID: 11400000, guid: 5372599f1083c1341b459597a0959f7b, type: 2}
     trigger: 0
   mode: 0
-  n: 2
+  n: 1
   references:
     version: 2
     RefIds: []

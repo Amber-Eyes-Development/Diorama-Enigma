@@ -39,7 +39,6 @@ namespace DioramaEnigma.Sequences
                 var child = entry.Step;
                 if (active)
                 {
-                    child.SetActive(true);
                     child.onCompletionChanged += OnChildStateChanged;
                     child.onUnlockChanged += OnChildStateChanged;
                 }
@@ -47,7 +46,6 @@ namespace DioramaEnigma.Sequences
                 {
                     child.onCompletionChanged -= OnChildStateChanged;
                     child.onUnlockChanged -= OnChildStateChanged;
-                    child.SetActive(false);
                 }
             }
         }

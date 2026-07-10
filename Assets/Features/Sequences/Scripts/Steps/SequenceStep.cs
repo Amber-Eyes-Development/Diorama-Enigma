@@ -41,6 +41,7 @@ namespace DioramaEnigma.Sequences
         [Header("Значение"), Space]
         [Tooltip("Сохранять ли значение между сессиями")]
         [SerializeField] private bool isSaveable;
+        [ShowIf(nameof(isSaveable), true)]
         [Tooltip("Глобальный профиль сохранения, иначе состояние отдельно для каждого активного профиля")]
         [SerializeField] private bool isGlobal;
         [Tooltip("Дефолтное значение, используемое если нет сохранения или оно отключено")]

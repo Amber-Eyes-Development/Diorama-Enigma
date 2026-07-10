@@ -126,6 +126,12 @@ MonoBehaviour:
     interactableAfterCompletion: 0
     effects: []
     gates: []
+  - step: {fileID: 11400000, guid: 50c427e2432effa4d912efe01f1dba77, type: 2}
+    groupIndex: 1
+    availability: 0
+    interactableAfterCompletion: 0
+    effects: []
+    gates: []
   references:
     version: 2
     RefIds:
