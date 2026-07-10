@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Extensions.Attributes;
 using Extensions.Data;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ namespace Extensions.ScriptableValues
         /// <summary>
         /// Текущее значение
         /// </summary>
+        [ReadOnlyProperty("Текущее значение")]
         public virtual T Value
         {
             get
@@ -28,6 +30,10 @@ namespace Extensions.ScriptableValues
             set => SetValue(value);
         }
         
+        /// <summary>
+        /// Равно ли текущее значение дефолтному
+        /// </summary>
+        public override bool IsDefault => EqualityComparer<T>.Default.Equals(Value, defaultValue);
         /// <summary>
         /// Является ли состояние глобальным (иначе состояние отдельно для каждого активного профиля)
         /// </summary>
@@ -69,6 +75,7 @@ namespace Extensions.ScriptableValues
             runtimeValue = newValue;
 
             onValueChanged?.Invoke(runtimeValue);
+            RaiseChanged();
 
             if (Application.isPlaying && isSaveable)
             {

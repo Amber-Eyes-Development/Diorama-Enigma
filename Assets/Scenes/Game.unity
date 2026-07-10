@@ -210,8 +210,9 @@ GameObject:
   m_Component:
   - component: {fileID: 166266677}
   - component: {fileID: 166266678}
+  - component: {fileID: 166266679}
   m_Layer: 0
-  m_Name: Diorama Camera Controller
+  m_Name: Camera Controllers
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -246,7 +247,84 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Dioramas.DioramaCameraController
   spawner: {fileID: 1740526216}
   cameraRig: {fileID: 900364002}
-  moveSpeed: 60
+  moveSpeed: 30
+--- !u!114 &166266679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 166266676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26f0ca95878746e4e8641cd66f89f9a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.CameraUtils.DioramaCameraNavigator
+  targetCamera: {fileID: 900364003}
+  spawnerReference: {fileID: 11400000, guid: 49a7317ee6d120c43a187aea565cb1c1, type: 2}
+  dragButton: {fileID: -898773395064134303, guid: 1485cd0ddf7405548928e81d07bcf576, type: 3}
+  pointerPosition: {fileID: 2553562454140312610, guid: 1485cd0ddf7405548928e81d07bcf576, type: 3}
+  zoomScroll: {fileID: 6466005656688648456, guid: 1485cd0ddf7405548928e81d07bcf576, type: 3}
+  panSmoothTime: 0.08
+  panHalfExtents: {x: 2.5, y: 2}
+  centerOffset: {x: 0, y: 0}
+  minZoom: 1
+  maxZoom: 3
+  zoomStep: 0.2
+  zoomDuration: 0.2
+  zoomEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  tiltEnabled: 1
+  tiltStrength: {x: -3, y: 3}
+  maxTiltAngle: 6
+  tiltZoomInfluence:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  resetZoomOnFocusChange: {fileID: 11400000, guid: fbe5db06cbe84050850bca7331984682, type: 2}
+  zoomLevel: {fileID: 11400000, guid: 0996a93c04964720a752390059f325d0, type: 2}
 --- !u!1 &200966132
 GameObject:
   m_ObjectHideFlags: 0
@@ -929,6 +1007,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2716764239821628002, guid: 5ab40e0961185684ab9f6664a1e37e19, type: 3}
   m_PrefabInstance: {fileID: 900364001}
   m_PrefabAsset: {fileID: 0}
+--- !u!20 &900364003 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 4172172966148084803, guid: 5ab40e0961185684ab9f6664a1e37e19, type: 3}
+  m_PrefabInstance: {fileID: 900364001}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1022374106
 GameObject:
   m_ObjectHideFlags: 0
@@ -1023,6 +1106,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Statistics.DioramaStatisticsRecorder
   spawner: {fileID: 1740526216}
+  flushInterval: 5
 --- !u!1 &1147585660
 GameObject:
   m_ObjectHideFlags: 0
@@ -1250,9 +1334,9 @@ Transform:
   - {fileID: 348488911}
   - {fileID: 9106779}
   - {fileID: 1095776236}
-  - {fileID: 1740526215}
   - {fileID: 166266677}
   - {fileID: 212913384}
+  - {fileID: 1740526215}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2100693806
