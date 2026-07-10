@@ -7,11 +7,6 @@ namespace Extensions.ScriptableValues
     /// <summary>
     /// Проигрывает DOTweenAnimation по изменению значения ScriptableValue и по длительному простою (неизменению)
     /// </summary>
-    /// <remarks>
-    /// Типовое применение — фейд CanvasGroup индикатора: показать при изменении, скрыть после простоя.
-    /// Целевые DOTweenAnimation должны быть с выключенным autoKill (иначе повторный запуск не сработает);
-    /// autoPlay обычно тоже выключают, чтобы анимация играла только по триггеру
-    /// </remarks>
     public sealed class ScriptableValueAnimator : MonoBehaviour
     {
         [Tooltip("Наблюдаемое значение (любой конкретный ScriptableValue)")]

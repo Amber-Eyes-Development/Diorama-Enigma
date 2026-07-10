@@ -11,7 +11,7 @@ namespace Extensions.ScriptableValues
         protected const string GLOBAL_PROFILE = "global values";
 
         /// <summary>
-        /// Значение изменилось (неуниверсальный хук — не требует знания типа значения)
+        /// Значение изменилось
         /// </summary>
         public event Action onChanged;
 
