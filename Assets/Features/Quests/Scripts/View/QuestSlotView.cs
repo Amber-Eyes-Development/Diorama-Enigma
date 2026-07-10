@@ -11,6 +11,8 @@ namespace DioramaEnigma.Quests
     {
         [Tooltip("Текст задания")]
         [SerializeField] private TMP_Text label;
+        [Tooltip("Объект-метка «готово»: включается, когда выполненный квест удержан до приоритетного впереди")]
+        [SerializeField] private GameObject doneObject;
 
         [Header("Анимации")]
         [Tooltip("Появление слота")]
@@ -27,6 +29,7 @@ namespace DioramaEnigma.Quests
 
         private string stepId;
         private DioramaDefinition diorama;
+        private bool focused = true;
 
         private void Awake()
         {
@@ -41,10 +44,26 @@ namespace DioramaEnigma.Quests
             stepId = quest.StepId;
             diorama = quest.Diorama;
             if (label != null) label.text = quest.Text;
+            SetDone(quest.Done);
         }
 
-        /// <summary> Анимация появления </summary>
-        public void PlayAppear() => PlayGroup(appearAnimations);
+        /// <summary> Показать/снять метку «готово» (удержанный выполненный квест) </summary>
+        public void SetDone(bool done)
+        {
+            if (doneObject != null) doneObject.SetActive(done);
+        }
+
+        /// <summary> Анимация появления; фокус применяется по её завершении </summary>
+        public void PlayAppear(bool focused)
+        {
+            this.focused = focused;
+            PlayGroup(appearAnimations);
+
+            // фокус — после появления: финал appear иначе перебивает приглушение
+            DOTweenAnimation primary = FindFirst(appearAnimations);
+            if (primary != null && primary.tween != null) primary.tween.OnComplete(ApplyFocus);
+            else ApplyFocus();
+        }
 
         /// <summary> Анимация исчезновения перед удалением слота </summary>
         /// <param name="onComplete"> Действие по завершении, напр. удалить слот </param>
@@ -64,6 +83,12 @@ namespace DioramaEnigma.Quests
         /// <summary> Выставить фокус: false — приглушить (чужая диорама), true — вернуть в обычный вид </summary>
         public void SetFocused(bool focused)
         {
+            this.focused = focused;
+            ApplyFocus();
+        }
+
+        private void ApplyFocus()
+        {
             if (defocusedAnimations == null) return;
 
             foreach (var animation in defocusedAnimations)
@@ -71,7 +96,7 @@ namespace DioramaEnigma.Quests
                 if (animation == null) continue;
 
                 EnsureTween(animation);
-                if (focused) animation.DORewind();
+                if (focused) animation.DOPlayBackwards();
                 else animation.DORestart();
             }
         }

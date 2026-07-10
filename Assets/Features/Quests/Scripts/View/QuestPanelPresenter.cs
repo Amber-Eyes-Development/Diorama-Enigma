@@ -25,16 +25,27 @@ namespace DioramaEnigma.Quests
 
         [Header("Сколько показывать")]
         [Tooltip("Обычных квестов")]
+        [Range(0, 99)]
         [SerializeField] private int normalCount = 3;
-        [Tooltip("Приоритетных квестов (гарантированно попадают в список)")]
+        [Range(0, 99)]
+        [Tooltip("Приоритетных квестов")]
         [SerializeField] private int priorityCount = 1;
 
         [Header("Фильтр")]
         [Tooltip("Только квесты сфокусированной диорамы (иначе — весь блок)")]
         [SerializeField] private bool focusedOnly;
+        [Tooltip("Показывать квесты линейных шагов")]
+        [SerializeField] private bool showLinearQuests = true;
+        [Tooltip("Показывать квесты Always-шагов (фоновых)")]
+        [SerializeField] private bool showAlwaysQuests;
+
+        [Header("Удержание")]
+        [Tooltip("Держать выполненные квесты (метка «готово») до завершения приоритетного, стоящего за ними")]
+        [SerializeField] private bool holdBeforePriority;
 
         private readonly Dictionary<string, QuestSlotView> slots = new();
         private readonly Dictionary<AbstractSequenceStep, Action<bool>> stepHandlers = new();
+        private readonly List<StepGate> observedGates = new();
 
         private DioramaSpawner spawner;
 
@@ -73,7 +84,6 @@ namespace DioramaEnigma.Quests
             Rebuild();
         }
 
-        // Подписка на завершение квестовых шагов всех живых диорам: любое изменение пересобирает список
         private void ResubscribeSteps()
         {
             UnsubscribeSteps();
@@ -92,6 +102,8 @@ namespace DioramaEnigma.Quests
                     Action<bool> handler = _ => Rebuild();
                     stepHandlers[step] = handler;
                     step.onCompletionChanged += handler;
+                    step.onUnlockChanged += handler;
+                    ObserveGates(step);
                 }
             }
         }
@@ -99,37 +111,79 @@ namespace DioramaEnigma.Quests
         private void UnsubscribeSteps()
         {
             foreach (var pair in stepHandlers)
-                if (pair.Key != null) pair.Key.onCompletionChanged -= pair.Value;
+            {
+                if (pair.Key == null) continue;
+                pair.Key.onCompletionChanged -= pair.Value;
+                pair.Key.onUnlockChanged -= pair.Value;
+            }
 
             stepHandlers.Clear();
+            StopObservingGates();
         }
+
+        private void ObserveGates(AbstractSequenceStep step)
+        {
+            var gates = step.QuestGates;
+            if (gates == null) return;
+
+            foreach (var gate in gates)
+            {
+                if (gate == null) continue;
+
+                gate.StartObserving();
+                gate.onSatisfactionChanged += OnGateChanged;
+                observedGates.Add(gate);
+            }
+        }
+
+        private void StopObservingGates()
+        {
+            foreach (var gate in observedGates)
+            {
+                if (gate == null) continue;
+
+                gate.onSatisfactionChanged -= OnGateChanged;
+                gate.StopObserving();
+            }
+
+            observedGates.Clear();
+        }
+
+        private void OnGateChanged() => Rebuild();
 
         private void Rebuild()
         {
             if (spawner == null || slotPrefab == null || container == null) return;
 
+            var options = new QuestPanelOptions(
+                normalCount, priorityCount, focusedOnly,
+                holdBeforePriority, showLinearQuests, showAlwaysQuests);
+
             var desired = QuestSelector.Select(
-                spawner.BlockDioramas, spawner.LiveInstances, spawner.Active,
-                focusedOnly, normalCount, priorityCount);
+                spawner.BlockDioramas, spawner.LiveInstances, spawner.Active, options);
 
             RemoveStaleSlots(desired);
 
             for (int i = 0; i < desired.Count; i++)
             {
                 var quest = desired[i];
+                bool focused = quest.Diorama == spawner.Active;
 
                 if (!slots.TryGetValue(quest.StepId, out var slot) || slot == null)
                 {
-                    slot = CreateSlot(quest);
+                    slot = CreateSlot(quest, focused);
                     if (slot == null) continue;
+                }
+                else
+                {
+                    slot.SetFocused(focused);
                 }
 
                 slot.transform.SetSiblingIndex(i);
-                slot.SetFocused(quest.Diorama == spawner.Active);
+                slot.SetDone(quest.Done);
             }
         }
 
-        // Убрать слоты, которых больше нет в выборке
         private void RemoveStaleSlots(List<ActiveQuest> desired)
         {
             var stale = new List<string>();
@@ -151,12 +205,12 @@ namespace DioramaEnigma.Quests
             }
         }
 
-        private QuestSlotView CreateSlot(ActiveQuest quest)
+        private QuestSlotView CreateSlot(ActiveQuest quest, bool focused)
         {
             var slot = Instantiate(slotPrefab, container);
             slot.Bind(quest);
             slots[quest.StepId] = slot;
-            slot.PlayAppear();
+            slot.PlayAppear(focused);
             return slot;
         }
 

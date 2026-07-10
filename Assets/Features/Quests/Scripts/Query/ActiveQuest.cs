@@ -19,13 +19,16 @@ namespace DioramaEnigma.Quests
         public bool Priority { get; }
         /// <summary> Диорама, которой принадлежит квест </summary>
         public DioramaDefinition Diorama { get; }
+        /// <summary> Шаг выполнен, но слот удержан до приоритетного впереди (показать метку «готово», не убирать) </summary>
+        public bool Done { get; }
 
-        public ActiveQuest(string stepId, string text, bool priority, DioramaDefinition diorama)
+        public ActiveQuest(string stepId, string text, bool priority, DioramaDefinition diorama, bool done = false)
         {
             StepId = stepId;
             Text = text;
             Priority = priority;
             Diorama = diorama;
+            Done = done;
         }
     }
 }

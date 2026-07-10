@@ -10,56 +10,85 @@ namespace DioramaEnigma.Quests
     /// <remarks>
     /// Отделён от UI, чтобы будущая система подсказок переиспользовала ту же выборку.
     /// Приоритет не поднимает квест наверх — все идут строго в порядке очереди; он лишь
-    /// гарантирует попадание ближайших приоритетных, даже если они дальше N-го обычного
+    /// гарантирует попадание ближайших приоритетных. Опционально держит выполненные квесты
+    /// (метка «готово») до завершения приоритетного, стоящего за ними
     /// </remarks>
     public static class QuestSelector
     {
+        private readonly struct Candidate
+        {
+            public readonly string StepId;
+            public readonly string Text;
+            public readonly bool Priority;
+            public readonly bool Completed;
+            public readonly bool ConditionsMet;
+            public readonly DioramaDefinition Diorama;
+
+            public Candidate(string stepId, string text, bool priority, bool completed, bool conditionsMet, DioramaDefinition diorama)
+            {
+                StepId = stepId;
+                Text = text;
+                Priority = priority;
+                Completed = completed;
+                ConditionsMet = conditionsMet;
+                Diorama = diorama;
+            }
+        }
+
         /// <summary>
         /// Ближайшие квесты блока в порядке очереди
         /// </summary>
         /// <param name="blockOrder"> Порядок диорам блока (для сортировки живых инстансов) </param>
         /// <param name="live"> Живые инстансы блока </param>
         /// <param name="focused"> Сфокусированная диорама (для фильтра focusedOnly) </param>
-        /// <param name="focusedOnly"> Только квесты сфокусированной диорамы </param>
-        /// <param name="normalCount"> Сколько обычных квестов показывать </param>
-        /// <param name="priorityCount"> Сколько приоритетных квестов гарантировать </param>
+        /// <param name="options"> Параметры выборки </param>
         public static List<ActiveQuest> Select(
             IReadOnlyList<DioramaDefinition> blockOrder,
             IReadOnlyCollection<DioramaInstance> live,
             DioramaDefinition focused,
-            bool focusedOnly,
-            int normalCount,
-            int priorityCount)
+            QuestPanelOptions options)
         {
             var result = new List<ActiveQuest>();
             if (live == null || live.Count == 0) return result;
 
-            var ordered = CollectOrderedInstances(blockOrder, live, focused, focusedOnly);
-            var pending = CollectPendingQuests(ordered);
+            var ordered = CollectOrderedInstances(blockOrder, live, focused, options.FocusedOnly);
+            var candidates = CollectCandidates(ordered, options);
+            bool[] heldAllowed = ComputeHeldAllowed(candidates);
 
             int normalTaken = 0;
             int priorityTaken = 0;
 
-            foreach (var quest in pending)
+            for (int i = 0; i < candidates.Count; i++)
             {
-                if (quest.Priority)
+                var candidate = candidates[i];
+
+                if (candidate.Completed)
                 {
-                    if (priorityTaken >= priorityCount) continue;
+                    if (options.HoldBeforePriority && !candidate.Priority && heldAllowed[i])
+                        result.Add(ToQuest(candidate, done: true));
+
+                    continue;
+                }
+
+                if (!candidate.ConditionsMet) continue;
+
+                if (candidate.Priority)
+                {
+                    if (priorityTaken >= options.PriorityCount) continue;
                     priorityTaken++;
                 }
                 else
                 {
-                    if (normalTaken >= normalCount) continue;
+                    if (normalTaken >= options.NormalCount) continue;
                     normalTaken++;
                 }
 
-                result.Add(quest);
+                result.Add(ToQuest(candidate, done: false));
             }
 
             return result;
         }
 
-        // Живые инстансы в порядке блока (либо только сфокусированный)
         private static List<DioramaInstance> CollectOrderedInstances(
             IReadOnlyList<DioramaDefinition> blockOrder,
             IReadOnlyCollection<DioramaInstance> live,
@@ -90,47 +119,89 @@ namespace DioramaEnigma.Quests
             return int.MaxValue;
         }
 
-        // Плоский список ожидающих квестовых шагов: диорамы по очереди, шаги внутри — по GroupIndex
-        private static List<ActiveQuest> CollectPendingQuests(List<DioramaInstance> ordered)
+        private static List<Candidate> CollectCandidates(List<DioramaInstance> ordered, QuestPanelOptions options)
         {
-            var pending = new List<ActiveQuest>();
+            var candidates = new List<Candidate>();
 
             foreach (var instance in ordered)
             {
                 var sequence = instance.Definition.Sequence;
                 if (sequence == null) continue;
 
-                AppendPendingQuests(pending, sequence, instance.Definition);
+                AppendCandidates(candidates, sequence, instance.Definition, options);
             }
 
-            return pending;
+            return candidates;
         }
 
-        private static void AppendPendingQuests(List<ActiveQuest> pending, Sequence sequence, DioramaDefinition diorama)
+        private static void AppendCandidates(
+            List<Candidate> candidates, Sequence sequence, DioramaDefinition diorama, QuestPanelOptions options)
         {
-            int startCount = pending.Count;
+            int startCount = candidates.Count;
 
             foreach (var entry in sequence.Steps)
             {
                 var step = entry?.Step;
-                if (step == null || !step.IsQuestStep || step.IsCompleted) continue;
+                if (step == null || !step.IsQuestStep) continue;
                 if (string.IsNullOrEmpty(step.QuestText)) continue;
+                if (!PassesGroupFilter(entry.Availability, options)) continue;
 
-                pending.Add(new ActiveQuest(step.Id, step.QuestText, step.IsPriorityQuest, diorama));
+                candidates.Add(new Candidate(
+                    step.Id, step.QuestText, step.IsPriorityQuest,
+                    step.IsCompleted, ConditionsMet(step), diorama));
             }
 
             // Внутри диорамы упорядочиваем по группе (массив Steps порядок групп не гарантирует)
-            pending.Sort(startCount, pending.Count - startCount,
-                Comparer<ActiveQuest>.Create((a, b) => GroupOf(sequence, a).CompareTo(GroupOf(sequence, b))));
+            candidates.Sort(startCount, candidates.Count - startCount,
+                Comparer<Candidate>.Create((a, b) => GroupOf(sequence, a).CompareTo(GroupOf(sequence, b))));
         }
 
-        private static int GroupOf(Sequence sequence, ActiveQuest quest)
+        private static bool PassesGroupFilter(GroupAvailability availability, QuestPanelOptions options)
+        {
+            bool always = availability == GroupAvailability.Always;
+            return always ? options.ShowAlways : options.ShowLinear;
+        }
+
+        private static bool ConditionsMet(AbstractSequenceStep step)
+        {
+            if (!step.IgnoreUnlocked && !step.IsUnlocked) return false;
+
+            var gates = step.QuestGates;
+            if (gates == null) return true;
+
+            foreach (var gate in gates)
+                if (gate != null && !gate.IsSatisfied())
+                    return false;
+
+            return true;
+        }
+
+        private static bool[] ComputeHeldAllowed(List<Candidate> candidates)
+        {
+            var heldAllowed = new bool[candidates.Count];
+            bool nearestPriorityAfterIsPending = false;
+
+            for (int i = candidates.Count - 1; i >= 0; i--)
+            {
+                heldAllowed[i] = nearestPriorityAfterIsPending;
+
+                if (candidates[i].Priority)
+                    nearestPriorityAfterIsPending = !candidates[i].Completed;
+            }
+
+            return heldAllowed;
+        }
+
+        private static int GroupOf(Sequence sequence, Candidate candidate)
         {
             foreach (var entry in sequence.Steps)
-                if (entry?.Step != null && entry.Step.Id == quest.StepId)
+                if (entry?.Step != null && entry.Step.Id == candidate.StepId)
                     return entry.GroupIndex;
 
             return int.MaxValue;
         }
+
+        private static ActiveQuest ToQuest(Candidate candidate, bool done) =>
+            new(candidate.StepId, candidate.Text, candidate.Priority, candidate.Diorama, done);
     }
 }

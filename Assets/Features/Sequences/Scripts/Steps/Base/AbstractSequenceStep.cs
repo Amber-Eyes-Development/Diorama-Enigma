@@ -47,6 +47,10 @@ namespace DioramaEnigma.Sequences
         public string QuestText => questText;
         /// <summary> Приоритетный квест: попадает в список, даже если дальше по очереди обычных </summary>
         public bool IsPriorityQuest => isPriorityQuest;
+        /// <summary> Игнорировать разблокировку при показе квеста: true — как есть; false — показывать только когда шаг разблокирован </summary>
+        public bool IgnoreUnlocked => ignoreUnlocked;
+        /// <summary> Доп. условия показа квеста как активного (помимо очереди); пусто — без условий </summary>
+        public IReadOnlyList<StepGate> QuestGates => questGates;
 
         [Header("Шаг"), Space]
         [Tooltip("Необратимый: после завершения состояние нельзя изменить обратно")]
@@ -61,6 +65,12 @@ namespace DioramaEnigma.Sequences
         [ShowIf(nameof(isQuestStep), true)]
         [Tooltip("Приоритетный квест: гарантированно попадает в список, даже находясь дальше по очереди")]
         [SerializeField] private bool isPriorityQuest;
+        [ShowIf(nameof(isQuestStep), true)]
+        [Tooltip("Игнорировать разблокировку: выкл — квест не показывать, пока шаг не разблокирован (группа активна, гейты открыты)")]
+        [SerializeField] private bool ignoreUnlocked = false;
+        [ShowIf(nameof(isQuestStep), true)]
+        [Tooltip("Доп. условия показа квеста как активного (помимо очереди). Пусто — показывать без условий")]
+        [SerializeReference] private StepGate[] questGates = Array.Empty<StepGate>();
 
         private readonly StepCompletionTracker tracker = new();
 
