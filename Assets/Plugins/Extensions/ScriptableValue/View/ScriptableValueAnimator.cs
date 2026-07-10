@@ -53,7 +53,6 @@ namespace Extensions.ScriptableValues
         {
             if (idlePlayed) return;
 
-            // Пока значение не дефолтное (при включённой опции) — простой не копится
             if (skipIdleWhenNotDefault && !scriptableValue.IsDefault)
             {
                 idleTimer = 0f;
@@ -69,7 +68,6 @@ namespace Extensions.ScriptableValues
             bool wasVisible = shown;
             ResetIdle();
 
-            // Пока цель показана (идёт отсчёт простоя) — не переигрываем анимацию, только продлеваем видимость
             if (skipChangeWhileIdle && wasVisible) return;
 
             PlayChange();
@@ -81,7 +79,6 @@ namespace Extensions.ScriptableValues
             idlePlayed = false;
         }
 
-        // Останавливаем встречную анимацию, чтобы не конфликтовали на одном свойстве (напр. alpha CanvasGroup)
         private void PlayChange()
         {
             shown = true;

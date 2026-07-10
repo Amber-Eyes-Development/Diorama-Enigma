@@ -53,8 +53,6 @@ namespace DioramaEnigma.CameraUtils
         [Tooltip("Максимальный orthographicSize (максимальное отдаление)")]
         [Min(0.01f)]
         [SerializeField] private float maxZoom = 3f;
-        [Tooltip("orthographicSize по умолчанию (стартовый кадр диорамы)")]
-        [SerializeField] private float defaultZoom = 2.3f;
         [Tooltip("Изменение orthographicSize за один щелчок колеса")]
         [Min(0f)]
         [SerializeField] private float zoomStep = 0.35f;
@@ -64,16 +62,32 @@ namespace DioramaEnigma.CameraUtils
         [Tooltip("Кривая сглаживания доезда зума (0→1)")]
         [SerializeField] private AnimationCurve zoomEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+        [Header("Объём (наклон по смещению)"), Space]
+        [Tooltip("Включить лёгкий поворот камеры вокруг пивота по смещению — ощущение объёма (параллакс)")]
+        [SerializeField] private bool tiltEnabled = true;
+        [Tooltip("Градусов на 1 мир. ед. смещения от центра: X → рыскание (гориз. пан), Y → тангаж (верт. пан). Знак задаёт сторону")]
+        [SerializeField] private Vector2 tiltStrength = new(-3f, 3f);
+        [Tooltip("Предел угла наклона по каждой оси, град")]
+        [Min(0f)]
+        [SerializeField] private float maxTiltAngle = 6f;
+        [Tooltip("Коэффициент наклона по приближению: аргумент 0 — макс. отдаление (maxZoom), 1 — макс. приближение (minZoom). Дефолт линейный: на отдалении наклона нет, на приближении — полный")]
+        [SerializeField] private AnimationCurve tiltZoomInfluence = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+
         [Header("Смена фокуса"), Space]
         [Tooltip("Сбрасывать зум к дефолтному при переходе к другой диораме (иначе — восстанавливать запомненный)")]
         [SerializeField] private BoolValue resetZoomOnFocusChange;
+
+        [Header("UI"), Space]
+        [Tooltip("Опционально. Канал уровня приближения для UI: 1.0 = 100% (вся диорама видна на maxZoom), растёт при зуме. Слайдер/текст читают его готовыми биндерами (FloatValueSliderBinder / FloatValueView с showAsPercent)")]
+        [SerializeField] private FloatValue zoomLevel;
 
         #endregion
 
         #region Переменные
 
         private DioramaSpawner spawner;
-
+        private float baseOrthographicSize;
+        
         private Vector2 targetPan;
         private Vector2 pan;
         private Vector2 panVelocity;
@@ -181,12 +195,14 @@ namespace DioramaEnigma.CameraUtils
 
         private void OnZoomPerformed(InputAction.CallbackContext context)
         {
-            // Шаг по знаку колеса — устойчиво к масштабу scroll в разных версиях Input System (120 vs ±1)
             float scrollY = context.ReadValue<Vector2>().y;
             if (Mathf.Approximately(scrollY, 0f)) return;
 
-            // Колесо вверх (положительное) — приближаем, т.е. уменьшаем orthographicSize
-            targetZoom = Mathf.Clamp(targetZoom - Mathf.Sign(scrollY) * zoomStep, minZoom, maxZoom);
+            targetZoom = Mathf.Clamp(
+                targetZoom + Mathf.Sign(scrollY) * zoomStep,
+                minZoom,
+                maxZoom);
+
             RestartZoomTween();
         }
 
@@ -209,7 +225,36 @@ namespace DioramaEnigma.CameraUtils
             }
 
             pan = Vector2.SmoothDamp(pan, targetPan, ref panVelocity, panSmoothTime);
-            targetCamera.transform.localPosition = new Vector3(pan.x, pan.y, 0f);
+            ApplyCameraTransform();
+        }
+
+        // Орбита камеры вокруг начала пивота: центр сценки почти неподвижен, глубина расходится → объём.
+        // Угол — производная от уже сглаженного пана, поэтому отдельного сглаживания не нужно
+        private void ApplyCameraTransform()
+        {
+            Vector3 localPan = new(pan.x, pan.y, 0f);
+            Quaternion tilt = Quaternion.identity;
+
+            if (tiltEnabled)
+            {
+                Vector2 offset = pan - centerOffset;
+                float factor = tiltZoomInfluence.Evaluate(ZoomInNormalized());
+
+                float yaw = Mathf.Clamp(offset.x * tiltStrength.x, -maxTiltAngle, maxTiltAngle) * factor;
+                float pitch = Mathf.Clamp(offset.y * tiltStrength.y, -maxTiltAngle, maxTiltAngle) * factor;
+                tilt = Quaternion.Euler(pitch, yaw, 0f);
+            }
+
+            targetCamera.transform.localRotation = tilt;
+            targetCamera.transform.localPosition = tilt * localPan;
+        }
+
+        private float ZoomInNormalized()
+        {
+            if (Mathf.Approximately(maxZoom, minZoom))
+                return 1f;
+
+            return Mathf.InverseLerp(minZoom, maxZoom, CurrentZoom());
         }
 
         // Не панорамируем, если нажатие пришлось на UI или draggable-объект (тот перехватит перетаскивание сам)
@@ -259,15 +304,31 @@ namespace DioramaEnigma.CameraUtils
             zoomTimer += Time.deltaTime;
             float t = zoomDuration > 0f ? Mathf.Clamp01(zoomTimer / zoomDuration) : 1f;
 
-            targetCamera.orthographicSize = Mathf.Lerp(zoomFrom, targetZoom, zoomEase.Evaluate(t));
+            float currentZoom = Mathf.Lerp(zoomFrom, targetZoom, zoomEase.Evaluate(t));
+            targetCamera.orthographicSize = baseOrthographicSize / currentZoom;
 
-            // Видимый прямоугольник изменился — держим пан в новых пределах
+            PublishZoom();
             targetPan = ClampPan(targetPan);
+        }
+
+        private void PublishZoom()
+        {
+            if (zoomLevel == null) return;
+
+            zoomLevel.SetValue(CurrentZoom());
+        }
+
+        private float CurrentZoom()
+        {
+            if (targetCamera.orthographicSize <= 0f)
+                return minZoom;
+
+            return baseOrthographicSize / targetCamera.orthographicSize;
         }
 
         private void RestartZoomTween()
         {
-            zoomFrom = targetCamera.orthographicSize;
+            zoomFrom = CurrentZoom();
             zoomTimer = 0f;
         }
 
@@ -323,12 +384,12 @@ namespace DioramaEnigma.CameraUtils
             if (newId != null && memory.TryGetValue(newId, out PanZoomState saved))
             {
                 targetPan = saved.pan;
-                targetZoom = ResetZoom ? defaultZoom : saved.zoom;
+                targetZoom = ResetZoom ? DefaultZoom() : saved.zoom;
             }
             else
             {
                 targetPan = centerOffset;
-                targetZoom = defaultZoom;
+                targetZoom = DefaultZoom();
             }
 
             targetZoom = Mathf.Clamp(targetZoom, minZoom, maxZoom);
@@ -366,16 +427,22 @@ namespace DioramaEnigma.CameraUtils
 
         private void InitState()
         {
-            targetZoom = Mathf.Clamp(defaultZoom, minZoom, maxZoom);
+            baseOrthographicSize = targetCamera.orthographicSize;
+
+            targetZoom = DefaultZoom();
             zoomFrom = targetZoom;
             zoomTimer = zoomDuration;
-            targetCamera.orthographicSize = targetZoom;
+
+            targetCamera.orthographicSize = baseOrthographicSize / targetZoom;
+            PublishZoom();
 
             targetPan = ClampPan(centerOffset);
             pan = targetPan;
             panVelocity = Vector2.zero;
-            targetCamera.transform.localPosition = new Vector3(pan.x, pan.y, 0f);
+            ApplyCameraTransform();
         }
+        
+        private float DefaultZoom() => Mathf.Clamp(1f, minZoom, maxZoom);
 
         #endregion
     }

@@ -268,10 +268,9 @@ MonoBehaviour:
   panSmoothTime: 0.08
   panHalfExtents: {x: 2.5, y: 2}
   centerOffset: {x: 0, y: 0}
-  minZoom: 0.75
+  minZoom: 1
   maxZoom: 3
-  defaultZoom: 2.3
-  zoomStep: 0.35
+  zoomStep: 0.2
   zoomDuration: 0.2
   zoomEase:
     serializedVersion: 2
@@ -297,7 +296,35 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  tiltEnabled: 1
+  tiltStrength: {x: -3, y: 3}
+  maxTiltAngle: 6
+  tiltZoomInfluence:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   resetZoomOnFocusChange: {fileID: 11400000, guid: fbe5db06cbe84050850bca7331984682, type: 2}
+  zoomLevel: {fileID: 11400000, guid: 0996a93c04964720a752390059f325d0, type: 2}
 --- !u!1 &200966132
 GameObject:
   m_ObjectHideFlags: 0
@@ -1307,9 +1334,9 @@ Transform:
   - {fileID: 348488911}
   - {fileID: 9106779}
   - {fileID: 1095776236}
-  - {fileID: 1740526215}
   - {fileID: 166266677}
   - {fileID: 212913384}
+  - {fileID: 1740526215}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2100693806
