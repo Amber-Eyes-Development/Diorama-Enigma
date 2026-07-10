@@ -14,8 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: d798958a3ac0406eb10061434c95a4ca
   irreversible: 0
+  isQuestStep: 1
+  questText: Find the right fuse slot
+  isPriorityQuest: 0
+  ignoreUnlocked: 0
+  questGates: []
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
   toggleCooldown: 0
+  references:
+    version: 2
+    RefIds: []

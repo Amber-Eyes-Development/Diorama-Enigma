@@ -12,10 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bd42c72b335e7a43a9fa1aaf4324698, type: 3}
   m_Name: "1.7 \u0420\u044B\u0447\u0430\u0433\u0438"
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
-  id: 
+  id: 4cf41951332f4a068191a6fc0f8228b3
   irreversible: 0
+  isQuestStep: 1
+  questText: Guess right lever sequence
+  isPriorityQuest: 0
+  ignoreUnlocked: 0
+  questGates: []
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
   toggleCooldown: 0.5
+  references:
+    version: 2
+    RefIds: []

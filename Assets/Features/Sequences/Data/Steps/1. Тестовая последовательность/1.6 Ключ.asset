@@ -14,11 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: fb77c3b34600426c9f8833982cd28e34
   irreversible: 1
-  gates: []
+  isQuestStep: 1
+  questText: Find the key
+  isPriorityQuest: 0
+  ignoreUnlocked: 0
+  questGates:
+  - rid: 7545908952600412241
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
+  toggleCooldown: 0.5
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7545908952600412241
+      type: {class: RequireStepsCompletedGate, ns: DioramaEnigma.Sequences, asm: Assembly-CSharp}
+      data:
+        trigger: 2
+        requiredSteps:
+        - {fileID: 11400000, guid: 0c4e685450b0fa94698ea03aae969c63, type: 2}

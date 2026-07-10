@@ -14,8 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DioramaEnigma.Sequences.SequenceStep
   id: 68a26b6485af4f55aea913b6af0e32d0
   irreversible: 0
+  isQuestStep: 1
+  questText: Find a way to open the door
+  isPriorityQuest: 1
+  ignoreUnlocked: 1
+  questGates: []
   isSaveable: 1
   isGlobal: 0
   defaultValue: 0
   completionState: 1
   toggleCooldown: 0.5
+  references:
+    version: 2
+    RefIds: []
