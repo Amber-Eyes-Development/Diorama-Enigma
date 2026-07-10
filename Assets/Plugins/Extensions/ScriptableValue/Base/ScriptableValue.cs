@@ -46,6 +46,7 @@ namespace Extensions.ScriptableValues
         [Header("Хранимое значение"), Space]
         [Tooltip("Сохранять ли значение между сессиями")]
         [SerializeField] protected bool isSaveable = false;
+        [ShowIf(nameof(isSaveable), true)]
         [Tooltip("Глобальный профиль сохранения, иначе состояние отдельно для каждого активного профиля")]
         [SerializeField] protected bool isGlobal = false;
         [Tooltip("Дефолтное значение, используемое если нет сохранения или оно отключено")]
