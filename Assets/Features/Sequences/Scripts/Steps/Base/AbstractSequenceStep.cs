@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Extensions.Attributes;
 using Extensions.Identification;
 using UnityEngine;
 
@@ -40,9 +41,26 @@ namespace DioramaEnigma.Sequences
         /// <summary> Является ли шаг необратимым </summary>
         public bool Irreversible => irreversible;
 
+        /// <summary> Показывать ли текст шага как квест-подсказку «что делать дальше» </summary>
+        public bool IsQuestStep => isQuestStep;
+        /// <summary> Текст квеста для панели заданий </summary>
+        public string QuestText => questText;
+        /// <summary> Приоритетный квест: попадает в список, даже если дальше по очереди обычных </summary>
+        public bool IsPriorityQuest => isPriorityQuest;
+
         [Header("Шаг"), Space]
         [Tooltip("Необратимый: после завершения состояние нельзя изменить обратно")]
         [SerializeField] private bool irreversible;
+
+        [Header("Квесты"), Space]
+        [Tooltip("Показывать текст этого шага в панели заданий, пока он не завершён")]
+        [SerializeField] private bool isQuestStep;
+        [ShowIf(nameof(isQuestStep), true)]
+        [Tooltip("Текст задания (что нужно сделать)")]
+        [SerializeField, TextArea] private string questText;
+        [ShowIf(nameof(isQuestStep), true)]
+        [Tooltip("Приоритетный квест: гарантированно попадает в список, даже находясь дальше по очереди")]
+        [SerializeField] private bool isPriorityQuest;
 
         private readonly StepCompletionTracker tracker = new();
 

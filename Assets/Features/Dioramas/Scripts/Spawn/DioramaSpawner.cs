@@ -20,6 +20,8 @@ namespace DioramaEnigma.Dioramas
         #region События 
         /// <summary> Фокус сменился: точка кадрирования активной диорамы и нужна ли анимация перехода </summary>
         public event Action<DioramaFocus> onFocusChanged;
+        /// <summary> Набор живых инстансов блока изменился (доспавн реальной диорамы / выгрузка блока) </summary>
+        public event Action onLiveInstancesChanged;
         #endregion
 
         #region Свойства 
@@ -31,6 +33,8 @@ namespace DioramaEnigma.Dioramas
         public DioramaAccessService Access => access;
         /// <summary> Все диорамы активного блока в порядке (вкл. закрытые) </summary>
         public IReadOnlyList<DioramaDefinition> BlockDioramas => queue;
+        /// <summary> Живые (реально загруженные) инстансы блока </summary>
+        public IReadOnlyCollection<DioramaInstance> LiveInstances => liveInstances.Values;
         /// <summary> Есть ли активная диорама </summary>
         public bool HasFocus => activeIndex >= 0;
         /// <summary> Можно ли шагнуть вперёд </summary>
@@ -315,10 +319,14 @@ namespace DioramaEnigma.Dioramas
 
             instance.Bind(def, access, runner, this);
             instance.SetFocused(activeDefinition != null && def.Id == activeDefinition.Id);
+
+            onLiveInstancesChanged?.Invoke();
         }
 
         private void UnloadAll()
         {
+            bool hadInstances = liveInstances.Count > 0;
+
             foreach (var pair in liveInstances)
                 if (pair.Value != null) Destroy(pair.Value.gameObject);
             liveInstances.Clear();
@@ -328,6 +336,8 @@ namespace DioramaEnigma.Dioramas
             placeholders.Clear();
 
             loading.Clear();
+
+            if (hadInstances) onLiveInstancesChanged?.Invoke();
         }
 
         private Vector3 SlotPosition(int index) => axisRoot.position + spacing * index;
