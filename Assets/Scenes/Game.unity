@@ -266,36 +266,37 @@ MonoBehaviour:
   pointerPosition: {fileID: 2553562454140312610, guid: 1485cd0ddf7405548928e81d07bcf576, type: 3}
   zoomScroll: {fileID: 6466005656688648456, guid: 1485cd0ddf7405548928e81d07bcf576, type: 3}
   panSmoothTime: 0.08
-  panHalfExtents: {x: 2.5, y: 2}
+  panAreaScale: 1
   centerOffset: {x: 0, y: 0}
   minZoom: 1
   maxZoom: 3
-  zoomStep: 0.2
-  zoomDuration: 0.2
+  zoomStep: 1
+  zoomDuration: 0.3
   zoomEase:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
       value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 34
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 34
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  cursorFollow: 1
   tiltEnabled: 1
   tiltStrength: {x: -3, y: 3}
   maxTiltAngle: 6
