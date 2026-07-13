@@ -22,6 +22,8 @@ namespace Extensions.ScriptableValues
         [Tooltip("Время простоя до запуска анимации простоя, сек")]
         [Min(0f)]
         [SerializeField] private float idleDelay = 2f;
+        [Tooltip("Не запускать анимацию простоя и не считать время простоя, пока значение равно дефолтному")]
+        [SerializeField] private bool skipIdleWhenDefault;
         [Tooltip("Не запускать анимацию простоя и не считать время простоя, пока значение не равно дефолтному")]
         [SerializeField] private bool skipIdleWhenNotDefault;
         [Tooltip("Не переигрывать анимацию изменения, пока идёт отсчёт простоя — только продлевать (сбрасывать) таймер")]
@@ -53,7 +55,8 @@ namespace Extensions.ScriptableValues
         {
             if (idlePlayed) return;
 
-            if (skipIdleWhenNotDefault && !scriptableValue.IsDefault)
+            if ((skipIdleWhenNotDefault && !scriptableValue.IsDefault) ||
+                (skipIdleWhenDefault && scriptableValue.IsDefault))
             {
                 idleTimer = 0f;
                 return;
