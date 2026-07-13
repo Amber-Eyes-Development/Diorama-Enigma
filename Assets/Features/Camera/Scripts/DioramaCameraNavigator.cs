@@ -41,9 +41,10 @@ namespace DioramaEnigma.CameraUtils
         [Tooltip("Плавность ведения вида, сек (0 — мгновенно)")]
         [Min(0f)]
         [SerializeField] private float panSmoothTime = 0.08f;
-        [Tooltip("Глобальные полу-размеры области обзора (мир. ед.) по осям вправо/вверх относительно центра кадра")]
-        [SerializeField] private Vector2 panHalfExtents = new(2f, 1.5f);
-        [Tooltip("Смещение центра области обзора относительно точки кадрирования (тюнинг)")]
+        [Tooltip("Область панорамирования как доля базового (полностью отдалённого) кадра: 1 — ровно базовый кадр (за него не выходим), >1 — можно чуть дальше, <1 — уже. Место для пана открывается по мере приближения")]
+        [Min(0f)]
+        [SerializeField] private float panAreaScale = 1f;
+        [Tooltip("Смещение центра области панорамирования относительно точки кадрирования (тюнинг)")]
         [SerializeField] private Vector2 centerOffset = Vector2.zero;
 
         [Header("Зум"), Space]
@@ -61,6 +62,9 @@ namespace DioramaEnigma.CameraUtils
         [SerializeField] private float zoomDuration = 0.2f;
         [Tooltip("Кривая сглаживания доезда зума (0→1)")]
         [SerializeField] private AnimationCurve zoomEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [Tooltip("Уровень следования зума за курсором: 0 — к центру вида (обычное), 1 — центр моментально переносится на точку под курсором (с учётом рамок). Промежуточные — частичное подтягивание за щелчок")]
+        [Range(0f, 1f)]
+        [SerializeField] private float cursorFollow = 0.5f;
 
         [Header("Объём (наклон по смещению)"), Space]
         [Tooltip("Включить лёгкий поворот камеры вокруг пивота по смещению — ощущение объёма (параллакс)")]
@@ -93,6 +97,10 @@ namespace DioramaEnigma.CameraUtils
         private Vector2 panVelocity;
         private bool panning;
         private Vector2 lastPointerPos;
+
+        private Vector2 panFrom;
+        private Vector2 panTo;
+        private bool zoomPanning;
 
         private float targetZoom;
         private float zoomFrom;
@@ -188,6 +196,8 @@ namespace DioramaEnigma.CameraUtils
             if (PointerBlocksPan()) return;
 
             panning = true;
+            zoomPanning = false;
+            panVelocity = Vector2.zero;
             lastPointerPos = ReadPointer();
         }
 
@@ -204,6 +214,22 @@ namespace DioramaEnigma.CameraUtils
                 maxZoom);
 
             RestartZoomTween();
+
+            if (cursorFollow > 0f) BeginCursorZoom();
+        }
+
+        private void BeginCursorZoom()
+        {
+            if (Screen.height <= 0) return;
+
+            Vector2 fromCenter = ReadPointer() - new Vector2(Screen.width, Screen.height) * 0.5f;
+            float worldPerPixel = 2f * targetCamera.orthographicSize / Screen.height;
+            Vector2 cursorWorld = pan + fromCenter * worldPerPixel;
+
+            panFrom = pan;
+            panTo = ClampPan(Vector2.Lerp(pan, cursorWorld, cursorFollow), TargetSize());
+            targetPan = panTo;
+            zoomPanning = true;
         }
 
         #endregion
@@ -220,16 +246,19 @@ namespace DioramaEnigma.CameraUtils
 
                 float worldPerPixel = Screen.height > 0 ? 2f * targetCamera.orthographicSize / Screen.height : 0f;
 
-                // Держим захваченную точку под курсором: вид едет навстречу движению мыши
                 targetPan = ClampPan(targetPan - delta * worldPerPixel);
+                zoomPanning = false; 
             }
 
-            pan = Vector2.SmoothDamp(pan, targetPan, ref panVelocity, panSmoothTime);
+            if (!zoomPanning)
+            {
+                pan = Vector2.SmoothDamp(pan, targetPan, ref panVelocity, panSmoothTime);
+                pan = ClampPan(pan, targetCamera.orthographicSize);
+            }
+
             ApplyCameraTransform();
         }
 
-        // Орбита камеры вокруг начала пивота: центр сценки почти неподвижен, глубина расходится → объём.
-        // Угол — производная от уже сглаженного пана, поэтому отдельного сглаживания не нужно
         private void ApplyCameraTransform()
         {
             Vector3 localPan = new(pan.x, pan.y, 0f);
@@ -257,7 +286,6 @@ namespace DioramaEnigma.CameraUtils
             return Mathf.InverseLerp(minZoom, maxZoom, CurrentZoom());
         }
 
-        // Не панорамируем, если нажатие пришлось на UI или draggable-объект (тот перехватит перетаскивание сам)
         private bool PointerBlocksPan()
         {
             if (EventSystem.current == null) return false;
@@ -273,19 +301,19 @@ namespace DioramaEnigma.CameraUtils
             return top.gameObject != null && top.gameObject.GetComponentInParent<IBeginDragHandler>() != null;
         }
 
-        private Vector2 ClampPan(Vector2 value)
-        {
-            float size = targetCamera.orthographicSize;
-            float viewHalfW = size * targetCamera.aspect;
-            float viewHalfH = size;
+        private Vector2 ClampPan(Vector2 value) => ClampPan(value, TargetSize());
 
-            float maxX = Mathf.Max(0f, panHalfExtents.x - viewHalfW);
-            float maxY = Mathf.Max(0f, panHalfExtents.y - viewHalfH);
+        private Vector2 ClampPan(Vector2 value, float size)
+        {
+            float limitY = Mathf.Max(0f, baseOrthographicSize * panAreaScale - size);
+            float limitX = limitY * targetCamera.aspect;
 
             return new Vector2(
-                Mathf.Clamp(value.x, centerOffset.x - maxX, centerOffset.x + maxX),
-                Mathf.Clamp(value.y, centerOffset.y - maxY, centerOffset.y + maxY));
+                Mathf.Clamp(value.x, centerOffset.x - limitX, centerOffset.x + limitX),
+                Mathf.Clamp(value.y, centerOffset.y - limitY, centerOffset.y + limitY));
         }
+
+        private float TargetSize() => baseOrthographicSize / Mathf.Max(targetZoom, 0.0001f);
 
         private Vector2 ReadPointer()
         {
@@ -303,12 +331,22 @@ namespace DioramaEnigma.CameraUtils
         {
             zoomTimer += Time.deltaTime;
             float t = zoomDuration > 0f ? Mathf.Clamp01(zoomTimer / zoomDuration) : 1f;
+            float eased = zoomEase.Evaluate(t);
 
-            float currentZoom = Mathf.Lerp(zoomFrom, targetZoom, zoomEase.Evaluate(t));
+            float currentZoom = Mathf.Lerp(zoomFrom, targetZoom, eased);
             targetCamera.orthographicSize = baseOrthographicSize / currentZoom;
-
             PublishZoom();
-            targetPan = ClampPan(targetPan);
+
+            if (zoomPanning)
+            {
+                targetPan = panTo;
+                pan = ClampPan(Vector2.Lerp(panFrom, panTo, eased), targetCamera.orthographicSize);
+                if (t >= 1f) zoomPanning = false;
+            }
+            else
+            {
+                targetPan = ClampPan(targetPan);
+            }
         }
 
         private void PublishZoom()
